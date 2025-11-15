@@ -1,0 +1,862 @@
+<!doctype html>
+<!--
+Copyright (c) 2025 Cyber Soho. All Rights Reserved.
+
+This software and associated documentation files (the "Software"), 
+including all original content and documents, 
+are the exclusive intellectual property of Cyber Soho.
+
+Unauthorized use, reproduction, distribution, or modification of this 
+Software or its content, in whole or in part, is strictly prohibited 
+without the express written permission of the copyright holder.
+
+---
+ADAPTED FROM: cyDef-co.docx
+ADAPTED USING: index-.html template
+DATE: 2025-11-14
+---
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Cyber Defense (420-2C1-DW) — Course Outline | 2025-2026</title>
+
+  <!-- Strong CSP from example; keep nonce values in sync with script/style -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'nonce-tr-fixed-2025';
+    style-src 'self' 'nonce-tr-fixed-2025';
+    img-src 'self' data:; font-src 'self';
+    connect-src 'none'; media-src 'none'; object-src 'none';
+    base-uri 'self'; form-action 'self';
+    upgrade-insecure-requests; block-all-mixed-content; require-trusted-types-for 'script';" />
+
+  <style nonce="tr-fixed-2025">
+    :root { --bg:#0b0c0f; --bg-2:#101217; --text:#e6e6e6; --muted:#b7bcc7; --accent:#7aa2f7; --ok:#7ad77a; --warn:#ffd166; --danger:#ff6b6b; --card:#12151b; --border:#1e2430; --shadow:0 10px 30px rgba(0,0,0,.35); color-scheme: dark; }
+    [data-theme="light"] { --bg:#f7f8fa; --bg-2:#ffffff; --text:#111; --muted:#505a70; --accent:#1e66f5; --ok:#2e7d32; --warn:#b26a00; --danger:#c62828; --card:#ffffff; --border:#e4e7ee; --shadow:0 10px 30px rgba(20,30,55,.08); color-scheme: light; }
+    html, body { height:100%; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: radial-gradient(1200px 800px at 10% -10%, color-mix(in oklab, var(--accent), transparent 92%), transparent 60%), radial-gradient(1400px 900px at 110% 10%, color-mix(in oklab, var(--ok), transparent 93%), transparent 55%), var(--bg); color:var(--text); line-height:1.55; }
+    header.site { position:sticky; top:0; z-index:1000; backdrop-filter:saturate(140%) blur(8px); background: color-mix(in oklab, var(--bg-2) 90%, transparent); border-bottom:1px solid var(--border); }
+    .container{ max-width:1100px; margin:0 auto; padding:1rem; }
+    nav.topnav{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:1rem; }
+    .brand{ display:flex; align-items:center; gap:.75rem; font-weight:700; letter-spacing:.2px; }
+    .brand svg{ width:28px; height:28px; }
+    .links a{ text-decoration:none; color:var(--text); opacity:.9; padding:.4rem .6rem; border-radius:.6rem; }
+    .links a:hover{ background:var(--card); box-shadow:var(--shadow); }
+    .tools{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+    button,input,select{ font:inherit; color:inherit; background:var(--bg-2); border:1px solid var(--border); border-radius:.6rem; padding:.5rem .75rem; }
+    button{ cursor:pointer; }
+    .hero{ padding:2rem 1rem 1.2rem; }
+    .hero .title{ font-size:clamp(1.4rem,1.2rem + 1.8vw,2.2rem); font-weight:800; letter-spacing:.2px; }
+    .hero .meta{ margin-top:.2rem; color:var(--muted); }
+    .card{ background:var(--bg-2); border:1px solid var(--border); border-radius:1rem; box-shadow:var(--shadow); padding:1.25rem; }
+    .grid{ display:grid; gap:1rem; }
+    .grid.cols-2{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .grid.cols-3{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+    @media (max-width:900px){ .grid.cols-2, .grid.cols-3{ grid-template-columns:1fr; } }
+    h2{ font-size:1.4rem; margin:.2rem 0 1rem; }
+    h3{ font-size:1.1rem; margin:.2rem 0 .5rem; }
+    h4 { font-size: 1rem; font-weight: 700; color: var(--accent); margin: 0.75rem 0 0.25rem; }
+    .badge{ display:inline-flex; align-items:center; gap:.35rem; font-size:.85rem; padding:.25rem .5rem; border:1px solid var(--border); border-radius:.5rem; background:var(--card); }
+    .muted{ color:var(--muted); }
+    details.accordion{ border:1px solid var(--border); border-radius:.8rem; background:var(--card); }
+    details.accordion + details.accordion{ margin-top:.6rem; }
+    details.accordion[open]{ box-shadow:var(--shadow); }
+    details.accordion summary{ list-style:none; cursor:pointer; padding:.9rem 1rem; font-weight:700; display:grid; grid-template-columns:1fr auto; align-items:center; gap: 1rem; }
+    details.accordion summary::-webkit-details-marker{ display:none; }
+    .summary-row{ display:flex; align-items:center; gap:.5rem; }
+    .summary-row .chev{ transition: transform .25s ease; }
+    details[open] .summary-row .chev{ transform: rotate(90deg); }
+    .accordion .panel{ padding:.2rem 1.25rem 1.25rem; border-top: 1px solid var(--border); }
+    .accordion .panel ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+    .accordion .panel li { margin-bottom: 0.4rem; }
+    table{ width:100%; border-collapse:collapse; margin-top: 1rem; }
+    th,td{ text-align:left; padding:.6rem .5rem; border-bottom:1px dashed var(--border); vertical-align:top; }
+    thead th{ position:sticky; top:calc(56px + 1rem); background:var(--bg-2); z-index:5; }
+    tbody tr:last-child th, tbody tr:last-child td { border-bottom: none; }
+    .kpi{ display:flex; gap:.75rem; flex-wrap:wrap; }
+    .kpi .card{ flex:1; min-width:180px; padding: 1rem; }
+    .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.15rem .5rem; border:1px solid var(--border); border-radius:1rem; background:var(--bg-2); font-size:.85rem; }
+    .sticky-note{ border-left:3px solid var(--accent); background: color-mix(in oklab, var(--accent) 6%, transparent); padding:.75rem 1rem; border-radius:.6rem; margin-top: 1rem; }
+    .btn{ display:inline-flex; align-items:center; gap:.5rem; padding:.55rem .8rem; border:1px solid var(--border); border-radius:.7rem; background:var(--card); text-decoration:none; color:var(--text); }
+    .btn:hover{ box-shadow:var(--shadow); }
+    .btn.primary{ border-color: color-mix(in oklab, var(--accent) 40%, var(--border)); }
+    .footer{ margin:2rem 0; color:var(--muted); font-size:.9rem; display:grid; gap:.5rem; }
+    
+    /* --- Password Protection Styles --- */
+    .content-protected {
+      filter: blur(10px);
+      pointer-events: none;
+      user-select: none;
+    }
+    #password-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      display: none; /* Hidden by default, shown by JS */
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      color: var(--text);
+    }
+    #password-modal {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      width: 100%;
+      max-width: 450px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    #password-modal p {
+      margin: 0 0 0.5rem;
+      line-height: 1.6;
+      color: var(--muted);
+      white-space: pre-line; /* To respect line breaks in the prompt */
+    }
+    #password-modal .input-group {
+      position: relative;
+      display: flex;
+      gap: 0.5rem;
+    }
+    #password-input {
+      flex-grow: 1;
+      padding-right: 3rem; /* Space for eye icon */
+    }
+    #toggle-password {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+      color: var(--muted);
+    }
+    #toggle-password:hover {
+      color: var(--text);
+    }
+    #submit-password {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      border-color: var(--accent);
+    }
+    [data-theme="light"] #submit-password {
+      color: var(--bg-2);
+    }
+    #password-error {
+      color: var(--danger);
+      font-size: 0.9rem;
+      height: 1.2em; /* Reserve space */
+      text-align: center;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    /* --- End Password Protection Styles --- */
+
+    /* --- Disclaimer Box Styles --- */
+    .disclaimer-box {
+      padding: 1rem 1.25rem;
+      border-left: 4px solid var(--border);
+      border-radius: .6rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--shadow);
+    }
+    .disclaimer-box h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .disclaimer-warn {
+      background: color-mix(in oklab, var(--warn) 15%, var(--bg-2));
+      border-color: var(--warn);
+      color: color-mix(in oklab, var(--warn) 90%, var(--bg));
+    }
+    .disclaimer-danger {
+      background: color-mix(in oklab, var(--danger) 15%, var(--bg-2));
+      border-color: var(--danger);
+      color: color-mix(in oklab, var(--danger) 90%, var(--bg));
+    }
+    .disclaimer-info {
+      background: color-mix(in oklab, var(--accent) 15%, var(--bg-2));
+      border-color: var(--accent);
+      color: color-mix(in oklab, var(--accent) 90%, var(--bg));
+    }
+    [data-theme="light"] .disclaimer-warn {
+      background: color-mix(in oklab, var(--warn) 15%, var(--bg-2));
+      color: color-mix(in oklab, var(--warn) 80%, #000);
+    }
+    [data-theme="light"] .disclaimer-danger {
+      background: color-mix(in oklab, var(--danger) 15%, var(--bg-2));
+      color: color-mix(in oklab, var(--danger) 70%, #000);
+    }
+    [data-theme="light"] .disclaimer-info {
+      background: color-mix(in oklab, var(--accent) 15%, var(--bg-2));
+      color: color-mix(in oklab, var(--accent) 80%, #000);
+    }
+    /* --- End Disclaimer Box Styles --- */
+
+    @media print{ header.site, .tools, .sticky-note, .footer .security, .search, .disclaimer-box, #password-overlay { display:none !important; } .card, details.accordion{ box-shadow:none !important; border-color:#bbb !important; } body{ background:#fff; color:#000; } .content-protected { filter: none; } }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="container">
+      <nav class="topnav" aria-label="Top navigation">
+        <div class="brand" aria-label="Course brand">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" role="img"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M7 13.5l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <!-- CHANGED: Title from docx -->
+          <span>Cyber Defense</span>
+        </div>
+        <div class="tools">
+          <div class="search" role="search" aria-label="Search sections">
+            <label for="q" class="muted">Search</label>
+            <input id="q" name="q" type="search" inputmode="search" placeholder="Filter: iptables, OPNsense, wazuh…" aria-controls="main" aria-describedby="search-help" autocomplete="off" />
+          </div>
+          <button id="toggle-theme" class="btn" type="button" aria-pressed="false" title="Toggle dark/light">🌓 Theme</button>
+          <button id="expand-all" class="btn" type="button" title="Expand all sections">➕ Expand</button>
+          <button id="collapse-all" class="btn" type="button" title="Collapse all sections">➖ Collapse</button>
+          <button id="print" class="btn primary" type="button" title="Print / Save as PDF">🖨️ Print</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container" tabindex="-1">
+    <section class="hero">
+      <!-- CHANGED: Title and term from docx -->
+      <div class="title">Course Outline — <span style="color:var(--accent)">Term 2 (2025-2026)</span></div>
+      <div class="meta">Group 1 • Term 2 • Location: online &amp; <strong>2F.20</strong> (see dates, and locations)</div>
+    </section>
+
+    <section aria-labelledby="overview-h">
+      <div class="grid cols-2">
+        <article class="card">
+          <h2 id="overview-h">Overview</h2>
+          <!-- CONTENT: Data from docx -->
+          <p><strong>Course Title:</strong> Cyber Defense &nbsp;&nbsp; <strong>Course Number:</strong> 420-2C1-DW</p>
+          <p><strong>Course Hours:</strong> 90 &nbsp;&nbsp; <strong>Ponderation:</strong> 3–3–3 &nbsp;&nbsp; <strong>Credits:</strong> 3</p>
+          <p><strong>Prerequisite:</strong> None &nbsp;&nbsp; <strong>Corequisite:</strong> None</p>
+          <p><strong>Teacher:</strong> &nbsp;<a href="mailto:agrozdanov@dawsoncollege.qc.ca" class="btn" rel="noopener noreferrer">agrozdanov@dawsoncollege.qc.ca</a> <span class="muted">(reply within 24 hours)</span></p>
+          <div class="sticky-note" role="note">
+            <p><strong>Course Description.</strong> Building on the foundational knowledge acquired in Preventative Monitoring, this course delves into advanced techniques for hardening hosts and securing networks and data. Students will learn to utilize appropriate tools, implement robust access control measures, and apply cryptographic techniques to safeguard information systems. This course is designed to equip students with the skills necessary to protect against cyber threats and prepares them for the subsequent course in the series, Incident Management.</p>
+          </div>
+        </article>
+        <article class="card">
+          <h2>Outcomes &amp; Assessment</h2>
+          <!-- CONTENT: Evaluation breakdown from docx -->
+          <div class="kpi">
+            <div class="card" aria-label="Labs or Quizzes 30%"><h3>Labs or Quizzes</h3><p class="muted">30%</p></div>
+            <div class="card" aria-label="Midterm Exam 30%"><h3>Midterm Exam</h3><p class="muted">30%</p></div>
+            <div class="card" aria-label="Final Exam 40%"><h3>Final Exam</h3><p class="muted">40%</p></div>
+          </div>
+          <!-- CONTENT: Learning Outcomes from docx -->
+          <h3 style="margin-top:1.5rem;">Course Learning Outcomes</h3>
+          <ul style="padding-left: 1.25rem; margin-top: 0.5rem;">
+            <li>Secure a network through perimeter defense and network segmentation.</li>
+            <li>Control access to hosts and harden them using a variety of hardening techniques.</li>
+            <li>Apply the relevant cryptographic techniques to secure systems, as well as stored and transitory data.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="schedule-h" style="margin-top:1rem">
+      <article class="card">
+        <h2 id="schedule-h">Weekly Schedule of Learning Activities</h2>
+        <p id="search-help" class="muted">Tip: Type a keyword to filter (e.g., “firewall”, “OPNsense”, “Wazuh”, “honeypot”).</p>
+
+        <!-- CONTENT: Week 1 from docx -->
+        <details class="accordion" data-week="1" open>
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 1 — Nov 18-22, 2025</span></div><span class="chip">12.5 hrs total</span></summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (7.5hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Introduction to Cyber Defense &amp; Network Security Fundamentals</p>
+                <ul>
+                  <li>Course overview, defense-in-depth principles</li>
+                  <li>Introduction to network firewalls and their role in perimeter defense</li>
+                  <li>Understanding stateful inspection concepts</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Linux Firewall Fundamentals</p>
+                <ul>
+                  <li>Deep dive into iptables (chains, tables, rules, stateful inspection)</li>
+                  <li>Introduction to UFW for simplified firewall management</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <ul>
+                  <li>Configuring iptables rules manually (e.g., allowing SSH, blocking specific IPs)</li>
+                  <li>Installing and configuring UFW on a Linux VM to manage firewall rules</li>
+                </ul>
+                <div class="chip" style="margin-top:1rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Secure a network through perimeter defense and network segmentation.</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- CONTENT: Week 2 from docx -->
+        <details class="accordion" data-week="2">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 2 — Nov 24-29, 2025</span></div><span class="chip">15.5 hrs total</span></summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (10.5hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Dedicated Network Firewalls - OPNsense Introduction</p>
+                <ul>
+                  <li>Overview of OPNsense as a perimeter firewall distribution</li>
+                  <li>Installation and basic configuration concepts</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Advanced OPNsense Features &amp; Network Segmentation</p>
+                <ul>
+                  <li>Implementing VLANs for network segmentation</li>
+                  <li>Introduction to VPN basics</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <ul>
+                  <li>Installing OPNsense in a virtual machine</li>
+                  <li>Performing initial setup, configuring WAN and LAN interfaces, and setting up a basic outbound NAT rule</li>
+                  <li>Advanced firewall rules for inter-VLAN communication</li>
+                  <li>Creating VLANs within OPNsense and assigning them to interfaces</li>
+                  <li>Defining firewall rules between VLANs to enforce network segmentation</li>
+                  <li>Basic VPN client configuration for remote access</li>
+                </ul>
+                <div class="chip" style="margin-top:1rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Secure a network through perimeter defense and network segmentation.</div>
+                <div class="chip" style="margin-top:0.5rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Application of access control measures.</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- CONTENT: Week 3 from docx -->
+        <details class="accordion" data-week="3">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 3 — Dec 1-6, 2025</span></div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <span class="chip" style="background:color-mix(in oklab, var(--warn) 25%, var(--bg-2)); border-color:var(--warn);">Midterm Assessment</span>
+              <span class="chip">15.5 hrs total</span>
+            </div>
+          </summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (10.5hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Dedicated Network Firewalls - IPFire Introduction</p>
+                <ul>
+                  <li>Overview of IPFire</li>
+                  <li>Its distinct zone model (Red, Green, Blue, Orange) and its core features</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">IPFire Lab</p>
+                <ul>
+                  <li>Installing IPFire in a virtual machine</li>
+                  <li>Configuring network zones (Red, Green, Orange)</li>
+                  <li>Implementing basic firewall rules to control traffic flow</li>
+                </ul>
+                 <p style="margin-top: 0.5rem; font-weight: 700;">Midterm Review &amp; Assessment</p>
+                <ul>
+                  <li>Comprehensive review of firewalls, network segmentation, host hardening, and access control</li>
+                  <li>Review exercises and scenario discussions</li>
+                  <li><strong>Midterm Assessment: Practical exam (in class 2F.2)</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- CONTENT: Week 4 from docx -->
+        <details class="accordion" data-week="4">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 4 — Dec 8-13, 2025</span></div><span class="chip">15.5 hrs total</span></summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (10.5hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Host Hardening - Basic Operating System Security</p>
+                <ul>
+                  <li>Principles of least privilege</li>
+                  <li>Secure configurations (e.g., SSH hardening, disabling unnecessary services, user/group management)</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Host Hardening - Access Control &amp; Fail2Ban</p>
+                <ul>
+                  <li>Linux file permissions (chmod, chown) and Access Control Lists (ACLs)</li>
+                  <li>Introduction to automated host-based protection with Fail2Ban</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Hardening a Linux VM</p>
+                <ul>
+                  <li>Modifying default SSH port, disabling root login, configuring sudo privileges</li>
+                  <li>Disabling unneeded system services</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Permissions &amp; Fail2Ban Lab</p>
+                <ul>
+                  <li>Practicing Linux file/directory permissions and implementing ACLs</li>
+                  <li>Installing and configuring Fail2Ban to protect SSH from brute-force attacks</li>
+                </ul>
+                <div class="chip" style="margin-top:1rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Control access to hosts and harden them using a variety of hardening techniques.</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- CONTENT: Week 5 from docx -->
+        <details class="accordion" data-week="5">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 5 — Dec 15-20, 2025</span></div><span class="chip">15.5 hrs total</span></summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (10.5hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Intrusion Detection Systems (NIDS/NSM) - Security Onion</p>
+                <ul>
+                  <li>Introduction to IDS/IPS concepts, signature vs. anomaly detection</li>
+                  <li>Overview of Security Onion architecture (Suricata, Zeek for network visibility)</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Host-based IDS &amp; SIEM - Wazuh</p>
+                <ul>
+                  <li>Deep dive into Host-based IDS (HIDS) principles</li>
+                  <li>Introduction to Wazuh as a comprehensive HIDS with SIEM capabilities</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Security Onion Lab</p>
+                <ul>
+                  <li>Deploying a basic Security Onion instance</li>
+                  <li>Configuring Suricata for network traffic monitoring</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Wazuh Lab</p>
+                <ul>
+                  <li>Installing the Wazuh agent on a Linux VM</li>
+                  <li>Configuring File Integrity Monitoring (FIM)</li>
+                  <li>Practicing basic log analysis and exploring alerts</li>
+                </ul>
+                <div class="chip" style="margin-top:1rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Secure a network through perimeter defense...</div>
+                <div class="chip" style="margin-top:0.5rem; height: auto; line-height: 1.4; padding-top: .4rem; padding-bottom: .4rem;">Control access to hosts and harden them...</div>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- CONTENT: Week 6 from docx -->
+        <details class="accordion" data-week="6">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Week 6 — Jan 6-10, 2026</span></div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <span class="chip" style="background:color-mix(in oklab, var(--danger) 25%, var(--bg-2)); border-color:var(--danger);">Final Assessment</span>
+              <span class="chip">13.0 hrs total</span>
+            </div>
+          </summary>
+          <div class="panel">
+            <div class="grid cols-2">
+              <div>
+                <h4>Theory (8.0hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Honeypots – OpenCanary and Cowrie</p>
+                <ul>
+                  <li>Introduction to honeypots and honeynets (low, medium, high interaction)</li>
+                  <li>Role in threat intelligence gathering</li>
+                  <li>Deep dive into medium-interaction honeypots (SSH/Telnet emulation)</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Lab (5.0hrs)</h4>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Honeypot Lab</p>
+                <ul>
+                  <li>Deploying OpenCanary, configuring emulated services (HTTP, SSH, SMB)</li>
+                  <li>Deploying Cowrie, interacting as an "attacker" to observe logs</li>
+                </ul>
+                <p style="margin-top: 0.5rem; font-weight: 700;">Final Review &amp; Assessment</p>
+                <ul>
+                  <li>Comprehensive review of all course topics</li>
+                  <li>Integrating firewalls, IDS, and honeypots for layered defense</li>
+                  <li>Complex lab scenario integrating multiple tools</li>
+                  <li><strong>Final Theory / Final Lab Assessment (in class 2F.2)</strong></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </article>
+    </section>
+
+    <!-- NEW SECTION: For policies and competency details -->
+    <section aria-labelledby="policies-h" style="margin-top:1rem">
+      <h2 id="policies-h" style="margin-left: .2rem;">Evaluation &amp; Competency Details</h2>
+      <article>
+        <!-- Evaluation Table -->
+        <details class="accordion" data-week="eval">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Evaluation Breakdown &amp; Dates</span></div></summary>
+          <div class="panel">
+            <table>
+              <thead>
+                <tr><th>Component</th><th>Tentative Date</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Review Final Quiz (Formative)</td>
+                  <td>December 6th, 2025 (morning - online)</td>
+                  <td>FORMATIVE</td>
+                </tr>
+                <tr>
+                  <td>Labs or Quizzes</td>
+                  <td>Nov 29, Dec 4, Dec 13, Dec 20, Jan 10</td>
+                  <td>30%</td>
+                </tr>
+                <tr>
+                  <td>Midterm Exam</td>
+                  <td>December 6th, 2025 (afternoon - in class - 2F.20)</td>
+                  <td>30%</td>
+                </tr>
+                <tr>
+                  <td>Final Exam</td>
+                  <td>January 10th, 2026 (afternoon - in class - 2F.20)</td>
+                  <td>40%</td>
+                </tr>
+                <tr>
+                  <td><strong>Total</strong></td>
+                  <td></td>
+                  <td><strong>100%</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>Note:</strong> A minimum grade total of 60% must be achieved to successfully complete this course with a passing grade. Students must successfully pass the summative assessment element.</p>
+          </div>
+        </details>
+
+        <!-- Competency Table -->
+        <details class="accordion" data-week="competency">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Competency Details (EZ03)</span></div><span class="chip">EZ03 - Application of access control measures</span></summary>
+          <div class="panel">
+            <p>This course addresses competency <strong>EZ03: Application of access control measures</strong> in its entirety.</p>
+            <div class="grid cols-2">
+              <div>
+                <h4>Achievement Context</h4>
+                <ul>
+                  <li>For an entire network comprising various platforms.</li>
+                  <li>To respond to a one-time request or a request for services.</li>
+                  <li>Working independently.</li>
+                  <li>In collaboration with analysts and other technicians.</li>
+                  <li>In accordance with internal policies, practices and procedures.</li>
+                  <li>Based on risk analysis.</li>
+                  <li>With the help of: technical manuals, documents describing infrastructure, equipment, tools and software.</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Performance Criteria (Overall)</h4>
+                <ul>
+                  <li>Compliance with regulations & professional ethics.</li>
+                  <li>Demonstration of autonomy.</li>
+                  <li>Effective priority management.</li>
+                  <li>Problem-solving skills.</li>
+                  <li>Compliance with policies, standards, and constraints.</li>
+                  <li>Compliance with best practices in cybersecurity.</li>
+                  <li>Effective work methods.</li>
+                  <li>Appropriate use of equipment, tools and software.</li>
+                  <li>Detailed documentation of operations carried out.</li>
+                </ul>
+              </div>
+            </div>
+            
+            <h4 style="margin-top: 1.5rem;">Elements of the Competency</h4>
+            <table>
+              <thead>
+                <tr><th>Element</th><th>Performance Criteria</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>1. Apply cyber defense techniques.</strong></td>
+                  <td>
+                    1.1 Correct identification of perimeter elements.<br>
+                    1.2 Implementation of appropriate security measures on the perimeter.<br>
+                    1.3 Subdivision of the network into relevant zones.<br>
+                    1.4 Appropriate configuration of active defense systems.<br>
+                    1.5 Application of relevant redundancy measures.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>2. Control access to hosts.</strong></td>
+                  <td>
+                    2.1 Correct identification of the position, role and nature of the host.<br>
+                    2.2 Effective control of digital identities, permissions, and access.<br>
+                    2.3 Compliant configuration of a system firewall.<br>
+                    2.4 Application of the relevant control measures according to the role of the system.<br>
+                    2.5 Systematic application of reinforcement measures (hardening).<br>
+                    2.6 Rigorous validation of the effectiveness of access control measures applied.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>3. Control access to networks.</strong></td>
+                  <td>
+                    3.1 Effective control of digital identities, permissions, and access rights.<br>
+                    3.2 Determination of appropriate access to the various network zones.<br>
+                    3.3 Compliant configuration of a network firewall.<br>
+                    3.4 Correct installation of intrusion prevention and detection systems.<br>
+                    3.5 Appropriate use of security protocols on the wired and wireless network.<br>
+                    3.6 Rigorous validation of the effectiveness of the access-control measures applied.
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>4. Apply cryptographic techniques.</strong></td>
+                  <td>
+                    4.1 Correct application of the basic concepts of cryptography.<br>
+                    4.2 Compliant implementation of the main cryptosystems.<br>
+                    4.3 Analysis that summarizes the main attacks on cryptographic systems.<br>
+                    4.4 Correct assessment of the relative effectiveness of different cryptographic systems.<br>
+                    4.5 Use of the appropriate techniques to secure transitory and stored data.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+        
+        <!-- Policies -->
+        <details class="accordion" data-week="policies">
+          <summary><div class="summary-row"><span class="chev">▶</span> <span>Institutional Policies (ISEP)</span></div></summary>
+          <div class="panel" style="font-size: 0.9rem; line-height: 1.6;">
+            <p><strong>Institutional Student Evaluation Policy (ISEP):</strong> ISEP is designed to promote equitable and effective evaluation of student learning. The policy describes the rights and obligations of students, faculty, departments, programs, and the College administration. This course outline has been prepared in conformity with ISEP. The full policy is available on the Dawson College webpage.</p>
+            <p><strong>Literacy Standards:</strong> The Computer Science Department recognizes that literacy in all its forms is essential. In graded activities, teachers may deduct up to 10% for grammar, spelling, punctuation and/or syntax errors.</p>
+            <p><strong>Academic Integrity Policy:</strong> Cheating and Plagiarism are serious offences and will result in failure in the assignment, test or exam, or entire evaluation component and may also result in failure of the course. Further disciplinary action might be taken. Every instance must be reported, with explanation, in writing, to the appropriate Dean. (ISEP Section V-A)</p>
+            <p><strong>Code of Conduct:</strong> “Everyone has the right to a safe and non-violent environment. Students are obliged to conduct themselves as stated in the Student Code of Conduct and in the ISEP section on the roles and responsibilities of students.” (ISEP section II-D).</p>
+            <p><strong>Professional Conduct:</strong> Faculty members in the program are responsible for assessing student behaviour in terms of suitability to the profession, advising students that exhibit inappropriate behaviour, and reporting said behaviour to the Program Coordinator when necessary. (ISEP section IV-O.2)</p>
+            <p><strong>Attendance Policy:</strong> “Students should refer to the Institutional Student Evaluation Policy (ISEP section IV-C) regarding attendance.”</p>
+            <p><strong>Policy on Religious Observances Statements:</strong> “Students observing religious holidays must inform their teachers, in writing, as prescribed in the ISEP Policy on Religious Observances, no later than the end of the second week of the impacted semester or term. This applies both to the semester or term, as well as to any final examination period.” (ISEP section IV-D).</p>
+          </div>
+        </details>
+
+      </article>
+    </section>
+
+    <!-- --- Disclaimers Section (from template) --- -->
+    <section id="legal-warning" class="disclaimers">
+        <div class="disclaimer-box disclaimer-warn">
+            <h3>⚠️ Cybersecurity Lab Warning</h3>
+            <p>The skills and techniques discussed in this course are for educational and authorized purposes ONLY. All hands-on practice must be conducted in a secure, isolated lab environment (e.g., virtual machines) completely disconnected from any public or private networks. Applying these skills to any system, network, or application without explicit, written permission from the owner is illegal and may result in severe civil and criminal penalties. Practice legally and ethically.</p>
+        </div>
+
+        <div class="disclaimer-box disclaimer-danger">
+            <h3>Legal Disclaimer</h3>
+            <p>The information provided in this course outline and all associated materials is for informational purposes only and does not constitute professional advice. The author, Cyber Soho, makes no warranties regarding the accuracy, completeness, or suitability of this information. Any reliance you place on such information is strictly at your own risk. In no event will the author be liable for any loss or damage including, without limitation, indirect or consequential loss or damage, or any loss or damage whatsoever arising from the use of this course or the information contained within.</p>
+        </div>
+
+        <div class="disclaimer-box disclaimer-info">
+            <h3>Non-Affiliation & Editorial Disclaimer</h3>
+            <p>This course and its content represent the editorial opinion and intellectual property of Cyber Soho. The author's relationship with Dawson College is that of a "non-tenured visiting teacher". The author is not otherwise affiliated with, endorsed by, or partnered with Dawson College, or any other organization or certification body mentioned or unmentioned. All product names, logos, and brands are property of their respective owners.</p>
+        </div>
+    </section>
+    <!-- --- End Disclaimers Section --- -->
+
+
+    <section class="footer">
+      <div class="copyright">
+        <p>Copyright &copy; 2025 Cyber Soho. All Rights Reserved.</p>
+        <p>This content is the exclusive intellectual property of the author and may not be reused without permission.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- --- Password Protection Modal (from template) --- -->
+  <div id="password-overlay">
+    <div id="password-modal" role="dialog" aria-modal="true" aria-labelledby="password-heading">
+      <h2 id="password-heading" style="margin-top:0;">Password Required</h2>
+      <!-- CHANGED: Updated text for the new course -->
+      <p>Please enter the password to the Course of Cyber Defense — 420-2C1-DW.
+If you want to Cancel the action, click outside the "Password Required" box.
+You can see the entered password by clicking on the "eye" icon.</p>
+      <div class="input-group">
+        <input type="password" id="password-input" placeholder="Enter password..." aria-label="Password" />
+        <button id="toggle-password" type="button" title="Show/hide password">
+          <span>👁️</span>
+        </button>
+      </div>
+      <button id="submit-password" type="button">Unlock</button>
+      <div id="password-error" role="alert" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script nonce="tr-fixed-2025">
+    (function(){
+      'use strict';
+      const $ = (s, el=document) => el.querySelector(s);
+      const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
+
+      // Ensure DOM is ready before binding
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once:true });
+      } else { init(); }
+
+      function init(){
+        const themeBtn = $('#toggle-theme');
+        const root = document.documentElement;
+        function setTheme(mode){
+          root.setAttribute('data-theme', mode);
+          if (themeBtn) themeBtn.setAttribute('aria-pressed', String(mode === 'light'));
+          try { localStorage.setItem('tr.theme', mode); } catch {}
+        }
+        let saved=null; try { saved = localStorage.getItem('tr.theme'); } catch {}
+        setTheme(saved === 'light' ? 'light' : 'dark');
+        if (themeBtn) themeBtn.addEventListener('click', () => setTheme(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
+
+        const expandAll = $('#expand-all');
+        const collapseAll = $('#collapse-all');
+        const detailsNodes = $$('details.accordion');
+        if (expandAll) expandAll.addEventListener('click', () => detailsNodes.forEach(d => d.open = true));
+        if (collapseAll) collapseAll.addEventListener('click', () => detailsNodes.forEach(d => d.open = false));
+
+        const printBtn = $('#print');
+        if (printBtn) printBtn.addEventListener('click', () => window.print());
+
+        const q = $('#q');
+        if (q) q.addEventListener('input', () => {
+          const kw = (q.value || '').toLowerCase().trim();
+          detailsNodes.forEach(sec => { sec.style.display = !kw || sec.textContent.toLowerCase().includes(kw) ? '' : 'none'; });
+        });
+        
+        // --- Password Protection Logic ---
+        
+        // *** THIS IS THE CHANGED LINE ***
+        // Stored Base64 encoded password.
+        const CORRECT_PASSWORD_B64 = "Y3liZXItZGVmZW5jZS0yMDI1IQ=="; 
+        const SESSION_KEY = "tr_authed_2025"; // Re-using session key from template
+
+        const mainContent = $('#main');
+        const overlay = $('#password-overlay');
+        const modal = $('#password-modal');
+        const passwordInput = $('#password-input');
+        const submitBtn = $('#submit-password');
+        const errorMsg = $('#password-error');
+        const togglePassword = $('#toggle-password');
+        const toggleIcon = $('#toggle-password span');
+
+        // Function to show the main content
+        function showContent() {
+          if (overlay) overlay.style.display = 'none';
+          if (mainContent) {
+            mainContent.classList.remove('content-protected');
+            mainContent.removeAttribute('aria-hidden');
+            mainContent.removeAttribute('tabindex');
+          }
+        }
+
+        // Function to show the password modal
+        function showModal() {
+          if (overlay) overlay.style.display = 'flex';
+          if (mainContent) {
+            mainContent.classList.add('content-protected');
+            mainContent.setAttribute('aria-hidden', 'true');
+            mainContent.setAttribute('tabindex', '-1');
+          }
+          if (passwordInput) passwordInput.focus();
+        }
+
+        // Function to attempt login
+        function attemptLogin() {
+          if (!passwordInput) return;
+          // Check the Base64 encoded input against the stored Base64 password
+          try {
+            if (btoa(passwordInput.value) === CORRECT_PASSWORD_B64) {
+              try {
+                sessionStorage.setItem(SESSION_KEY, 'true');
+              } catch (e) {
+                console.warn('Session storage is unavailable. Password protection will not persist for this session.');
+              }
+              showContent();
+              if (errorMsg) errorMsg.textContent = '';
+            } else {
+              if (errorMsg) errorMsg.textContent = 'Incorrect password. Please try again.';
+              if (passwordInput) passwordInput.value = '';
+              if (passwordInput) passwordInput.focus();
+            }
+          } catch (e) {
+            // Handle potential btoa errors (e.g., invalid characters)
+            if (errorMsg) errorMsg.textContent = 'Error processing password.';
+            console.error('Password encoding error:', e);
+          }
+        }
+
+        // Check auth status on page load
+        let isAuthed = false;
+        try {
+          isAuthed = (sessionStorage.getItem(SESSION_KEY) === 'true');
+        } catch (e) {
+          console.warn('Session storage is unavailable. Proceeding without session auth.');
+        }
+
+        if (isAuthed) {
+          showContent();
+        } else {
+          showModal();
+
+          // Bind event listeners only if modal is shown
+          if (submitBtn) {
+            submitBtn.addEventListener('click', attemptLogin);
+          }
+
+          if (passwordInput) {
+            passwordInput.addEventListener('keypress', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission (if any)
+                attemptLogin();
+              }
+            });
+          }
+
+          if (togglePassword) {
+            togglePassword.addEventListener('click', () => {
+              if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                if (toggleIcon) toggleIcon.textContent = '🙈';
+              } else {
+                passwordInput.type = 'password';
+                if (toggleIcon) toggleIcon.textContent = '👁️';
+              }
+              passwordInput.focus();
+            });
+          }
+          
+          // Handle "click outside to cancel"
+          if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                // Check if the click is on the overlay itself, not on the modal
+                if (e.target === overlay) {
+                    // Re-focus the password input to indicate the modal is active
+                    if (passwordInput) passwordInput.focus();
+                    
+                    // Add a slight "shake" animation to the modal
+                    if(modal) {
+                        modal.style.animation = 'shake 0.3s ease-out';
+                        setTimeout(() => {
+                            if (modal) modal.style.animation = '';
+                        }, 300);
+                    }
+                }
+            });
+          }
+        }
+        // --- End Password Protection Logic ---
+      }
+    })();
+  </script>
+</body>
+</html>
