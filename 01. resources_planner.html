@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Defense Labs Resource Planner</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Use the Inter font family -->
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Container for charts to ensure responsiveness */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        /* Custom styles for platform suitability badges */
+        .platform-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.25;
+            width: 100%;
+        }
+        .platform-badge-rec {
+            background-color: #DCFCE7; /* green-100 */
+            color: #166534; /* green-800 */
+        }
+        .platform-badge-feas {
+            background-color: #FEF3C7; /* yellow-100 */
+            color: #92400E; /* yellow-800 */
+        }
+        .platform-badge-not {
+            background-color: #FEE2E2; /* red-100 */
+            color: #991B1B; /* red-800 */
+        }
+        .platform-badge-rec::before, .platform-badge-feas::before, .platform-badge-not::before {
+            content: '';
+            display: inline-block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        .platform-badge-rec::before { background-color: #22C55E; /* green-500 */ }
+        .platform-badge-feas::before { background-color: #F59E0B; /* yellow-500 */ }
+        .platform-badge-not::before { background-color: #EF4444; /* red-500 */ }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <!-- Page Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Cyber Defense Labs Resource Planner</h1>
+            <p class="mt-2 text-lg text-gray-600">Interactive guide to the technical requirements for EACH instance in a lab and choices of optimal deployment.</p>
+        </header>
+
+        <main>
+            <!-- Filters Section -->
+            <section id="filters" class="mb-8 p-6 bg-white rounded-xl shadow-sm">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Filter Labs</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Week Filter -->
+                    <div>
+                        <label for="weekFilter" class="block text-sm font-medium text-gray-700">Filter by Week</label>
+                        <select id="weekFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="all">All Weeks</option>
+                            <option value="1">Week 1</option>
+                            <option value="2">Week 2</option>
+                            <option value="3">Week 3</option>
+                            <option value="4">Week 4</option>
+                            <option value="5">Week 5</option>
+                            <option value="6">Week 6</option>
+                        </select>
+                    </div>
+                    <!-- RAM Filter -->
+                    <div>
+                        <label for="ramFilter" class="block text-sm font-medium text-gray-700">Recommended RAM</label>
+                        <select id="ramFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="all">All RAM</option>
+                            <option value="low">Low (1-2 GB)</option>
+                            <option value="medium">Medium (4-8 GB)</option>
+                            <option value="high">High (12+ GB)</option>
+                        </select>
+                    </div>
+                    <!-- Deployment Filter -->
+                    <div>
+                        <label for="deploymentFilter" class="block text-sm font-medium text-gray-700">Deployment Platform</label>
+                        <select id="deploymentFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="all">All Platforms</option>
+                            <option value="virtualbox">VirtualBox (Recommended)</option>
+                            <option value="aws">AWS (Feasible)</option>
+                            <option value="docker">Docker (Feasible)</option>
+                        </select>
+                    </div>
+                    <!-- OS Filter -->
+                    <div>
+                        <label for="osFilter" class="block text-sm font-medium text-gray-700">Suitable OS</label>
+                        <select id="osFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="all">All Operating Systems</option>
+                            <!-- Options will be dynamically populated by JS -->
+                        </select>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Visualizations Section -->
+            <section id="visualizations" class="mb-8 p-6 bg-white rounded-xl shadow-sm">
+                 <div class="text-center mb-8">
+                     <h2 class="text-2xl font-semibold text-gray-800">Resource Overview (Filtered)</h2>
+                     <p class="mt-1 text-gray-600">Charts dynamically update based on your filter selection above.</p>
+                </div>
+                <div id="charts-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div class="chart-container mx-auto">
+                        <canvas id="ramChart"></canvas>
+                    </div>
+                    <div class="chart-container mx-auto">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                    <div class="chart-container mx-auto lg:col-span-2" style="max-width: 400px; height: 300px;">
+                        <canvas id="deploymentChart"></canvas>
+                    </div>
+                </div>
+                 <div id="no-charts-message" class="hidden text-center text-gray-500 py-8">
+                    <p>No data available for the selected filters.</p>
+                </div>
+            </section>
+
+            <!-- AWS Summary Section (Dynamic) -->
+            <section id="aws-summary" class="mb-8 p-6 bg-white rounded-xl shadow-sm">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">AWS Summary (All Labs)</h2>
+                    <p class="mt-1 text-gray-600">To ensure any lab can be completed, a user should have access to an instance that meets the maximum requirements of the most resource-intensive labs.</p>
+                </div>
+                <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-800 font-medium">Max vCPUs Required</p>
+                        <p id="summary-cpu" class="text-3xl font-bold text-blue-900">...</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-green-800 font-medium">Max RAM Required</p>
+                        <p id="summary-ram" class="text-3xl font-bold text-green-900">...</p>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <p class="text-sm text-yellow-800 font-medium">Recommended Instance</p>
+                        <p id="summary-instance" class="text-3xl font-bold text-yellow-900">...</p>
+                    </div>
+                </div>
+                 <div class="text-center mt-6">
+                    <p class="text-sm text-gray-500">This recommendation ensures a smooth experience for labs like Security Onion and the Capstone project.</p>
+                </div>
+            </section>
+
+            <!-- Lab Cards Section -->
+            <section id="lab-cards">
+                 <div class="text-center mb-8">
+                     <h2 class="text-2xl font-semibold text-gray-800">Lab Details (Filtered)</h2>
+                     <p id="lab-count" class="mt-1 text-gray-600">Showing all labs. Use the filters above to narrow the list.</p>
+                </div>
+                <div id="lab-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Lab cards will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <!-- NEW AWS WARNING SECTION -->
+            <section id="aws-warning" class="mt-12 mb-8 p-6 bg-red-100 border-l-4 border-red-500 rounded-lg shadow-md">
+                <div class="flex items-start">
+                    <div class="text-4xl mr-4">⚠️</div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-red-800">WARNING: Potential AWS Costs</h2>
+                        <p class="mt-2 text-lg text-red-700">
+                            Using AWS for these labs, especially high-resource instances like <strong>t3.xlarge</strong> or <strong>t3.2xlarge</strong>, can incur <strong>SIGNIFICANT COSTS</strong>.
+                        </p>
+                        <p class="mt-2 text-md text-red-700 font-semibold">
+                            Always ensure you <strong>STOP</strong> or <strong>TERMINATE</strong> your EC2 instances after each lab session. Do not leave them running overnight or when not in use.
+                        </p>
+                    </div>
+                </div>
+            </section>
+            <!-- END NEW AWS WARNING SECTION -->
+
+        </main>
+    </div>
+
+    <script>
+        // --- DATASET ---
+        // This data is derived from the provided course_outline.docx
+        const labData = [
+          {
+            id: 1.1,
+            week: 1,
+            title: "Linux Firewall - iptables/UFW",
+            tools: "iptables, UFW",
+            vcpus: 1,
+            ram: 1,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Not Recommended" },
+            aws_instance: "t3.micro",
+            notes: "Lab focuses on host-based firewalls. AWS equivalent is Security Groups, but lab specifics require a VM."
+          },
+          {
+            id: 2.1,
+            week: 2,
+            title: "OPNsense Firewall Setup",
+            tools: "OPNsense",
+            vcpus: 2,
+            ram: 2,
+            os: "OPNsense (FreeBSD)",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Not Recommended" },
+            aws_instance: "t3.small",
+            notes: "Requires a dedicated VM as a gateway. VirtualBox is ideal for network simulation."
+          },
+          {
+            id: 2.2,
+            week: 2,
+            title: "OPNsense VLAN & VPN",
+            tools: "OPNsense (VLANs, VPN)",
+            vcpus: 2,
+            ram: 2,
+            os: "OPNsense (FreeBSD)",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Not Recommended" },
+            aws_instance: "t3.small",
+            notes: "Builds on Lab 2.1. Involves virtual network configuration."
+          },
+          {
+            id: 3.1,
+            week: 3,
+            title: "IPFire Firewall Setup",
+            tools: "IPFire",
+            vcpus: 2,
+            ram: 2,
+            os: "IPFire (Linux)",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Not Recommended" },
+            aws_instance: "t3.small",
+            notes: "Alternative to OPNsense. VirtualBox is best for configuring network zones (Red, Green, Orange)."
+          },
+          {
+            id: 4.1,
+            week: 4,
+            title: "Linux Host Hardening",
+            tools: "ssh, sudo, services",
+            vcpus: 1,
+            ram: 1,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Recommended", docker: "Partial" },
+            aws_instance: "t3.micro",
+            notes: "Basic hardening principles. Can be done on any Linux VM. Docker containers are hardened differently."
+          },
+          {
+            id: 4.2,
+            week: 4,
+            title: "Access Control & Fail2Ban",
+            tools: "chmod, chown, ACLs, Fail2Ban",
+            vcpus: 1,
+            ram: 1,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Recommended", docker: "Feasible" },
+            aws_instance: "t3.micro",
+            notes: "Fail2Ban can be configured on a host (VM/EC2) or in a Docker container to monitor logs."
+          },
+          {
+            id: 5.1,
+            week: 5,
+            title: "Security Onion (NIDS)",
+            tools: "Security Onion (Suricata, Zeek)",
+            vcpus: 4,
+            ram: 12,
+            os: "Security Onion (Rocky)",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Not Recommended" },
+            aws_instance: "t3.xlarge",
+            notes: "HIGH resource lab. Requires a dedicated, powerful VM. Not suitable for Docker."
+          },
+          {
+            id: 5.2,
+            week: 5,
+            title: "Wazuh (HIDS/SIEM)",
+            tools: "Wazuh Server, Wazuh Agent",
+            vcpus: 4,
+            ram: 8,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Recommended", docker: "Recommended" },
+            aws_instance: "t3.large",
+            notes: "Wazuh server and agents can be deployed as VMs, on EC2, or via Docker containers."
+          },
+          {
+            id: 6.1,
+            week: 6,
+            title: "OpenCanary Honeypot",
+            tools: "OpenCanary",
+            vcpus: 1,
+            ram: 1,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Recommended", docker: "Recommended" },
+            aws_instance: "t3.micro",
+            notes: "Lightweight honeypot. Easily deployed in a VM, EC2, or Docker."
+          },
+          {
+            id: 6.2,
+            week: 6,
+            title: "Cowrie Honeypot (SSH/Telnet)",
+            tools: "Cowrie",
+            vcpus: 1,
+            ram: 1,
+            os: "Ubuntu Server",
+            platforms: { virtualbox: "Recommended", aws: "Recommended", docker: "Recommended" },
+            aws_instance: "t3.micro",
+            notes: "Medium-interaction honeypot. Docker is a very common deployment method."
+          },
+          {
+            id: 6.3,
+            week: 6,
+            title: "Capstone: Layered Defense",
+            tools: "Firewall, Web Server, Wazuh, Honeypot",
+            vcpus: 8,
+            ram: 16,
+            os: "Multiple Linux VMs",
+            platforms: { virtualbox: "Recommended", aws: "Feasible", docker: "Partial" },
+            aws_instance: "t3.2xlarge",
+            notes: "Integration lab. Requires multiple VMs and complex networking. VirtualBox is ideal."
+          }
+        ];
+
+        // --- GLOBALVARS ---
+        let ramChart, cpuChart, deploymentChart;
+        const iconMap = {
+            vcpus: '⚙️',
+            ram: '💾',
+            os: '🖥️',
+            aws: '💡'
+        };
+        // Chart colors
+        const chartColors = {
+            backgroundColor: [
+                'rgba(54, 162, 235, 0.6)', // Blue
+                'rgba(75, 192, 192, 0.6)', // Green
+                'rgba(255, 159, 64, 0.6)', // Orange
+                'rgba(255, 99, 132, 0.6)', // Red
+                'rgba(153, 102, 255, 0.6)', // Purple
+                'rgba(255, 206, 86, 0.6)', // Yellow
+                'rgba(199, 199, 199, 0.6)', // Grey
+                'rgba(83, 102, 255, 0.6)', // Indigo
+                'rgba(100, 255, 64, 0.6)', // Light Green
+                 'rgba(255, 99, 255, 0.6)' // Pink
+            ],
+            borderColor: [
+                'rgba(54, 162, 235, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(255, 159, 64, 1)',
+                'rgba(255, 99, 132, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 206, 86, 1)',
+                 'rgba(199, 199, 199, 1)',
+                'rgba(83, 102, 255, 1)',
+                'rgba(100, 255, 64, 1)',
+                'rgba(255, 99, 255, 1)'
+            ],
+        };
+        // Platform colors helper
+        const platformStyleMap = {
+            "Recommended": "platform-badge-rec",
+            "Feasible": "platform-badge-feas",
+            "Partial": "platform-badge-feas",
+            "Not Recommended": "platform-badge-not"
+        };
+
+        // --- HELPER FUNCTIONS ---
+
+        /**
+         * Generates the HTML for platform suitability badges.
+         */
+        function getPlatformHtml(platforms) {
+            let html = '';
+            const platformOrder = { 'virtualbox': 'VirtualBox', 'aws': 'AWS', 'docker': 'Docker' };
+            for (const [key, name] of Object.entries(platformOrder)) {
+                const status = platforms[key];
+                const styleClass = platformStyleMap[status] || 'platform-badge-not';
+                html += `
+                    <div class="platform-badge ${styleClass}">
+                        <span>${name}: ${status}</span>
+                    </div>
+                `;
+            }
+            return html;
+        }
+
+        /**
+         * Populates the OS filter dropdown with unique OS values from labData.
+         */
+        function populateOSFilter() {
+            const osFilter = document.getElementById('osFilter');
+            const osSet = new Set(labData.map(lab => lab.os));
+            osSet.forEach(os => {
+                const option = document.createElement('option');
+                option.value = os;
+                option.textContent = os;
+                osFilter.appendChild(option);
+            });
+        }
+
+        /**
+         * Updates the dynamic summary section with max values from ALL labs.
+         */
+        function updateSummary(data) {
+            const maxCpu = Math.max(...data.map(l => l.vcpus));
+            const maxRam = Math.max(...data.map(l => l.ram));
+            
+            let instance = "t3.micro";
+            if (maxCpu >= 8 || maxRam >= 16) instance = "t3.2xlarge";
+            else if (maxCpu >= 4 || maxRam >= 12) instance = "t3.xlarge";
+            else if (maxCpu >= 4 || maxRam >= 8) instance = "t3.large";
+            else if (maxCpu >= 2 || maxRam >= 4) instance = "t3.medium";
+            else if (maxCpu >= 2 || maxRam >= 2) instance = "t3.small";
+
+            document.getElementById('summary-cpu').textContent = maxCpu;
+            document.getElementById('summary-ram').textContent = `${maxRam} GB`;
+            document.getElementById('summary-instance').textContent = instance;
+        }
+
+        // --- CORE FUNCTIONS ---
+
+        /**
+         * Renders the lab cards based on filtered data.
+         */
+        function renderCards(data) {
+            const grid = document.getElementById('lab-grid');
+            const labCount = document.getElementById('lab-count');
+            grid.innerHTML = '';
+            
+            if (data.length === 0) {
+                grid.innerHTML = `<p class="md:col-span-2 xl:col-span-3 text-center text-gray-500">No labs match the current filters.</p>`;
+                labCount.textContent = 'Found 0 labs. Try broadening your filters.';
+                return;
+            }
+            
+            labCount.textContent = `Found ${data.length} lab(s) matching your filters.`;
+            data.forEach(lab => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-sm p-6 flex flex-col transition-all duration-300 hover:shadow-lg';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-bold text-gray-900">${lab.title}</h3>
+                        <span class="text-sm font-semibold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">Week ${lab.week}</span>
+                    </div>
+                    <p class="text-blue-600 font-semibold mb-4 flex-grow" title="${lab.tools}">${lab.tools}</p>
+                    
+                    <div class="grid grid-cols-3 gap-2 md:gap-4 mb-4 text-center">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <span class="text-xl md:text-2xl">${iconMap.ram}</span>
+                            <p class="text-xs md:text-sm text-gray-700">${lab.ram} GB RAM</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <span class="text-xl md:text-2xl">${iconMap.vcpus}</span>
+                            <p class="text-xs md:text-sm text-gray-700">${lab.vcpus} vCPU(s)</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <span class="text-xl md:text-2xl">${iconMap.os}</span>
+                            <p class="text-xs md:text-sm text-gray-700 truncate" title="${lab.os}">${lab.os}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h4 class="text-sm font-semibold text-gray-800 mb-2">Platform Suitability</h4>
+                        <div class="space-y-2">
+                            ${getPlatformHtml(lab.platforms)}
+                        </div>
+                    </div>
+
+                    <div class="text-sm bg-gray-50 p-3 rounded-lg">
+                        <p class="flex items-center mb-1"><span class="mr-2">${iconMap.aws}</span><strong>AWS Instance:</strong><span class="ml-1">${lab.aws_instance}</span></p>
+                        <p class="text-gray-600 text-xs">${lab.notes}</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        /**
+         * Creates and updates the charts based on filtered data.
+         */
+        function createCharts(data) {
+            const chartsGrid = document.getElementById('charts-grid');
+            const noChartsMessage = document.getElementById('no-charts-message');
+
+            if (ramChart) ramChart.destroy();
+            if (cpuChart) cpuChart.destroy();
+            if (deploymentChart) deploymentChart.destroy();
+            
+            if (!data || data.length === 0) {
+                chartsGrid.classList.add('hidden');
+                noChartsMessage.classList.remove('hidden');
+                return;
+            }
+            
+            chartsGrid.classList.remove('hidden');
+            noChartsMessage.classList.add('hidden');
+
+            const ramCtx = document.getElementById('ramChart').getContext('2d');
+            const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+            const deploymentCtx = document.getElementById('deploymentChart').getContext('2d');
+
+            const labels = data.map(lab => `W${lab.week} - ${lab.title}`);
+
+            // RAM Chart
+            ramChart = new Chart(ramCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Recommended RAM (GB)',
+                        data: data.map(lab => lab.ram),
+                        backgroundColor: chartColors.backgroundColor,
+                        borderColor: chartColors.borderColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'RAM Requirements per Lab' } }
+                }
+            });
+
+            // vCPU Chart
+            cpuChart = new Chart(cpuCtx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Recommended vCPUs',
+                        data: data.map(lab => lab.vcpus),
+                        backgroundColor: chartColors.backgroundColor,
+                        borderColor: chartColors.borderColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                     indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'vCPU Requirements per Lab' } }
+                }
+            });
+
+            // Deployment Suitability Chart
+            const deploymentCounts = data.reduce((acc, lab) => {
+                if (lab.platforms.virtualbox === "Recommended" || lab.platforms.virtualbox === "Feasible") acc.VirtualBox = (acc.VirtualBox || 0) + 1;
+                if (lab.platforms.aws === "Recommended" || lab.platforms.aws === "Feasible") acc.AWS = (acc.AWS || 0) + 1;
+                if (lab.platforms.docker === "Recommended" || lab.platforms.docker === "Feasible") acc.Docker = (acc.Docker || 0) + 1;
+                return acc;
+            }, {});
+
+            deploymentChart = new Chart(deploymentCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(deploymentCounts),
+                    datasets: [{
+                        label: 'Platform Suitability (Count)',
+                        data: Object.values(deploymentCounts),
+                        backgroundColor: [chartColors.backgroundColor[0], chartColors.backgroundColor[2], chartColors.backgroundColor[3]],
+                        borderColor: [chartColors.borderColor[0], chartColors.borderColor[2], chartColors.borderColor[3]],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: 'Lab Suitability by Platform' }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Applies all active filters and re-renders cards and charts.
+         */
+        function applyFilters() {
+            const weekFilter = document.getElementById('weekFilter').value;
+            const ramFilter = document.getElementById('ramFilter').value;
+            const deploymentFilter = document.getElementById('deploymentFilter').value;
+            const osFilter = document.getElementById('osFilter').value;
+
+            let filteredData = labData.filter(lab => {
+                // Week Filter
+                const weekMatch = weekFilter === 'all' || lab.week == weekFilter;
+                
+                // RAM Filter
+                let ramMatch = false;
+                if (ramFilter === 'all') ramMatch = true;
+                else if (ramFilter === 'low') ramMatch = lab.ram >= 1 && lab.ram <= 2;
+                else if (ramFilter === 'medium') ramMatch = lab.ram >= 4 && lab.ram <= 8;
+                else if (ramFilter === 'high') ramMatch = lab.ram >= 12;
+
+                // Deployment Filter
+                let deploymentMatch = false;
+                if (deploymentFilter === 'all') deploymentMatch = true;
+                else if (deploymentFilter === 'virtualbox') deploymentMatch = lab.platforms.virtualbox === "Recommended";
+                else if (deploymentFilter === 'aws') deploymentMatch = lab.platforms.aws === "Recommended" || lab.platforms.aws === "Feasible";
+                else if (deploymentFilter === 'docker') deploymentMatch = lab.platforms.docker === "Recommended" || lab.platforms.docker === "Feasible";
+
+                // OS Filter
+                const osMatch = osFilter === 'all' || lab.os === osFilter;
+                
+                return weekMatch && ramMatch && deploymentMatch && osMatch;
+            });
+            
+            renderCards(filteredData);
+            createCharts(filteredData);
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Populate dynamic filters and summary
+            populateOSFilter();
+            updateSummary(labData);
+            
+            // Add event listeners to all filters
+            document.getElementById('weekFilter').addEventListener('change', applyFilters);
+            document.getElementById('ramFilter').addEventListener('change', applyFilters);
+            document.getElementById('deploymentFilter').addEventListener('change', applyFilters);
+            document.getElementById('osFilter').addEventListener('change', applyFilters);
+            
+            // Initial render on page load
+            applyFilters();
+        });
+
+    </script>
+</body>
+</html>

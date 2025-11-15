@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Lab Environment Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Neutrals (Tailwind grays, blues, reds for warnings) -->
+    <!-- Application Structure Plan: The SPA uses a "Lab-by-Lab" structure. A side navigation allows users to select a specific lab (Lab 1, Lab 2, etc.). The main content area then displays the details for that lab. Within this detail view, the core interaction is a toggle to switch between the "Local Setup" (VMs) and "Cloud Setup" (AWS) options. This structure was chosen to directly answer the user's need: "What do I need for Lab X?". The toggle makes the comparison explicit and digestible, while non-technical-friendly language ("Complexity", "Potential Cost", "Purpose") is used to make the information understandable as requested. -->
+    <!-- Visualization & Content Choices: 
+        - Lab Navigation: Goal: Organize. Viz: HTML/Tailwind list of buttons. Interaction: Click to update main content. Justification: Simple, intuitive navigation.
+        - Setup Toggle: Goal: Compare. Viz: HTML/Tailwind button group. Interaction: Click to show/hide local vs. cloud cards. Justification: This is the primary interactive element, directly comparing the two paths.
+        - VM/Service Cards: Goal: Inform. Viz: HTML/Tailwind styled cards. Interaction: None. Justification: Translates technical specs from the report into simple, purpose-driven blocks with clear "Complexity" and "Cost" indicators for a non-IT audience.
+        - AWS Warning: Goal: Inform (Critical). Viz: HTML/Tailwind red-bordered alert box. Interaction: None. Justification: Clearly surfaces the critical warnings from the source report about AWS complexity and cost.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .nav-btn {
+            @apply w-full text-left px-4 py-3 rounded-lg font-medium text-gray-700 bg-white shadow-sm hover:bg-gray-100 transition-colors duration-200;
+        }
+        .nav-btn.active {
+            @apply bg-blue-600 text-white shadow-lg hover:bg-blue-700;
+        }
+        .toggle-btn {
+            @apply px-6 py-2 rounded-md font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300;
+        }
+        .toggle-btn.active {
+            @apply bg-blue-600 text-white hover:bg-blue-700;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-blue-800">Lab Environment Guide</h1>
+            <p class="text-lg text-gray-600 mt-2">Choosing the Right Setup for Each Lab (Non-Technical Guide)</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8 border-l-4 border-blue-500">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">How to Use This Guide</h2>
+            <p class="text-gray-700 leading-relaxed">
+                This guide explains the computer resources needed for each lab. For every lab, you have two choices. Select a lab to begin.
+            </p>
+            <ul class="list-disc list-inside mt-4 space-y-2">
+                <li><strong class="text-blue-600">💻 Local Setup (Recommended):</strong> The simple, standard path. Uses your local computer's resources. Best for most users.</li>
+                <li><strong class="text-red-600">☁️ Cloud Setup (Advanced):</strong> A powerful but complex option for experts. <strong class="font-semibold">This method can be difficult and may cost money.</strong></li>
+            </ul>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-8">
+            <nav id="main-nav" class="flex-shrink-0 w-full md:w-1/4">
+                <div class="flex flex-col space-y-2">
+                    <button class="nav-btn active" data-lab="lab1">Lab 1: Linux Firewalls</button>
+                    <button class="nav-btn" data-lab="lab2">Lab 2: OPNsense Firewall</button>
+                    <button class="nav-btn" data-lab="lab3">Lab 3: IPFire Firewall</button>
+                    <button class="nav-btn" data-lab="lab4">Lab 4: Host Hardening</button>
+                    <button class="nav-btn" data-lab="lab5">Lab 5: IDS & SIEM</button>
+                    <button class="nav-btn" data-lab="lab6">Lab 6: Honeypots & Final</button>
+                </div>
+            </nav>
+
+            <main id="content-area" class="flex-1">
+                <section id="detail-section">
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+                        <h2 id="lab-title" class="text-3xl font-semibold text-gray-900 mb-2"></h2>
+                        <p id="lab-intro" class="text-lg text-gray-700"></p>
+                    </div>
+
+                    <div class="flex justify-center space-x-4 mb-6">
+                        <button id="toggle-local" class="toggle-btn active">💻 Local Setup</button>
+                        <button id="toggle-cloud" class="toggle-btn">☁️ Cloud Setup</button>
+                    </div>
+
+                    <div id="local-setup-card" class="space-y-4">
+
+                    </div>
+
+                    <div id="cloud-setup-card" class="hidden space-y-4">
+
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const dataStore = {
+            labs: {
+                lab1: {
+                    title: "Lab 1: Linux Firewalls",
+                    intro: "This lab teaches the basics of digital 'security guards' (firewalls) on a single computer.",
+                    local: {
+                        vms: [
+                            { name: "1x Linux Computer", purpose: "To practice setting up basic firewall rules.", complexity: "Low" }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "This setup is simple, but it's the first step into the cloud. Be sure to use the correct 'Security Group' settings.",
+                        services: [
+                            { name: "Cloud Computer (t2.micro)", purpose: "A small cloud server to act as your Linux computer." },
+                        ],
+                        complexity: "Medium",
+                        potentialCost: "Low (Free-Tier eligible)"
+                    }
+                },
+                lab2: {
+                    title: "Lab 2: OPNsense Firewall",
+                    intro: "This lab uses a special, dedicated program (OPNsense) to act as a powerful firewall for a whole network.",
+                    local: {
+                        vms: [
+                            { name: "1x OPNsense Firewall", purpose: "To run the special firewall software.", complexity: "Medium" },
+                            { name: "1x Internal Client", purpose: "A second computer to test if the firewall is working.", complexity: "Low" }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "This is a complex AWS setup. It requires advanced knowledge of cloud networking (VPCs, Subnets, Route Tables) and disabling security features. High risk of misconfiguration.",
+                        services: [
+                            { name: "Cloud Firewall (t3.small)", purpose: "A cloud computer to run the OPNsense software." },
+                            { name: "Cloud Client (t3.micro)", purpose: "A second cloud computer to test the firewall." },
+                            { name: "Custom Cloud Network", purpose: "You must build a private cloud network for these to communicate." }
+                        ],
+                        complexity: "High",
+                        potentialCost: "Medium"
+                    }
+                },
+                lab3: {
+                    title: "Lab 3: IPFire Firewall",
+                    intro: "Similar to Lab 2, this uses another dedicated firewall program (IPFire) and splits the network into different 'zones' (like a public vs. private area).",
+                    local: {
+                        vms: [
+                            { name: "1x IPFire Firewall", purpose: "To run the IPFire software.", complexity: "Medium" },
+                            { name: "1x LAN Client (Green)", purpose: "A computer for the 'private' zone." },
+                            { name: "1x DMZ Client (Orange)", purpose: "A computer for the 'public' zone." }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "Even more complex than Lab 2. This requires creating three separate cloud networks (subnets) and routing traffic between them correctly. Very high risk of misconfiguration.",
+                        services: [
+                            { name: "Cloud Firewall (t3.small)", purpose: "The main IPFire computer with 3 network cards." },
+                            { name: "LAN Client (t3.micro)", purpose: "A computer for the 'private' cloud network." },
+                            { name: "DMZ Client (t3.micro)", purpose: "A computer for the 'public' cloud network." },
+                            { name: "3x Custom Cloud Networks", purpose: "You must build three interconnected networks." }
+                        ],
+                        complexity: "High",
+                        potentialCost: "Medium"
+                    }
+                },
+                lab4: {
+                    title: "Lab 4: Host Hardening",
+                    intro: "This lab focuses on 'locking the doors' of a single computer, making it more secure and watching for break-in attempts.",
+                    local: {
+                        vms: [
+                            { name: "1x Linux Computer", purpose: "The computer you will practice 'hardening' and securing.", complexity: "Low" }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "This is a straightforward cloud lab, good for beginners. You will practice securing the cloud computer itself.",
+                        services: [
+                            { name: "Cloud Computer (t3.micro)", purpose: "The cloud computer you will practice hardening." }
+                        ],
+                        complexity: "Low",
+                        potentialCost: "Low (Free-Tier eligible)"
+                    }
+                },
+                lab5: {
+                    title: "Lab 5: IDS & SIEM",
+                    intro: "This lab sets up advanced 'security cameras' (Security Onion) and a 'security HQ' (Wazuh) to monitor all activity and detect threats.",
+                    local: {
+                        vms: [
+                            { name: "1x Security Onion", purpose: "The 'security camera' system. Needs lots of computer resources.", complexity: "High" },
+                            { name: "1x Wazuh Server", purpose: "The 'security HQ' for collecting alerts.", complexity: "Medium" },
+                            { name: "1x Linux Agent", purpose: "A computer to monitor with your new security tools." }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "This is extremely complex and expensive. Security Onion requires a large, costly cloud computer. You must also use a special (and costly) AWS service called 'VPC Traffic Mirroring' to copy all network traffic for analysis.",
+                        services: [
+                            { name: "Security Onion (t3.xlarge)", purpose: "A very large, expensive cloud computer for monitoring." },
+                            { name: "Wazuh Server (t3.medium)", purpose: "A medium-sized cloud computer for the 'HQ'." },
+                            { name: "Linux Agent (t3.micro)", purpose: "The computer to be monitored." },
+                            { name: "VPC Traffic Mirroring", purpose: "A costly AWS service to copy network data." }
+                        ],
+                        complexity: "Very High",
+                        potentialCost: "High"
+                    }
+                },
+                lab6: {
+                    title: "Lab 6: Honeypots & Final",
+                    intro: "This final lab involves setting up 'digital traps' (Honeypots) to catch attackers, and then combining everything you've learned.",
+                    local: {
+                        vms: [
+                            { name: "1x OpenCanary Honeypot", purpose: "A 'decoy' server to attract attackers.", complexity: "Low" },
+                            { name: "1x Cowrie Honeypot", purpose: "A 'decoy' SSH login to trick attackers.", complexity: "Medium" },
+                            { name: "Final Lab: 5+ Computers", purpose: "Combines all tools from previous labs (Firewall, IDS, etc.).", complexity: "High" }
+                        ],
+                        potentialCost: "None"
+                    },
+                    cloud: {
+                        warning: "The final integration lab is not recommended on AWS for non-experts. It would require running all the complex and expensive services from Labs 2, 5, and 6 at the same time, leading to significant costs and complexity.",
+                        services: [
+                            { name: "Honeypot (t3.micro)", purpose: "A small cloud computer to run OpenCanary or Cowrie." },
+                            { name: "Final Lab: All Services", purpose: "Firewall + Security Onion + Wazuh + Honeypot... all running at once." }
+                        ],
+                        complexity: "Very High",
+                        potentialCost: "Very High"
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initNavigation();
+            initToggles();
+            populateLabView('lab1'); 
+        });
+
+        function initNavigation() {
+            const navButtons = document.querySelectorAll('#main-nav .nav-btn');
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const labId = btn.getAttribute('data-lab');
+                    
+                    navButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    populateLabView(labId);
+                    
+                    document.getElementById('toggle-local').click();
+                });
+            });
+        }
+
+        function initToggles() {
+            const toggleLocal = document.getElementById('toggle-local');
+            const toggleCloud = document.getElementById('toggle-cloud');
+            const localCard = document.getElementById('local-setup-card');
+            const cloudCard = document.getElementById('cloud-setup-card');
+
+            toggleLocal.addEventListener('click', () => {
+                toggleLocal.classList.add('active');
+                toggleCloud.classList.remove('active');
+                localCard.classList.remove('hidden');
+                cloudCard.classList.add('hidden');
+            });
+
+            toggleCloud.addEventListener('click', () => {
+                toggleCloud.classList.add('active');
+                toggleLocal.classList.remove('active');
+                cloudCard.classList.remove('hidden');
+                localCard.classList.add('hidden');
+            });
+        }
+
+        function populateLabView(labId) {
+            const data = dataStore.labs[labId];
+            if (!data) return;
+
+            document.getElementById('lab-title').innerText = data.title;
+            document.getElementById('lab-intro').innerText = data.intro;
+
+            const localCard = document.getElementById('local-setup-card');
+            const cloudCard = document.getElementById('cloud-setup-card');
+
+            localCard.innerHTML = createLocalCard(data.local);
+            cloudCard.innerHTML = createCloudCard(data.cloud);
+        }
+
+        function createLocalCard(data) {
+            const vmCards = data.vms.map(vm => `
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-gray-800">${vm.name}</h4>
+                    <p class="text-gray-600"><strong class="font-medium">Purpose:</strong> ${vm.purpose}</p>
+                    <p class="text-gray-600"><strong class="font-medium">Complexity:</strong> ${vm.complexity}</p>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-blue-500">
+                    <h3 class="text-2xl font-semibold text-blue-700 mb-4">💻 Local Setup (Recommended)</h3>
+                    <p class="mb-4">This is the simplest, most reliable, and cost-free way to do the lab.</p>
+                    <div class="space-y-4 mb-4">
+                        ${vmCards}
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                        <h4 class="text-xl font-semibold text-blue-800">Potential Cost: ${data.potentialCost}</h4>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createCloudCard(data) {
+            const serviceCards = data.services.map(service => `
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <h4 class="text-lg font-semibold text-gray-800">${service.name}</h4>
+                    <p class="text-gray-600"><strong class="font-medium">Purpose:</strong> ${service.purpose}</p>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-white p-6 rounded-lg shadow-lg border-l-4 border-red-500">
+                    <h3 class="text-2xl font-semibold text-red-700 mb-4">☁️ Cloud Setup (Advanced)</h3>
+                    
+                    <div class="bg-red-50 border border-red-200 text-red-800 p-4 rounded-lg mb-4">
+                        <h4 class="font-bold text-lg mb-2">⚠️ Important Warning</h4>
+                        <p>${data.warning}</p>
+                    </div>
+
+                    <div class="space-y-4 mb-4">
+                        ${serviceCards}
+                    </div>
+
+                    <div class="mt-4 p-4 bg-red-50 rounded-lg grid grid-cols-2 gap-4">
+                        <h4 class="text-xl font-semibold text-red-800">Complexity: ${data.complexity}</h4>
+                        <h4 class="text-xl font-semibold text-red-800">Potential Cost: ${data.potentialCost}</h4>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
