@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Hardening Guide for Pop!_OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Harmony (Light Slate, Dark Slate, Cyan Accent) -->
+    <!-- Application Structure Plan: A dashboard/documentation layout with a persistent left-hand sidebar for navigation between the 10 hardening steps and an "Overview" page. The main content area dynamically displays the selected step's details. This structure turns a linear document into an easily navigable, non-linear interactive guide, allowing users to jump to specific topics while maintaining context. Key interactions include one-click navigation and copy-to-clipboard buttons for code snippets to enhance usability for a technical audience. -->
+    <!-- Visualization & Content Choices: The report is a tutorial, not data-driven. Therefore, no charts are used. The primary goal is instruction and clarity. Key Information: Conceptual explanations, command-line instructions, usage guides. Presentation Method: Structured text sections with clear typography, distinct code blocks. Interaction: Clickable navigation (sidebar/cards) to switch content views, and copy-to-clipboard buttons for all shell commands. Justification: This approach directly supports the user's goal of easily following a technical guide, reducing errors from re-typing commands and making the content digestible in discrete, manageable sections. Library/Method: Vanilla JS, Tailwind CSS, Unicode icons. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .sidebar-link.active {
+            background-color: #0891b2;
+            color: white;
+        }
+        .code-block {
+            position: relative;
+        }
+        .copy-button {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #374151;
+            color: #d1d5db;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .copy-button:hover {
+            background-color: #4b5563;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar -->
+        <nav class="bg-slate-800 text-white w-full md:w-64 flex-shrink-0">
+            <div class="p-4 border-b border-slate-700">
+                <h1 class="text-xl font-bold text-center">System Hardening</h1>
+                <p class="text-xs text-slate-400 text-center">Pop!_OS 22.04+</p>
+            </div>
+            <ul class="p-2 space-y-1">
+                <li><a href="#overview" data-step="overview" class="sidebar-link active flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">📊 <span>Overview</span></a></li>
+                <li><a href="#step-0" data-step="step-0" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">0️⃣ <span class="truncate">Initial System Update</span></a></li>
+                <li><a href="#step-1" data-step="step-1" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🛡️ <span class="truncate">VPN (Proton VPN)</span></a></li>
+                <li><a href="#step-2" data-step="step-2" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🧱 <span class="truncate">Application Firewall</span></a></li>
+                <li><a href="#step-3" data-step="step-3" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🦠 <span class="truncate">Antivirus (ClamAV)</span></a></li>
+                <li><a href="#step-4" data-step="step-4" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🚫 <span class="truncate">Intrusion Prevention</span></a></li>
+                <li><a href="#step-5" data-step="step-5" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">👻 <span class="truncate">Anti-Rootkit Scanners</span></a></li>
+                <li><a href="#step-6" data-step="step-6" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🌐 <span class="truncate">WAF vs Browser Protection</span></a></li>
+                <li><a href="#step-7" data-step="step-7" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🖱️ <span class="truncate">Browser Protection</span></a></li>
+                <li><a href="#step-8" data-step="step-8" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">📦 <span class="truncate">Mandatory Access Control</span></a></li>
+                <li><a href="#step-9" data-step="step-9" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🔄 <span class="truncate">Automatic Security Updates</span></a></li>
+                <li><a href="#step-10" data-step="step-10" class="sidebar-link flex items-center gap-3 p-2 rounded-md hover:bg-slate-700 transition-colors">🔍 <span class="truncate">System Auditing (AIDE)</span></a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            <div id="content-container">
+                <!-- Overview -->
+                <div id="overview" class="content-step">
+                    <h2 class="text-3xl font-bold mb-4 text-slate-900">Interactive Hardening Guide</h2>
+                    <p class="mb-6 text-slate-600">This application transforms the standard hardening guide into an interactive experience. Each step is broken down into a manageable section, providing clear explanations and one-click copyable commands. Navigate using the sidebar or the cards below to begin securing your Pop!_OS system.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <a href="#step-0" data-step="step-0" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">0️⃣ Initial System Update</h3>
+                            <p class="text-sm text-slate-500">Ensure your OS is fully patched against all known vulnerabilities before starting.</p>
+                        </a>
+                        <a href="#step-1" data-step="step-1" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🛡️ VPN (Proton VPN)</h3>
+                            <p class="text-sm text-slate-500">Encrypt your internet traffic and hide your IP address for privacy and anonymity.</p>
+                        </a>
+                        <a href="#step-2" data-step="step-2" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🧱 Application Firewall</h3>
+                            <p class="text-sm text-slate-500">Monitor and control outgoing network connections on a per-application basis.</p>
+                        </a>
+                        <a href="#step-3" data-step="step-3" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🦠 Antivirus (ClamAV)</h3>
+                            <p class="text-sm text-slate-500">Perform on-demand scans of files and directories for malware.</p>
+                        </a>
+                        <a href="#step-4" data-step="step-4" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🚫 Intrusion Prevention</h3>
+                            <p class="text-sm text-slate-500">Automatically block IP addresses that show malicious behavior like brute-force attacks.</p>
+                        </a>
+                        <a href="#step-5" data-step="step-5" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">👻 Anti-Rootkit Scanners</h3>
+                            <p class="text-sm text-slate-500">Scan for advanced malware designed to hide its presence on your system.</p>
+                        </a>
+                         <a href="#step-6" data-step="step-6" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🌐 WAF vs Browser Protection</h3>
+                            <p class="text-sm text-slate-500">Clarify the difference between server-side and client-side web protection.</p>
+                        </a>
+                        <a href="#step-7" data-step="step-7" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🖱️ Browser Protection</h3>
+                            <p class="text-sm text-slate-500">Block ads, trackers, and malware domains directly within your web browser.</p>
+                        </a>
+                        <a href="#step-8" data-step="step-8" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">📦 Mandatory Access Control</h3>
+                            <p class="text-sm text-slate-500">Use AppArmor to confine applications and prevent exploits from spreading.</p>
+                        </a>
+                        <a href="#step-9" data-step="step-9" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🔄 Automatic Security Updates</h3>
+                            <p class="text-sm text-slate-500">Ensure your system automatically installs critical security patches.</p>
+                        </a>
+                        <a href="#step-10" data-step="step-10" class="overview-card block p-6 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-cyan-500 transition-all">
+                            <h3 class="text-lg font-semibold mb-2 flex items-center gap-3">🔍 System Auditing (AIDE)</h3>
+                            <p class="text-sm text-slate-500">Create a "security seal" to detect unauthorized changes to system files.</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Step 0 -->
+                <div id="step-0" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 0: Initial System Update</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">Before installing any security software, it is critical to ensure the operating system is fully patched against all known vulnerabilities.</p>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Implementation</h3>
+                    <p class="mb-4 text-slate-600">Open a Terminal and run the following commands to synchronize your package lists and apply all available upgrades:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt update
+sudo apt full-upgrade</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+                
+                <!-- Step 1 -->
+                <div id="step-1" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 1: VPN (Proton VPN)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">A Virtual Private Network (VPN) encrypts all your internet traffic and hides your true IP address. This protects your privacy from your Internet Service Provider (ISP), prevents tracking, and makes you anonymous online.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation</h3>
+                    <p class="mb-4 text-slate-600">1. (Optional) Clean up any previous failed attempts to ensure a clean slate:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo rm -f /etc/apt/sources.list.d/proton*
+sudo rm -f /etc/apt/keyrings/proton*
+sudo rm -f /usr/share/keyrings/proton*
+rm -f ./protonvpn-stable-release_1.0.3-3_all.deb</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">2. Manually fetch and store the GPG key to verify the software's authenticity:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo gpg --homedir /tmp --no-default-keyring --keyring /usr/share/keyrings/protonvpn-keyring.gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys EDA3E22630349F1C</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">3. Manually create the repository file to tell `apt` where to find the software:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">echo "deb [signed-by=/usr/share/keyrings/protonvpn-keyring.gpg] https://repo.protonvpn.com/debian stable main" | sudo tee /etc/apt/sources.list.d/protonvpn.list</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">4. Update package lists and install the application:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt update
+sudo apt install -y proton-vpn-gnome-desktop</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Setup & Usage</h3>
+                    <p class="mb-4 text-slate-600">1. To make the VPN icon always visible in the top system tray, install the GNOME AppIndicator extension. <b>You must log out and back in or reboot after installation.</b></p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install gnome-shell-extension-appindicator</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 text-slate-600">2. Open Applications, search for "Proton VPN", and log in.</p>
+                    <p class="mt-2 text-slate-600">3. In the app's settings (gear icon), enable the <b>Kill Switch</b>. This is a critical feature that blocks all internet traffic if the VPN disconnects, preventing your real IP address from being exposed.</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div id="step-2" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 2: Application Firewall (OpenSnitch)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">This acts like "Little Snitch" for Linux. It monitors all outgoing network connections on an application-by-application basis. It alerts you whenever a program tries to access the internet, and you can choose to allow or deny the connection, either temporarily or permanently. This gives you granular control and visibility over your system's network activity.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation</h3>
+                    <p class="mb-4 text-slate-600">1. Download and install the daemon (background service):</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">wget https://github.com/evilsocket/opensnitch/releases/download/v1.6.6/opensnitch_1.6.6-1_amd64.deb
+sudo apt install ./opensnitch_1.6.6-1_amd64.deb</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">2. Download and install the GUI (user interface):</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">wget https://github.com/evilsocket/opensnitch/releases/download/v1.6.6/python3-opensnitch-ui_1.6.6-1_all.deb
+sudo apt install ./python3-opensnitch-ui_1.6.6-1_all.deb</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">3. The installer will warn about a buggy library. Fix it immediately:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install -y python3-pip
+pip3 install grpcio==1.44.0</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Usage: The "Teaching" Phase</h3>
+                    <p class="mb-4 text-slate-600">After installing, you will get many pop-ups. This is normal. Your job is to "teach" OpenSnitch what is allowed. For each pop-up, analyze the application and destination, then choose to Allow or Deny for a specific duration (Once, Until restart, or Forever).</p>
+                    <details class="bg-white p-4 rounded-lg border border-slate-200 mt-4">
+                        <summary class="font-semibold cursor-pointer">View Common Safe Alerts to "Allow Forever"</summary>
+                        <ul class="list-disc list-inside mt-2 space-y-2 text-slate-600">
+                            <li><b>Alert:</b> `firefox-bin is attempting to resolve ... via 127.0.0.53` <br><b>Meaning:</b> Firefox is asking the system to look up a website address. This is a normal part of browsing.</li>
+                            <li><b>Alert:</b> `systemd-resolved is connecting to 10.2.0.1` <br><b>Meaning:</b> The system's DNS service is sending the lookup request through your Proton VPN server. This proves your VPN is working correctly.</li>
+                            <li><b>Alert:</b> `sudo is attempting to resolve pop-os` <br><b>Meaning:</b> A standard internal security check performed by the `sudo` command.</li>
+                            <li><b>Alert:</b> `chronyd is connecting to ... on UDP port 123` <br><b>Meaning:</b> Your system is synchronizing its clock with an internet time server, which is critical for security.</li>
+                            <li><b>Alert:</b> `Pop!_Shop Daemon is resolving dl.flathub.org` <br><b>Meaning:</b> Your app store is checking for software updates from the official Flatpak repository.</li>
+                        </ul>
+                    </details>
+                </div>
+                
+                <!-- Step 3 -->
+                <div id="step-3" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 3: On-Demand Antivirus (ClamAV)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">To scan files, downloads, and external drives for malware when you choose to. On Linux, antivirus is typically used as an on-demand scanner rather than a real-time one, mainly to find Windows-based threats that might be harmless to you but could be passed to others via file sharing.</p>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation & Setup</h3>
+                    <p class="mb-4 text-slate-600">1. Install ClamAV engine and its graphical interface, ClamTK:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install clamav clamav-daemon clamtk</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">2. The background service (`clamav-daemon`) will lock update files. To run the first update manually, we must temporarily stop the service, update, and restart it:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo systemctl stop clamav-freshclam
+sudo freshclam
+sudo systemctl start clamav-freshclam</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Usage</h3>
+                    <p class="text-slate-600">Open the "Show Applications" grid, search for `ClamTK`, right-click its icon, and select "Add to Favorites" to pin it to your dock. Launch it to scan files or directories.</p>
+                </div>
+
+                <!-- Step 4 -->
+                <div id="step-4" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 4: Host-Based Intrusion Prevention (Fail2ban)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">Fail2ban acts as a security guard for your log files. It looks for patterns of malicious behavior (like repeated failed SSH logins) and automatically blocks the attacker's IP address. This prevents brute-force password guessing attacks.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation & Setup</h3>
+                    <p class="mb-4 text-slate-600">1. Install the package:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install fail2ban</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">2. Create a local configuration file that is safe from being overwritten by updates:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">3. Enable and start the service:</p>
+                     <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo systemctl enable fail2ban
+sudo systemctl start fail2ban</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <p class="mt-4 mb-4 text-slate-600">4. Verify that it's working. You should see it has automatically enabled protection for SSH (`sshd`).</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo fail2ban-client status</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Step 5 -->
+                <div id="step-5" class="content-step hidden">
+                     <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 5: Anti-Rootkit Scanners</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">To scan for <b>rootkits</b>, a specific type of malware designed to hide its own presence, processes, and files from the operating system. Standard antivirus may not see them, so specialized scanners like `rkhunter` and `chkrootkit` are required.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation & Usage</h3>
+                     <p class="mb-4 text-slate-600">1. Install both scanners:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install rkhunter chkrootkit</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <p class="mt-4 mb-4 text-slate-600">2. Update `rkhunter`'s database and create a baseline snapshot of your system files:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo rkhunter --update
+sudo rkhunter --propupd</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <p class="mt-4 mb-4 text-slate-600">3. Run the scans:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo chkrootkit
+sudo rkhunter --check --sk</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Interpreting Results</h3>
+                    <p class="text-slate-600">These tools are very sensitive and often produce <b>false positives</b> on a clean system. Warnings about suspicious hidden files in developer directories or "packet sniffer" warnings for NetworkManager are normal and can be safely ignored. As long as no confirmed rootkits are found, you are all clear.</p>
+                </div>
+
+                <!-- Step 6 -->
+                <div id="step-6" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 6: WAF vs. Browser Protection</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">This section clarifies the correct tool for the job. It's important to understand the difference between protecting a server and protecting a client like your laptop.</p>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg border border-red-200">
+                           <h4 class="font-semibold text-lg mb-2 text-red-700">WAF (Web Application Firewall)</h4>
+                           <p class="text-slate-600">A WAF is a security tool for a <b>server</b>. It inspects malicious <b class="text-red-600">incoming</b> traffic to protect a website it is hosting.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg border border-green-200">
+                           <h4 class="font-semibold text-lg mb-2 text-green-700">Browser Protection Extension</h4>
+                           <p class="text-slate-600">A personal laptop is a <b>client</b>. You need to protect your <b class="text-green-600">outgoing</b> browser activity from malicious websites you might visit.</p>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-slate-600 font-medium text-center">For your personal laptop, the tool you need is a browser protection extension.</p>
+                </div>
+                
+                <!-- Step 7 -->
+                <div id="step-7" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 7: Browser Protection (uBlock Origin)</h2>
+                     <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">uBlock Origin is a wide-spectrum content blocker that protects your web browser from threats. It is <b>not</b> just an ad blocker. Using community-maintained blocklists, it also blocks trackers, many known malware-serving domains, and phishing sites. This is one of the most effective security measures for day-to-day browsing.</p>
+                     <h3 class="text-xl font-semibold mb-4 text-cyan-700">Installation</h3>
+                    <ol class="list-decimal list-inside space-y-2 text-slate-600">
+                        <li>Open the <b>Firefox</b> web browser.</li>
+                        <li>Navigate to the following URL: <a href="https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/" target="_blank" class="text-cyan-600 hover:underline">https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/</a></li>
+                        <li>Click the <b>"Add to Firefox"</b> button and approve the permissions pop-up.</li>
+                        <li>A shield icon will appear in your toolbar, indicating that it is active and protecting you.</li>
+                    </ol>
+                </div>
+
+                <!-- Step 8 -->
+                <div id="step-8" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 8: Mandatory Access Control (AppArmor)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">AppArmor is a powerful, kernel-level security module that confines applications to a strict set of rules. It protects your system *from your own applications*. If a hacker exploits a bug in Firefox, AppArmor can prevent that compromised application from accessing files outside of what it's normally allowed to, stopping the attack from spreading.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">How AppArmor Works: An Analogy</h3>
+                    <p class="mb-4 text-slate-600">Imagine Firefox is a temporary worker in your office (your system):</p>
+                    <ul class="list-disc list-inside space-y-2 text-slate-600">
+                        <li><b>Without AppArmor:</b> The worker's keycard opens every door. They can read files in the finance office or try to break into the server room.</li>
+                        <li><b>With AppArmor:</b> The worker's keycard *only* opens the front door and their assigned office. If they try to open any other door, an alarm sounds, and access is denied. AppArmor creates this "virtual office" for each application, restricting it to only the files and capabilities it absolutely needs to do its job.</li>
+                    </ul>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Usage & Management</h3>
+                    <p class="mb-4 text-slate-600">AppArmor is already installed and enabled. We just need the tools to manage it.</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install apparmor-utils</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">Check the status to see which applications are being protected. "Enforce Mode" is the active blocking mode, while "Complain Mode" is a report-only mode.</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo aa-status</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">To switch a profile from "complain" to "enforce" mode (recommended), you must use the full profile filename found in `/etc/apparmor.d/`.</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash"># Example for LibreOffice:
+sudo aa-enforce usr.lib.libreoffice.program.oosplash
+sudo aa-enforce usr.lib.libreoffice.program.soffice.bin</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Step 9 -->
+                <div id="step-9" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 9: Automatic Security Updates</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">To ensure your system automatically downloads and installs critical security patches. This is one of the most important defenses, as it protects you from known vulnerabilities as soon as a fix is available.</p>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Implementation</h3>
+                    <p class="mb-4 text-slate-600">1. Install the package:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install unattended-upgrades</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <p class="mt-4 mb-4 text-slate-600">2. Enable it. A text-based interface will appear; use the arrow keys to select `&lt;Yes&gt;` and press Enter.</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">3. Verify the configuration file to ensure it's turned on. The output must include `APT::Periodic::Unattended-Upgrade "1";`</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">cat /etc/apt/apt.conf.d/20auto-upgrades</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Step 10 -->
+                <div id="step-10" class="content-step hidden">
+                    <h2 class="text-3xl font-bold mb-2 text-slate-900">Step 10: System Auditing (AIDE)</h2>
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">Purpose</h3>
+                    <p class="mb-6 text-slate-600">The Advanced Intrusion Detection Environment (AIDE) acts like a digital "security seal" for your filesystem. It creates a "snapshot" (a secure database) of your critical system files. You can then run a check to see if any of these files have been changed, added, or deleted without your knowledge.</p>
+
+                    <h3 class="text-xl font-semibold mb-4 text-cyan-700">How AIDE Works: The "Security Seal" Analogy</h3>
+                    <ol class="list-decimal list-inside space-y-2 text-slate-600">
+                       <li><b>Placing the Seal (`aideinit`):</b> You take a detailed snapshot of thousands of files—their size, permissions, and cryptographic "fingerprints." This snapshot is stored in a database, which becomes your "golden master" copy.</li>
+                       <li><b>Inspecting the Seal (`aide --check`):</b> AIDE re-scans all the files and compares their current fingerprints to the golden master. If anything is different, the seal is "broken," and AIDE generates a detailed report of exactly what changed.</li>
+                    </ol>
+                    
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Installation & Setup</h3>
+                    <p class="mb-4 text-slate-600">1. Install AIDE:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo apt install aide</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                     <p class="mt-4 mb-4 text-slate-600">2. Create the initial "golden" database. <b>This will take 20-30 minutes.</b></p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo aideinit</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <p class="mt-4 mb-4 text-slate-600">3. Activate the database by copying the new snapshot into place:</p>
+                    <div class="code-block">
+                        <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db</code></pre>
+                        <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                    </div>
+
+                    <h3 class="text-xl font-semibold mt-6 mb-4 text-cyan-700">Usage: The AIDE Administrator's Workflow</h3>
+                    <p class="mb-4 text-slate-600">You must create a new "seal" <b>after every intentional system change</b> (like an `apt upgrade`).</p>
+                    <ol class="list-decimal list-inside space-y-3 text-slate-600">
+                        <li><b>Run a check *before* you make changes</b> to ensure the system is clean. No output means the seal is intact.
+                            <div class="code-block mt-2">
+                                <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo aide --config /etc/aide/aide.conf --check</code></pre>
+                                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </li>
+                        <li><b>Perform your administrative task</b> (e.g., `sudo apt install htop`).</li>
+                        <li><b>Update the AIDE snapshot</b> to include your new, legitimate changes. This creates a new temporary database.
+                            <div class="code-block mt-2">
+                                <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo aide --config /etc/aide/aide.conf --update</code></pre>
+                                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </li>
+                         <li><b>Promote the new snapshot to be the golden master.</b> This replaces the old seal with the new one.
+                             <div class="code-block mt-2">
+                                <pre class="bg-slate-900 text-white p-4 rounded-md overflow-x-auto"><code class="language-bash">sudo cp /var/lib/aide/aide.db.new /var/lib/aide/aide.db</code></pre>
+                                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const links = document.querySelectorAll('.sidebar-link, .overview-card');
+            const contentSteps = document.querySelectorAll('.content-step');
+            const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+            function showStep(stepId) {
+                contentSteps.forEach(step => {
+                    if (step.id === stepId) {
+                        step.classList.remove('hidden');
+                    } else {
+                        step.classList.add('hidden');
+                    }
+                });
+
+                sidebarLinks.forEach(link => {
+                    if (link.dataset.step === stepId) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+                
+                // window.location.hash = stepId;
+            }
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const stepId = link.dataset.step;
+                    showStep(stepId);
+                });
+            });
+
+            // Handle initial page load with hash
+            const initialStep = window.location.hash.substring(1) || 'overview';
+            const validInitialStep = document.getElementById(initialStep) ? initialStep : 'overview';
+            showStep(validInitialStep);
+        });
+
+        function copyCode(button) {
+            const pre = button.previousElementSibling;
+            const code = pre.querySelector('code').innerText;
+
+            // Fallback for browsers/iframes that don't support clipboard API well
+            const textArea = document.createElement('textarea');
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                button.textContent = 'Copied!';
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                button.textContent = 'Failed!';
+            }
+            document.body.removeChild(textArea);
+
+            setTimeout(() => {
+                button.textContent = 'Copy';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
+
+

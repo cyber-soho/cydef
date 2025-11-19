@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-M-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Network Defense Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Calm Harmony (Grays, Indigo) -->
+    <!-- Application Structure Plan: A 4-part SPA structure (Home, Theory, Tech, Labs) navigated by a header. This task-oriented design is chosen over mirroring the report's linear structure. 'Theory' uses clickable cards for IA Principles. 'Tech' uses an interactive builder for iptables commands. 'Labs' uses a tabbed interface to break the 8 exercises into manageable steps. This design prioritizes exploration and practical application over passive reading. -->
+    <!-- Visualization & Content Choices: 
+        - IA Principles: Report Info (Definitions) -> Goal (Inform) -> Viz (Clickable Cards) -> Interaction (Click to reveal details) -> Justification (Interactive learning) -> Method (JS).
+        - Firewall Types: Report Info (Definitions) -> Goal (Compare) -> Viz (Buttons + text area) -> Interaction (Click to update text) -> Justification (Active comparison) -> Method (JS).
+        - iptables Syntax: Report Info (Commands) -> Goal (Teach/Tool) -> Viz (Dropdown builder) -> Interaction (Selections generate command) -> Justification (Practical "wow" factor) -> Method (JS).
+        - 8 Lab Exercises: Report Info (Lab steps) -> Goal (Organize/Instruct) -> Viz (Tabbed content area) -> Interaction (Click tab to show specific lab) -> Justification (Manages large text volume) -> Method (JS).
+        - Charts (Chart.js): No quantitative data (e.g., attack stats) is present in the source reports, so no charts are included.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .nav-link {
+            @apply px-3 py-2 text-gray-700 rounded-md text-sm font-medium cursor-pointer hover:bg-gray-100;
+        }
+        .nav-link-active {
+            @apply px-3 py-2 rounded-md text-sm font-medium cursor-pointer bg-indigo-100 text-indigo-700;
+        }
+        .tab-button {
+            @apply px-4 py-2 text-sm font-medium text-gray-600 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50;
+        }
+        .tab-button-active {
+            @apply px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg shadow-sm cursor-pointer;
+        }
+        .lab-tab {
+            @apply w-full px-4 py-3 text-left text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 cursor-pointer;
+        }
+        .lab-tab-active {
+            @apply w-full px-4 py-3 text-left text-sm font-medium text-indigo-700 bg-indigo-50 rounded-lg cursor-pointer;
+        }
+        .content-card {
+            @apply bg-white p-6 rounded-lg shadow-lg transition-all duration-300;
+        }
+        .disclaimer-box {
+            padding: 1rem 1.25rem;
+            border-left: 4px solid;
+            border-radius: .375rem; /* rounded-md */
+            margin: 1.5rem 0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* shadow-sm */
+        }
+        .disclaimer-box h3 {
+            margin-top: 0;
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 700; /* font-bold */
+            margin-bottom: 0.5rem;
+        }
+        .disclaimer-warn {
+            background-color: #fffbeb; /* yellow-50 */
+            border-color: #f59e0b; /* amber-500 */
+            color: #92400e; /* amber-800 */
+        }
+        .disclaimer-danger {
+            background-color: #fef2f2; /* red-50 */
+            border-color: #ef4444; /* red-500 */
+            color: #b91c1c; /* red-700 */
+        }
+        .disclaimer-info {
+            background-color: #eff6ff; /* blue-50 */
+            border-color: #3b82f6; /* blue-500 */
+            color: #1e40af; /* blue-800 */
+        }
+    </style>
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header / Navigation -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-indigo-600">Intro to Cyber Defense</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a id="nav-home" data-section="home-section" class="nav-link nav-link-active">Home</a>
+                        <a id="nav-theory" data-section="theory-section" class="nav-link">Core Concepts</a>
+                        <a id="nav-tech" data-section="tech-section" class="nav-link">Tech Deep Dive</a>
+                        <a id="nav-labs" data-section="labs-section" class="nav-link">Practical Labs</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+
+        <!-- Section 1: Home -->
+        <section id="home-section" class="app-section">
+            <div class="text-center">
+                <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                    Welcome to the Interactive Network Defense Guide
+                </h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    This application translates complex network security lectures and labs into an interactive experience.
+                </p>
+                <!-- Removed EC-Council reference here as requested -->
+                <p class="mt-2 text-base text-gray-500">
+                    Comprehensive guide covering Network Security Fundamentals and Technical Controls.
+                </p>
+                <button onclick="showSection('theory-section')" class="mt-8 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition-colors">
+                    Start with Core Concepts
+                </button>
+            </div>
+
+             <!-- Legal Disclaimers Section -->
+             <div class="mt-16 border-t pt-8">
+                <div class="disclaimer-box disclaimer-warn">
+                    <h3>⚠️ Cybersecurity Lab Warning</h3>
+                    <p>The skills and techniques discussed in this course are for educational and authorized purposes ONLY. All hands-on practice must be conducted in a secure, isolated lab environment (e.g., virtual machines) completely disconnected from any public or private networks. Applying these skills to any system, network, or application without explicit, written permission from the owner is illegal and may result in severe civil and criminal penalties. Practice legally and ethically.</p>
+                </div>
+        
+                <div class="disclaimer-box disclaimer-danger">
+                    <h3>Legal Disclaimer</h3>
+                    <p>The information provided in this course outline and all associated materials is for informational purposes only and does not constitute professional advice. The author, Cyber Soho, makes no warranties regarding the accuracy, completeness, or suitability of this information. Any reliance you place on such information is strictly at your own risk. In no event will the author be liable for any loss or damage including, without limitation, indirect or consequential loss or damage, or any loss or damage whatsoever arising from the use of this course or the information contained within.</p>
+                </div>
+        
+                <div class="disclaimer-box disclaimer-info">
+                    <h3>Non-Affiliation & Editorial Disclaimer</h3>
+                    <p>This course and its content represent the editorial opinion and intellectual property of Cyber Soho. The author's relationship with Dawson College is that of a "non-tenured visiting teacher". The author is not otherwise affiliated with, endorsed by, or partnered with Dawson College, or any other organization or certification body mentioned or unmentioned. All product names, logos, and brands are property of their respective owners.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Core Concepts (Module 1) -->
+        <section id="theory-section" class="app-section hidden">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Core Security Concepts</h2>
+            <p class="text-lg text-gray-600 mb-10">
+                This section explores the fundamental "why" of network security. These are the core principles and strategies that form the foundation of all defensive actions. Interact with the cards below to learn about each concept.
+            </p>
+
+            <!-- IA Principles -->
+            <div class="mb-12">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Information Assurance (IA) Principles</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4" id="ia-principles-nav">
+                    <button data-tab="confidentiality" class="tab-button tab-button-active">Confidentiality</button>
+                    <button data-tab="integrity" class="tab-button">Integrity</button>
+                    <button data-tab="availability" class="tab-button">Availability</button>
+                    <button data-tab="non-repudiation" class="tab-button">Non-repudiation</button>
+                    <button data-tab="authentication" class="tab-button">Authentication</button>
+                </div>
+                <div class="mt-6 content-card" id="ia-principles-content">
+                    <!-- Content will be injected by JS -->
+                </div>
+            </div>
+
+            <!-- Defense Approaches -->
+            <div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Network Defense Approaches</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                        <h4 class="text-lg font-semibold text-blue-700">1. Preventive</h4>
+                        <p class="mt-2 text-gray-600">Methods used to avoid threats or attacks *before* they happen. (e.g., Firewalls, Encryption).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-yellow-500">
+                        <h4 class="text-lg font-semibold text-yellow-700">2. Reactive</h4>
+                        <p class="mt-2 text-gray-600">Methods used to detect attacks *while* they are in progress. (e.g., Intrusion Detection Systems).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-red-500">
+                        <h4 class="text-lg font-semibold text-red-700">3. Retrospective</h4>
+                        <p class="mt-2 text-gray-600">Methods used to examine the causes *after* an attack. (e.g., Digital Forensics, Log Analysis).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-purple-500">
+                        <h4 class="text-lg font-semibold text-purple-700">4. Proactive</h4>
+                        <p class="mt-2 text-gray-600">Methods used to make informed decisions about *future* potential attacks. (e.g., Threat Intelligence).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Tech Deep Dive (Module 5) -->
+        <section id="tech-section" class="app-section hidden">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Technical Deep Dive: Firewalls</h2>
+            <p class="text-lg text-gray-600 mb-10">
+                This section explores the technical controls from Module 5, focusing on firewalls. Firewalls are the gatekeepers of the network. Use the tools below to understand their types and how they are configured using `iptables`.
+            </p>
+
+            <!-- Firewall Sorter -->
+            <div class="mb-12">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Firewall Sorter</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="showFirewallInfo('hw')" class="tab-button">Hardware</button>
+                    <button onclick="showFirewallInfo('sw')" class="tab-button">Software</button>
+                    <button onclick="showFirewallInfo('net')" class="tab-button">Network-based</button>
+                    <button onclick="showFirewallInfo('host')" class="tab-button">Host-based</button>
+                    <button onclick="showFirewallInfo('stateful')" class="tab-button">Stateful Inspection</button>
+                </div>
+                <div class="content-card min-h-[150px]">
+                    <h4 id="fw-title" class="text-xl font-semibold text-indigo-700">Select a type</h4>
+                    <p id="fw-info" class="mt-2 text-gray-700">Click a button to see its description here.</p>
+                </div>
+            </div>
+
+            <!-- iptables Builder -->
+            <div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Interactive `iptables` Builder</h3>
+                <div class="content-card">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label for="ipt-chain" class="block text-sm font-medium text-gray-700">Chain</label>
+                            <select id="ipt-chain" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option>INPUT</option>
+                                <option>OUTPUT</option>
+                                <option>FORWARD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ipt-action" class="block text-sm font-medium text-gray-700">Action (Target)</label>
+                            <select id="ipt-action" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option>DROP</option>
+                                <option>REJECT</option>
+                                <option>ACCEPT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ipt-protocol" class="block text-sm font-medium text-gray-700">Protocol</label>
+                            <select id="ipt-protocol" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                <option value="-p tcp">TCP</option>
+                                <option value="-p udp">UDP</option>
+                                <option value="-p icmp">ICMP</option>
+                                <option value="">ALL</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="ipt-param" class="block text-sm font-medium text-gray-700">Source/Port</label>
+                            <input type="text" id="ipt-param" placeholder="-s 10.10.10.55" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        </div>
+                    </div>
+                    <div class="mt-6 bg-gray-900 text-white rounded-lg p-4 relative">
+                        <button onclick="copyToClipboard('ipt-output')" class="absolute top-2 right-2 bg-gray-700 text-gray-300 px-2 py-1 text-xs rounded hover:bg-gray-600">Copy</button>
+                        <pre><code id="ipt-output" class="font-mono">iptables -A INPUT -p tcp -j DROP</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Practical Labs (Docx) -->
+        <section id="labs-section" class="app-section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-extrabold text-gray-900">Practical Labs: Linux Endpoint Security</h2>
+                <!-- Added Due Date Here -->
+                <div class="text-sm font-medium text-red-600 bg-red-50 px-4 py-2 rounded-lg border border-red-200">
+                    Due date for Labs submission - November 29, 2025 via Omnivox's Lea !
+                </div>
+            </div>
+            <p class="text-lg text-gray-600 mb-10">
+                Theory is one thing, practice is another. This section contains the step-by-step exercises for hardening a Linux system. Select a lab from the menu to see its objectives and key commands.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Lab Navigation -->
+                <div class="md:col-span-1">
+                    <nav class="flex flex-col space-y-2" id="lab-nav">
+                        <!-- Lab buttons will be injected by JS -->
+                    </nav>
+                </div>
+                
+                <!-- Lab Content -->
+                <div class="md:col-span-3">
+                    <div class="content-card min-h-[400px]">
+                        <h3 id="lab-title" class="text-2xl font-bold text-indigo-700 mb-4">Select a Lab</h3>
+                        <p id="lab-objective" class="text-gray-600 mb-6"></p>
+                        <div id="lab-steps" class="prose max-w-none">
+                            <p>Select a lab from the menu on the left to get started.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer with Copyright -->
+        <footer class="bg-white border-t mt-12 py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+                <p>&copy; 2025 Cyber Soho. All Rights Reserved.</p>
+            </div>
+        </footer>
+
+    </main>
+
+    <script>
+        const iaPrinciplesData = {
+            confidentiality: {
+                title: "Confidentiality",
+                text: "Ensures information is not disclosed to unauthorized parties. It is about secrecy. We achieve this with encryption and strong access controls.",
+                example: "<strong>Real-life Example:</strong> When you send data to your bank, it is encrypted (HTTPS). If a hacker intercepts it, they only see gibberish, not your password. Your data remains confidential."
+            },
+            integrity: {
+                title: "Integrity",
+                text: "Ensures information is not modified or tampered with by unauthorized parties. The data you send is the data that is received.",
+                example: "<strong>Real-life Example:</strong> When you download a file, you check its SHA256 hash. If the hash matches, you know the file's integrity is intact and it hasn't been infected with a virus during download."
+            },
+            availability: {
+                title: "Availability",
+                text: "Ensures information and services are available to authorized parties when they need them. Security is useless if it blocks legitimate users.",
+                example: "<strong>Real-life Example:</strong> A 'Denial of Service' (DoS) attack floods a website with traffic, making it crash. This is an attack on availability, as legitimate users can no longer access the service."
+            },
+            'non-repudiation': {
+                title: "Non-repudiation",
+                text: "Provides proof of the origin and integrity of data. A party in a communication cannot later deny sending or receiving a message.",
+                example: "<strong>Real-life Example:</strong> When you digitally sign a PDF contract, that signature provides non-repudiation. You cannot later claim 'I never signed that,' because the cryptographic proof is bound to your identity."
+            },
+            authentication: {
+                title: "Authentication",
+                text: "The process of verifying the identity of an individual or service. It answers the question, 'Are you really who you say you are?'",
+                example: "<strong>Real-life Example:</strong> Logging in with a password and a 2-factor authentication (2FA) code sent to your phone. This proves your identity before you can access your email."
+            }
+        };
+
+        const firewallInfoData = {
+            hw: {
+                title: "Hardware Firewall",
+                text: "A dedicated physical appliance that acts as a gatekeeper for the entire network. It sits between the internal network and the internet. Pros: High performance, separate from other systems. Cons: Expensive."
+            },
+            sw: {
+                title: "Software Firewall",
+                text: "A program that runs on an individual computer or server (e.g., Windows Defender Firewall, iptables). Pros: Inexpensive, good for individual host protection. Cons: Uses system resources."
+            },
+            net: {
+                title: "Network-based Firewall",
+                text: "Protects an entire network. It is placed at the network perimeter and inspects all traffic coming in or going out. It cannot see traffic moving between two computers *inside* the same network."
+            },
+            host: {
+                title: "Host-based Firewall",
+                text: "Protects a single host (computer). It inspects all traffic for that specific machine. This is crucial for stopping attacks *inside* the network (e.g., a worm spreading from one PC to another)."
+            },
+            stateful: {
+                title: "Stateful Multilayer Inspection",
+                text: "The dominant modern firewall technology. Unlike simple packet filtering, it maintains a 'state table' to track active connections. It understands the *context* of traffic, allowing it to permit return traffic from a request you made, while blocking unsolicited traffic from the internet."
+            }
+        };
+
+        const labData = {
+            lab1: {
+                title: "Exercise 1: Linux Security Best Practices",
+                objective: "Learn to disable unnecessary services, remove unused software, and restrict SSH remote logins to reduce the attack surface.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Disable Services:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo update-rc.d -f apache2 remove</code></pre>
+                        </li>
+                        <li>
+                            <strong>Remove Software:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt remove avahi-daemon\nsudo apt-get autoremove</code></pre>
+                        </li>
+                        <li>
+                            <strong>Restrict SSH:</strong>
+                            <p>Edit <code>/etc/ssh/sshd_config</code> to add:</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>DenyUsers smith\nAllowGroups cndusers</code></pre>
+                            <p>Then restart the service:</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo service ssh restart</code></pre>
+                        </li>
+                    </ul>`
+            },
+            lab2: {
+                title: "Exercise 2: Mandatory Access Controls (AppArmor)",
+                objective: "Use AppArmor to create a security profile that restricts a program (ping) from executing.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Install:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt install apparmor-utils</code></pre>
+                        </li>
+                        <li>
+                            <strong>Create Profile:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo aa-autodep ping</code></pre>
+                        </li>
+                        <li>
+                            <strong>Enforce Profile:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo aa-enforce ping</code></pre>
+                        </li>
+                        <li>
+                            <strong>Edit Profile (<code>sudo nano /etc/apparmor.d/bin.ping</code>):</strong>
+                            <p>Add this line inside the profile:</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>deny /usr/bin/ping x,</code></pre>
+                        </li>
+                        <li>
+                            <strong>Reload Profile:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apparmor_parser -r /etc/apparmor.d/bin.ping</code></pre>
+                        </li>
+                    </ul>`
+            },
+            lab3: {
+                title: "Exercise 3: Security Auditing with Lynis",
+                objective: "Perform a comprehensive security health scan of a Linux system to identify vulnerabilities and hardening suggestions.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Clone Tool:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>git clone https://github.com/CISOfy/lynis.git</code></pre>
+                        </li>
+                        <li>
+                            <strong>Navigate:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>cd lynis</code></pre>
+                        </li>
+                        <li>
+                            <strong>Run Audit:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo ./lynis audit system</code></pre>
+                        </li>
+                        <li>
+                            <strong>View Report:</strong>
+                            <p>Analyze the "Warnings" and "Suggestions" in the terminal output, or view the full report:</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo nano /var/log/lynis-report.dat</code></pre>
+                        </li>
+                    </ul>`
+            },
+            lab4: {
+                title: "Exercise 4: Implementing Password Aging",
+                objective: "Enforce a password policy to force regular password changes for users.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Check User 'alice':</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo grep alice /etc/shadow</code></pre>
+                        </li>
+                        <li>
+                            <strong>Set Policy for 'alice' (90-day max, 10-day warn):</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo chage -M 90 -W 10 alice</code></pre>
+                        </li>
+                        <li>
+                            <strong>Set Default Policy (<code>sudo nano /etc/login.defs</code>):</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>PASS_MAX_DAYS   90\nPASS_MIN_DAYS   10\nPASS_WARN_AGE   10</code></pre>
+                        </li>
+                    </ul>`
+            },
+            lab5: {
+                title: "Exercise 5: File Integrity Checking (Checksum)",
+                objective: "Use SHA checksums to verify that a file has not been altered or corrupted.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Create File:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>printf 'Hello World' > test.txt</code></pre>
+                        </li>
+                        <li>
+                            <strong>Generate SHA-512 Hash & Save:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sha512sum test.txt > test.sha512</code></pre>
+                        </li>
+                        <li>
+                            <strong>Verify Integrity:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sha512sum -c test.sha512</code></pre>
+                            <p>(Should output: <code>test.txt: OK</code>)</p>
+                        </li>
+                        <li>
+                            <strong>Modify File & Re-verify:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>echo "tamper" >> test.txt\nsha512sum -c test.sha512</code></pre>
+                            <p>(Should output: <code>test.txt: FAILED</code>)</p>
+                        </li>
+                    </ul>`
+            },
+            lab6: {
+                title: "Exercise 6: Malware Scanning with ClamTK",
+                objective: "Use a graphical antivirus tool to scan for and remove malware from a Linux system.",
+                steps: `
+                    <h4 class="font-semibold">Key Steps:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Install ClamTK:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt-get install clamtk</code></pre>
+                        </li>
+                        <li>
+                            <strong>Download Test File:</strong>
+                            <p>Download the EICAR test virus file from <a href="https://www.eicar.org/?page_id=3950" target="_blank" class="text-indigo-600">eicar.org</a>. This is a harmless file used to test antivirus scanners.</p>
+                        </li>
+                        <li>
+                            <strong>Scan:</strong>
+                            <p>Launch ClamTK from the applications menu, go to Settings and check all options. Then, select "Scan a file" or "Scan a directory" and point it to your test file.</p>
+                        </li>
+                        <li>
+                            <strong>Analyze:</strong>
+                            <p>The tool will flag the EICAR file as a threat. You can then choose to Quarantine or Delete it.</p>
+                        </li>
+                    </ul>`
+            },
+            lab7: {
+                title: "Exercise 7: Event Auditing with AuditD",
+                objective: "Use the Linux Audit Daemon (AuditD) to monitor a specific file for any read or write access.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Install & Start:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt install auditd\nsudo systemctl start auditd</code></pre>
+                        </li>
+                        <li>
+                            <strong>Set Watch Rule:</strong>
+                            <p>This rule watches the <code>/etc/passwd</code> file for write, read, execute, or attribute changes and tags it with the key 'monitorpasswd'.</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo auditctl -w /etc/passwd -p wrxa -k monitorpasswd</code></pre>
+                        </li>
+                        <li>
+                            <strong>Trigger Event:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>cat /etc/passwd</code></pre>
+                        </li>
+                        <li>
+                            <strong>Search Logs:</strong>
+                            <p>Search the audit log for any events matching your key.</p>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo ausearch -k monitorpasswd</code></pre>
+                        </li>
+                        <li>
+                            <strong>View Summary Report:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo aureport --summary</code></pre>
+                        </li>
+                    </ul>`
+            },
+            lab8: {
+                title: "Exercise 8: System Maintenance & Cleanup",
+                objective: "Remove old/unused kernels and broken dependencies to free up space and reduce the attack surface.",
+                steps: `
+                    <h4 class="font-semibold">Key Commands:</h4>
+                    <ul class="list-disc pl-6 space-y-2">
+                        <li>
+                            <strong>Clean Cache:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt-get autoclean</code></pre>
+                        </li>
+                        <li>
+                            <strong>Check Current Kernel:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>uname -mrs</code></pre>
+                        </li>
+                        <li>
+                            <strong>List All Kernels:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>dpkg --list | egrep -i 'linux-image*|linux-header*'</code></pre>
+                        </li>
+                        <li>
+                            <strong>Auto-remove Old Kernels & Dependencies:</strong>
+                            <pre class="bg-gray-100 p-2 rounded"><code>sudo apt-get autoremove --purge</code></pre>
+                        </li>
+                    </ul>`
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNavigation();
+            setupIAPrinciples();
+            setupFirewallInfo();
+            setupIptablesBuilder();
+            setupLabNav();
+        });
+
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const sectionId = e.target.getAttribute('data-section');
+                    showSection(sectionId);
+                    
+                    navLinks.forEach(nav => nav.classList.remove('nav-link-active'));
+                    e.target.classList.add('nav-link-active');
+                });
+            });
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.app-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Sync nav link if called from button
+            document.querySelectorAll('.nav-link').forEach(nav => {
+                nav.classList.toggle('nav-link-active', nav.getAttribute('data-section') === sectionId);
+            });
+        }
+
+        function setupIAPrinciples() {
+            const nav = document.getElementById('ia-principles-nav');
+            const content = document.getElementById('ia-principles-content');
+            
+            const updateContent = (tab) => {
+                const data = iaPrinciplesData[tab];
+                content.innerHTML = `
+                    <h4 class="text-xl font-semibold text-indigo-700">${data.title}</h4>
+                    <p class="mt-2 text-gray-700">${data.text}</p>
+                    <p class="mt-4 text-sm text-gray-600">${data.example}</p>
+                `;
+                
+                nav.querySelectorAll('button').forEach(btn => {
+                    btn.classList.toggle('tab-button-active', btn.getAttribute('data-tab') === tab);
+                });
+            };
+
+            nav.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const tab = e.target.getAttribute('data-tab');
+                    updateContent(tab);
+                }
+            });
+
+            updateContent('confidentiality');
+        }
+
+        function setupFirewallInfo() {
+            showFirewallInfo('hw');
+        }
+
+        function showFirewallInfo(type) {
+            const data = firewallInfoData[type];
+            document.getElementById('fw-title').textContent = data.title;
+            document.getElementById('fw-info').textContent = data.text;
+        }
+
+        function setupIptablesBuilder() {
+            const chain = document.getElementById('ipt-chain');
+            const action = document.getElementById('ipt-action');
+            const protocol = document.getElementById('ipt-protocol');
+            const param = document.getElementById('ipt-param');
+            const output = document.getElementById('ipt-output');
+            
+            const updateCommand = () => {
+                const command = `iptables -A ${chain.value} ${protocol.value} ${param.value} -j ${action.value}`;
+                output.textContent = command;
+            };
+
+            [chain, action, protocol, param].forEach(el => {
+                el.addEventListener('change', updateCommand);
+                el.addEventListener('keyup', updateCommand);
+            });
+            
+            updateCommand();
+        }
+
+        function setupLabNav() {
+            const nav = document.getElementById('lab-nav');
+            Object.keys(labData).forEach((key, index) => {
+                const lab = labData[key];
+                const button = document.createElement('button');
+                button.className = index === 0 ? 'lab-tab lab-tab-active' : 'lab-tab';
+                button.textContent = lab.title.split(':')[0];
+                button.setAttribute('data-lab', key);
+                button.onclick = () => showLab(key);
+                nav.appendChild(button);
+            });
+            showLab('lab1');
+        }
+
+        function showLab(labId) {
+            const lab = labData[labId];
+            document.getElementById('lab-title').textContent = lab.title;
+            document.getElementById('lab-objective').textContent = lab.objective;
+            document.getElementById('lab-steps').innerHTML = lab.steps;
+
+            document.querySelectorAll('#lab-nav button').forEach(btn => {
+                btn.classList.toggle('lab-tab-active', btn.getAttribute('data-lab') === labId);
+            });
+        }
+        
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+    </script>
+</body>
+</html>
