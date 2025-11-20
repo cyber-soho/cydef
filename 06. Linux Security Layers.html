@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide: Linux Security Layers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 
+    Chosen Palette: Warm Neutrals (Grays/Whites) with Indigo Accent
+    Application Structure Plan: The structure is a thematic, guided-learning path. 
+    - Section 1 (Distinction): Compare Network vs System security.
+    - Section 2 (Analogy): Visual metaphor (Office/Guard).
+    - Section 3 (Deep Dive): Compare MAC types (SELinux vs AppArmor).
+    - Section 4 (Scenario): Step-by-step attack simulation.
+    - Section 5 (Tools): NEW - Interactive comparison of Firewall GUIs (GUFW, Firewalld, Cockpit, Webmin).
+    Visualization & Content Choices: 
+    - Report Info: Firewall Front-ends -> Goal: Inform/Compare -> Viz/Presentation: Vertical Tab/Pills layout -> Interaction: Click -> Justification: Allows users to quickly switch between tools to find the one matching their OS/Needs without scrolling long text. -> Library/Method: Vanilla JS + Tailwind.
+    - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. 
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .content-panel {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .scenario-step {
+            display: none;
+        }
+        .scenario-step.active {
+            display: block;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-900 leading-relaxed">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-10 max-w-5xl">
+
+        <header class="text-center mb-10 md:mb-16">
+            <h1 class="text-3xl md:text-5xl font-bold text-indigo-700 mb-2">Linux Security Layers</h1>
+            <p class="text-lg md:text-xl text-gray-600">An Interactive Guide: Firewalls vs. MAC</p>
+        </header>
+
+        <main id="app" class="space-y-12 md:space-y-16">
+
+            <!-- Section 1: The Core Distinction -->
+            <section id="distinction" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">1. The Core Distinction</h2>
+                <p class="text-gray-600 mb-6">
+                    A common misconception is confusing Network Security (Firewalls) with System Internals Security (Mandatory Access Control, or MAC). Click the buttons below to see what each one *actually* controls and how they differ.
+                </p>
+                
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/3 flex md:flex-col gap-4">
+                        <button id="show-firewall" class="tab-btn w-full text-lg font-semibold p-4 rounded-lg bg-white border-2 border-indigo-500 text-indigo-500 hover:bg-indigo-50">
+                            Host-Based Firewall
+                        </button>
+                        <button id="show-mac" class="tab-btn w-full text-lg font-semibold p-4 rounded-lg bg-white border-2 border-gray-400 text-gray-500 hover:bg-gray-50">
+                            AppArmor / SELinux (MAC)
+                        </button>
+                    </div>
+
+                    <div class="md:w-2/3 content-panel bg-gray-50 p-6 rounded-lg min-h-[200px]">
+                        <div id="distinction-content">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: The Analogy -->
+            <section id="analogy" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">2. The Analogy: "The High-Security Office"</h2>
+                <p class="text-gray-600 mb-6">
+                    To visualize how these layers work together, imagine your server is a corporate headquarters. Explore the two key security roles in this building.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-3">The Firewall (Front Desk Guard)</h3>
+                        <p class="text-gray-700 mb-2"><strong>Location:</strong> The main entrance.</p>
+                        <p class="text-gray-700 mb-2"><strong>Job:</strong> Checks IDs and stops strangers from entering.</p>
+                        <p class="text-gray-700 mb-2"><strong>Logic:</strong> "You are from a suspicious location? You cannot come in." or "Nobody is allowed on the 22nd floor (Port 22) except admin staff."</p>
+                        <p class="text-gray-700 font-semibold italic mt-4"><strong>Limitation:</strong> Once someone passes the guard, the firewall stops watching them. If a thief has a valid ID badge, the firewall lets them in.</p>
+                    </div>
+                    
+                    <div class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <h3 class="text-xl font-bold text-indigo-600 mb-3">AppArmor / SELinux (Keycard Readers)</h3>
+                        <p class="text-gray-700 mb-2"><strong>Location:</strong> On every single door inside the building (Server Room, CEO's Office, Cafeteria).</p>
+                        <p class="text-gray-700 mb-2"><strong>Job:</strong> Controls what people can *do* once they are inside.</p>
+                        <p class="text-gray-700 mb-2"><strong>Logic:</strong> "I see you are the 'Janitor' (a web server process). You are trying to open the 'CEO's Safe' (`/etc/shadow`). <strong>Access Denied.</strong>"</p>
+                        <p class="text-gray-700 font-semibold italic mt-4"><strong>Why it matters:</strong> If a hacker steals an employee's badge (exploits a vulnerability), MAC systems trap them in the lobby so they can't steal critical data.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Section 3: Deep Dive -->
+            <section id="deep-dive" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">3. Deep Dive: Meet the MACs</h2>
+                <p class="text-gray-600 mb-6">
+                    Both AppArmor and SELinux are <strong>Linux Security Modules (LSM)</strong> that enforce MAC policies, but they work differently. Select one to learn its specific mechanism, pros, and cons.
+                </p>
+                
+                <div class="flex justify-center gap-4 mb-6">
+                    <button id="show-selinux" class="tab-btn w-1/2 md:w-1/3 text-lg font-semibold p-4 rounded-lg bg-white border-2 border-gray-400 text-gray-500 hover:bg-gray-50">
+                        SELinux
+                    </button>
+                    <button id="show-apparmor" class="tab-btn w-1/2 md:w-1/3 text-lg font-semibold p-4 rounded-lg bg-white border-2 border-gray-400 text-gray-500 hover:bg-gray-50">
+                        AppArmor
+                    </button>
+                </div>
+                
+                <div class="content-panel bg-gray-50 p-6 rounded-lg min-h-[300px]">
+                    <div id="mac-details-content">
+                        <p class="text-center text-gray-500 pt-20">Select a module to see its details.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Summary Scenario -->
+            <section id="scenario" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">4. Summary Scenario: The Nginx Hack</h2>
+                <p class="text-gray-600 mb-6">
+                    Let's see how these layers work in a real-world attack. A hacker finds a bug in your Nginx web server. Click "Next Step" to see how the attack unfolds.
+                </p>
+
+                <div class="bg-gray-800 text-white rounded-lg p-6 min-h-[250px] flex flex-col justify-between">
+                    <div id="scenario-content">
+                        <div id="step-0" class="scenario-step active">
+                            <h3 class="text-xl font-bold text-indigo-300 mb-3">Start: The Server is Running</h3>
+                            <p class="text-gray-200 text-lg">Your Nginx website is running normally. The Firewall is active, and so is your AppArmor/SELinux profile. You are ready for traffic.</p>
+                        </div>
+                        <div id="step-1" class="scenario-step">
+                            <h3 class="text-xl font-bold text-red-400 mb-3">Step 1: The Firewall</h3>
+                            <p class="text-gray-200 text-lg mb-2">The hacker sends a malicious request to Port 80 (HTTP). The firewall sees this as "allowed" web traffic.</p>
+                            <p class="text-2xl font-bold text-red-300">Result: The packet is ALLOWED. The firewall has been bypassed.</p>
+                        </div>
+                        <div id="step-2" class="scenario-step">
+                            <h3 class="text-xl font-bold text-red-400 mb-3">Step 2: The Exploit</h3>
+                            <p class="text-gray-200 text-lg mb-2">The malicious request hits Nginx and triggers a bug. The hacker gains control of the Nginx process, running as the `www-data` user.</p>
+                            <p class="text-2xl font-bold text-red-300">Result: The application is COMPROMISED. The hacker is "inside".</p>
+                        </div>
+                        <div id="step-3" class="scenario-step">
+                            <h3 class="text-xl font-bold text-green-400 mb-3">Step 3: The MAC System (AppArmor/SELinux)</h3>
+                            <p class="text-gray-200 text-lg mb-2">The hacker (controlling Nginx) tries to read `/etc/shadow` or download a virus. The MAC system intervenes: "Wait! The policy for Nginx says it can ONLY read web files. It is NOT allowed to read shadow files or execute new programs."</p>
+                            <p class="text-2xl font-bold text-green-300">Result: The action is BLOCKED. The hack is contained.</p>
+                        </div>
+                    </div>
+                    
+                    <button id="next-step-btn" class="mt-6 w-full md:w-1/3 self-end bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        Next Step
+                    </button>
+                </div>
+            </section>
+
+            <!-- Section 5: Firewall Management Tools (NEW) -->
+            <section id="firewall-tools" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4">5. Firewall Management Tools</h2>
+                <p class="text-gray-600 mb-6">
+                    Most Linux users don't write raw <code>iptables</code> rules. Instead, they use front-end tools to manage the firewall. Choose a tool below to see how it works and when to use it.
+                </p>
+
+                <div class="flex flex-col md:flex-row gap-6">
+                    <!-- Tool Selection Buttons -->
+                    <div class="md:w-1/3 flex flex-col gap-3">
+                        <button id="tool-gufw" class="tab-btn text-left px-5 py-4 rounded-lg bg-white border-2 border-indigo-500 text-indigo-700 font-semibold hover:bg-indigo-50">
+                            GUFW & UFW <span class="block text-xs font-normal text-gray-500 mt-1">Simple & Uncomplicated</span>
+                        </button>
+                        <button id="tool-firewalld" class="tab-btn text-left px-5 py-4 rounded-lg bg-white border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50">
+                            Firewall-config <span class="block text-xs font-normal text-gray-500 mt-1">Zones & Dynamic</span>
+                        </button>
+                        <button id="tool-cockpit" class="tab-btn text-left px-5 py-4 rounded-lg bg-white border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50">
+                            Cockpit <span class="block text-xs font-normal text-gray-500 mt-1">Modern Web Interface</span>
+                        </button>
+                        <button id="tool-webmin" class="tab-btn text-left px-5 py-4 rounded-lg bg-white border-2 border-gray-200 text-gray-600 font-semibold hover:bg-gray-50">
+                            Webmin <span class="block text-xs font-normal text-gray-500 mt-1">Legacy Powerhouse</span>
+                        </button>
+                    </div>
+
+                    <!-- Content Display Area -->
+                    <div class="md:w-2/3 bg-gray-50 rounded-xl p-6 border border-gray-200 min-h-[300px]">
+                        <div id="tool-content">
+                            <!-- Content injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- SECTION 1 LOGIC ---
+            const distinctionContent = document.getElementById('distinction-content');
+            const btnFirewall = document.getElementById('show-firewall');
+            const btnMac = document.getElementById('show-mac');
+            
+            const distinctionData = {
+                firewall: {
+                    title: 'Host-Based Firewall',
+                    color: 'text-indigo-600',
+                    items: [
+                        { label: 'Type', value: 'Network Security' },
+                        { label: 'What it controls', value: 'Packets & Connections' },
+                        { label: 'The "Barrier"', value: 'The Perimeter (The Front Door)' },
+                        { label: 'Examples', value: 'iptables, ufw, firewalld' },
+                        { label: 'Attack Vector', value: 'Prevents unauthorized ENTRY via network ports.' }
+                    ]
+                },
+                mac: {
+                    title: 'AppArmor / SELinux (MAC)',
+                    color: 'text-gray-700',
+                    items: [
+                        { label: 'Type', value: 'Mandatory Access Control (MAC)' },
+                        { label: 'What it controls', value: 'Files, Capabilities, & Processes' },
+                        { label: 'The "Barrier"', value: 'Internal Compartments (Room Keys)' },
+                        { label: 'Examples', value: 'AppArmor, SELinux' },
+                        { label: 'Attack Vector', value: 'Prevents unauthorized ACTIONS by compromised programs.' }
+                    ]
+                }
+            };
+
+            function renderDistinction(type) {
+                const data = distinctionData[type];
+                if (!data) return;
+                
+                let itemsHtml = data.items.map(item => `
+                    <li class="flex flex-col sm:flex-row">
+                        <strong class="sm:w-1/3 text-gray-700">${item.label}:</strong>
+                        <span class="sm:w-2/3 text-gray-800">${item.value}</span>
+                    </li>
+                `).join('');
+
+                distinctionContent.innerHTML = `
+                    <h3 class="text-xl font-bold ${data.color} mb-4">${data.title}</h3>
+                    <ul class="space-y-3">${itemsHtml}</ul>
+                `;
+            }
+
+            btnFirewall.addEventListener('click', () => {
+                renderDistinction('firewall');
+                btnFirewall.classList.add('active', 'border-indigo-500', 'text-indigo-500');
+                btnFirewall.classList.remove('border-gray-400', 'text-gray-500');
+                btnMac.classList.remove('active', 'border-indigo-500', 'text-indigo-500');
+                btnMac.classList.add('border-gray-400', 'text-gray-500');
+            });
+
+            btnMac.addEventListener('click', () => {
+                renderDistinction('mac');
+                btnMac.classList.add('active', 'border-indigo-500', 'text-indigo-500');
+                btnMac.classList.remove('border-gray-400', 'text-gray-500');
+                btnFirewall.classList.remove('active', 'border-indigo-500', 'text-indigo-500');
+                btnFirewall.classList.add('border-gray-400', 'text-gray-500');
+            });
+
+            // --- SECTION 3 LOGIC ---
+            const macDetailsContent = document.getElementById('mac-details-content');
+            const btnSelinux = document.getElementById('show-selinux');
+            const btnApparmor = document.getElementById('show-apparmor');
+
+            const macData = {
+                selinux: {
+                    title: 'SELinux (Security-Enhanced Linux)',
+                    origin: 'Developed by the NSA.',
+                    ecosystem: 'Default in <strong>Red Hat, CentOS, Fedora, Android</strong>.',
+                    mechanism: '<strong>Label-Based:</strong> Every file and process gets a "sticker" (label). A central policy defines which labels can interact. "Sticker A can read Sticker B."',
+                    pros: 'Extremely granular and powerful. Can control virtually every aspect of the OS.',
+                    cons: 'High learning curve. Debugging "Permission Denied" errors can be complex.'
+                },
+                apparmor: {
+                    title: 'AppArmor (Application Armor)',
+                    origin: 'Maintained by Canonical/Ubuntu.',
+                    ecosystem: 'Default in <strong>Ubuntu, Debian, SUSE</strong>.',
+                    mechanism: '<strong>Path-Based:</strong> Profiles are attached to binary paths (e.g., `/usr/sbin/nginx`). The profile lists allowed file paths (e.g., "can read `/var/www/*`").',
+                    pros: 'Easier for humans to read and write. Profiles look like standard configuration files.',
+                    cons: 'Slightly less granular than SELinux (though sufficient for most servers).'
+                }
+            };
+
+            function renderMacDetails(type) {
+                const data = macData[type];
+                if (!data) return;
+                
+                macDetailsContent.innerHTML = `
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-4">${data.title}</h3>
+                    <div class="space-y-4 text-gray-700">
+                        <p><strong>Origins:</strong> ${data.origin}</p>
+                        <p><strong>Ecosystem:</strong> ${data.ecosystem}</p>
+                        <p><strong>Mechanism:</strong> ${data.mechanism}</p>
+                        <p class="text-green-700"><strong>Pros:</strong> ${data.pros}</p>
+                        <p class="text-red-700"><strong>Cons:</strong> ${data.cons}</p>
+                    </div>
+                `;
+            }
+            
+            btnSelinux.addEventListener('click', () => {
+                renderMacDetails('selinux');
+                btnSelinux.classList.add('active', 'border-indigo-500', 'text-indigo-500');
+                btnSelinux.classList.remove('border-gray-400', 'text-gray-500');
+                btnApparmor.classList.remove('active', 'border-indigo-500', 'text-indigo-500');
+                btnApparmor.classList.add('border-gray-400', 'text-gray-500');
+            });
+            
+            btnApparmor.addEventListener('click', () => {
+                renderMacDetails('apparmor');
+                btnApparmor.classList.add('active', 'border-indigo-500', 'text-indigo-500');
+                btnApparmor.classList.remove('border-gray-400', 'text-gray-500');
+                btnSelinux.classList.remove('active', 'border-indigo-500', 'text-indigo-500');
+                btnSelinux.classList.add('border-gray-400', 'text-gray-500');
+            });
+
+
+            // --- SECTION 4 LOGIC ---
+            const nextStepBtn = document.getElementById('next-step-btn');
+            let currentStep = 0;
+            const totalSteps = 4;
+
+            nextStepBtn.addEventListener('click', () => {
+                document.getElementById(`step-${currentStep}`).classList.remove('active');
+                currentStep = (currentStep + 1) % totalSteps;
+                document.getElementById(`step-${currentStep}`).classList.add('active');
+                
+                if (currentStep === totalSteps - 1) {
+                    nextStepBtn.textContent = 'Restart Scenario';
+                } else if (currentStep === 0) {
+                    nextStepBtn.textContent = 'Start Scenario';
+                } else {
+                    nextStepBtn.textContent = 'Next Step';
+                }
+            });
+
+            // --- SECTION 5 LOGIC (NEW) ---
+            const toolContent = document.getElementById('tool-content');
+            const toolBtns = {
+                gufw: document.getElementById('tool-gufw'),
+                firewalld: document.getElementById('tool-firewalld'),
+                cockpit: document.getElementById('tool-cockpit'),
+                webmin: document.getElementById('tool-webmin')
+            };
+
+            const toolsData = {
+                gufw: {
+                    name: 'GUFW & UFW',
+                    tagline: 'The "Uncomplicated" Choice',
+                    os: '<strong>Debian, Ubuntu, Mint</strong>',
+                    function: 'A wrapper for <code>iptables</code> designed for simplicity. "Deny all incoming, allow all outgoing" by default.',
+                    bestFor: 'Personal Laptops, Simple Web Servers.',
+                    setup: 'Unlock padlock -> Toggle "On" -> Add Rule.'
+                },
+                firewalld: {
+                    name: 'Firewall-config (Firewalld)',
+                    tagline: 'The "Zone" Based Choice',
+                    os: '<strong>RHEL, CentOS, Fedora, OpenSUSE</strong>',
+                    function: 'Dynamic daemon supporting "Zones" (e.g., Home vs. Public). Allows complex rules without restarting the firewall.',
+                    bestFor: 'Enterprise Laptops (roaming), Virtualization Hosts, Complex Servers.',
+                    setup: 'Select Zone -> Check services (ssh, http) to allow.'
+                },
+                cockpit: {
+                    name: 'Cockpit',
+                    tagline: 'The Modern Web Interface',
+                    os: 'Universal (Standard on <strong>RHEL, Fedora, Ubuntu Server</strong>)',
+                    function: 'Lightweight web UI for server admin. Controls the underlying firewall (Firewalld/UFW) remotely via browser.',
+                    bestFor: 'Headless Servers, Rack Management, Small Business Admin.',
+                    setup: 'Install -> Browse to port 9090 -> Networking Tab.'
+                },
+                webmin: {
+                    name: 'Webmin',
+                    tagline: 'The Legacy Powerhouse',
+                    os: 'Universal (via .deb/.rpm download)',
+                    function: 'Comprehensive web-based system config. Exposes raw <code>iptables</code> rules and granular control.',
+                    bestFor: 'Legacy Systems, Power Users needing granular control without CLI.',
+                    setup: 'Install -> Browse to port 10000 -> Networking -> Linux Firewall.'
+                }
+            };
+
+            function renderTool(key) {
+                const data = toolsData[key];
+                toolContent.innerHTML = `
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-2">${data.name}</h3>
+                    <p class="text-sm text-indigo-500 font-bold uppercase tracking-wide mb-4">${data.tagline}</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-bold text-gray-800">Primary OS</h4>
+                            <p class="text-gray-600">${data.os}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Function</h4>
+                            <p class="text-gray-600">${data.function}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Best For</h4>
+                            <p class="text-gray-600 bg-indigo-50 p-2 rounded border-l-4 border-indigo-400 inline-block">${data.bestFor}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Basic Setup</h4>
+                            <p class="text-gray-500 text-sm italic">${data.setup}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function setActiveToolBtn(activeKey) {
+                Object.keys(toolBtns).forEach(key => {
+                    const btn = toolBtns[key];
+                    if (key === activeKey) {
+                        btn.classList.add('border-indigo-500', 'text-indigo-700', 'bg-indigo-50');
+                        btn.classList.remove('border-gray-200', 'text-gray-600', 'bg-white');
+                    } else {
+                        btn.classList.remove('border-indigo-500', 'text-indigo-700', 'bg-indigo-50');
+                        btn.classList.add('border-gray-200', 'text-gray-600', 'bg-white');
+                    }
+                });
+            }
+
+            Object.keys(toolBtns).forEach(key => {
+                toolBtns[key].addEventListener('click', () => {
+                    renderTool(key);
+                    setActiveToolBtn(key);
+                });
+            });
+
+            // Init Defaults
+            btnFirewall.click();
+            nextStepBtn.textContent = 'Start Scenario';
+            toolBtns['gufw'].click(); // Init Section 5
+        });
+    </script>
+</body>
+</html>
+
+
+
