@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Lecture: Netfilter & Iptables</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 
+    Chosen Palette: Tailwind Standard Light (bg-gray-50, text-gray-900, accent-blue-600, code-bg-gray-100)
+    Application Structure Plan: A SPA with a persistent left-sidebar for navigation (Modules 0-7) and a main content area. Clicking a module link hides all other module content blocks and shows the selected one. This "tabbed" approach is intuitive for a multi-part lecture. Bash examples are interactive (show/hide). This structure is chosen for its high scannability and logical flow, allowing users to jump to specific topics or follow the lecture sequentially.
+    Visualization & Content Choices: Report Info: Lab Setup (Module 0) -> Goal: Organize/Inform -> Viz: HTML/Tailwind Diagram -> Interaction: None (static) -> Justification: Visually represents the lab topology. | Report Info: Packet Flow (Module 2) -> Goal: Organize/Inform -> Viz: HTML/Tailwind Diagram -> Interaction: None (static) -> Justification: Critical for understanding Netfilter's architecture, superior to text-only. | Report Info: Bash Examples (All Modules) -> Goal: Inform/Teach -> Viz: HTML <pre><code> block -> Interaction: JS Toggle (Show/Hide) -> Justification: Hides complex code by default to improve readability, allowing users to "drill down" on demand. | All other text -> Goal: Inform -> Viz: Standard HTML <p>, <ul>, <h3> -> Interaction: None. | CONFIRMS: No Chart.js, No Plotly.js, NO SVG/Mermaid.
+    CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        /* Wrapper for code blocks to position the copy button */
+        .code-wrapper {
+            position: relative;
+        }
+        .code-wrapper pre {
+            background-color: #1f2937; /* gray-900 */
+            color: #f9fafb; /* gray-50 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+        .code-wrapper pre code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+        /* Copy Button Styles */
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #d1d5db;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0; /* Hidden by default */
+        }
+        .code-wrapper:hover .copy-btn {
+            opacity: 1; /* Show on hover */
+        }
+        .copy-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+        /* Mobile optimization: always show copy button on small screens if needed, 
+           but hover works reasonably well on many touch devices too. 
+           Let's keep it simple. */
+        
+        .nav-link.active {
+            background-color: #eff6ff; /* blue-50 */
+            color: #2563eb; /* blue-600 */
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        
+        <!-- Mobile Header -->
+        <div class="md:hidden flex justify-between items-center p-4 bg-white border-b border-gray-200 shadow-sm">
+            <h1 class="text-xl font-bold text-gray-800">Iptables Lecture</h1>
+            <button id="mobile-menu-button" class="text-gray-600 hover:text-gray-900">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav id="sidebar" class="w-full md:w-72 bg-white border-r border-gray-200 flex-shrink-0 hidden md:block">
+            <div class="p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Course Modules</h2>
+                <ul class="space-y-2">
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100 active" data-target="module-0">Module 0: Lab Setup</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-1">Module 1: Why iptables?</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-2">Module 2: Architecture</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-3">Module 3: Command Syntax</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-4">Module 4: Basic Matches</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-5">Module 5: Advanced Matches (State)</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-6">Module 6: Targets</a></li>
+                    <li><a href="#" class="nav-link block p-3 rounded-lg hover:bg-gray-100" data-target="module-7">Module 7: NAT</a></li>
+                </ul>
+            </div>
+            <div class="p-6 border-t border-gray-200 mt-auto text-xs text-gray-500">
+                <p><strong>Copyright &copy; 2025 Cyber Soho.</strong></p>
+                <p>All Rights Reserved.</p>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+            <div class="max-w-4xl mx-auto">
+
+                <!-- Module 0: Lab Setup -->
+                <section id="module-0" class="module-content space-y-6">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 0: The Lab Environment & Preparation</h2>
+                    <p class="text-lg text-gray-700">To practice the concepts in this lecture effectively, we will build a specific Virtual Lab. All examples in this course are adapted to fit this exact topology.</p>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">0.1 VirtualBox Lab Setup</h3>
+                    
+                    <!-- HTML Diagram for Lab Setup -->
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <h4 class="text-lg font-semibold mb-6 text-center text-gray-700">Lab Topology Diagram</h4>
+                        <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
+                            
+                            <!-- WAN -->
+                            <div class="flex flex-col items-center">
+                                <span class="text-5xl">☁️</span>
+                                <span class="font-semibold">WAN (Internet)</span>
+                                <span class="text-sm text-gray-500">(Bridged Adapter)</span>
+                            </div>
+                            
+                            <div class="text-2xl md:text-4xl text-gray-400 font-light hidden md:block">→</div>
+                            <div class="text-2xl md:text-4xl text-gray-400 font-light md:hidden">↓</div>
+                            
+                            <!-- Router VM -->
+                            <div class="border-2 border-blue-500 bg-blue-50 p-4 rounded-lg shadow-md text-center">
+                                <span class="font-bold text-blue-700">"Router" VM</span>
+                                <span class="block text-sm text-gray-600">Xubuntu 24.04</span>
+                                <div class="mt-2 text-left text-sm space-y-1">
+                                    <div class="bg-white p-2 border border-gray-300 rounded">
+                                        <strong>WAN IF:</strong> <code class="text-red-600">enp0s3</code> (DHCP)
+                                    </div>
+                                    <div class="bg-white p-2 border border-gray-300 rounded">
+                                        <strong>LAN IF:</strong> <code class="text-red-600">enp0s8</code> (10.0.2.1/24)
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-2xl md:text-4xl text-gray-400 font-light hidden md:block">→</div>
+                            <div class="text-2xl md:text-4xl text-gray-400 font-light md:hidden">↓</div>
+
+                            <!-- Client VM -->
+                            <div class="border-2 border-green-500 bg-green-50 p-4 rounded-lg shadow-md text-center">
+                                <span class="font-bold text-green-700">"Client" VM</span>
+                                <span class="block text-sm text-gray-600">Any OS</span>
+                                <div class="mt-2 text-left text-sm space-y-1">
+                                    <div class="bg-white p-2 border border-gray-300 rounded">
+                                        <strong>LAN IF:</strong> <code class="text-red-600">eth0</code> (10.0.2.100/24)
+                                    </div>
+                                    <div class="bg-white p-2 border border-gray-300 rounded">
+                                        <strong>Gateway:</strong> <code class="text-red-600">10.0.2.1</code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-6 text-gray-600">
+                            Both <strong class="text-blue-600">Router (LAN)</strong> and <strong class="text-green-600">Client</strong> are connected to the <strong class="text-purple-600">"CyberLab" NAT Network</strong> (Subnet: 10.0.2.0/24).
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">0.2 Critical Preparation: Disabling UFW</h3>
+                    <p class="text-gray-700">Xubuntu comes with <code class="bg-gray-200 text-red-600 px-1 rounded">UFW</code> (Uncomplicated Firewall) enabled by default. UFW is a frontend that manipulates iptables. To learn <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> directly, we must disable UFW so it doesn't interfere with our manual rules.</p>
+                    
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Task: Stop and Disable UFW on the Router VM</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <pre><code># EXPLANATION:
+# This set of commands stops the UFW service and ensures it doesn't start on boot.
+
+# 1. Disable the UFW firewall logic
+# This flushes UFW chains and sets default policies to ACCEPT
+sudo ufw disable
+
+# 2. Stop the systemd service
+sudo systemctl stop ufw
+
+# 3. Disable the systemd service (prevents autostart on reboot)
+sudo systemctl disable ufw
+
+# 4. Install iptables (usually pre-installed, but good to verify)
+sudo apt-get update
+sudo apt-get install iptables
+
+# 5. Verify empty ruleset (Should be empty ACCEPT policies)
+sudo iptables -L -n</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">0.3 Managing Rules via Scripts</h3>
+                    <p class="text-gray-700">Typing commands one by one into the terminal is risky; if you make a mistake (like dropping SSH), you might lock yourself out. The professional way to manage rules is using <strong>Bash Scripts</strong>.</p>
+                    <p class="text-gray-700">How to create an iptables script:</p>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-1">
+                        <li>Create a file: <code class="bg-gray-200 text-red-600 px-1 rounded">touch firewall_rules.sh</code></li>
+                        <li>Make it executable: <code class="bg-gray-200 text-red-600 px-1 rounded">chmod +x firewall_rules.sh</code></li>
+                        <li>Edit it: <code class="bg-gray-200 text-red-600 px-1 rounded">nano firewall_rules.sh</code></li>
+                        <li>Run it: <code class="bg-gray-200 text-red-600 px-1 rounded">sudo ./firewall_rules.sh</code></li>
+                    </ol>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">0.4 Enabling and Testing Routing (IP Forwarding)</h3>
+                    <p class="text-gray-700">By default, a Linux system drops any packet that is not destined for itself. To act as a "Router," we must tell the kernel to forward packets from one interface to another.</p>
+                    <h4 class="text-xl font-semibold text-gray-800 pt-2">Step 1: Enable Routing (The "Router" VM)</h4>
+                    <p class="text-gray-700">You can do this temporarily (lost on reboot) or permanently.</p>
+                    <strong class="text-gray-800">Temporary Method:</strong>
+                    <pre class="bg-gray-900 text-white p-4 rounded-md overflow-x-auto my-2"><code># Write '1' to the forwarding control file
+echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward</code></pre>
+                    <strong class="text-gray-800">Permanent Method (Recommended):</strong>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-1 mt-2">
+                        <li>Edit the sysctl config: <code class="bg-gray-200 text-red-600 px-1 rounded">sudo nano /etc/sysctl.conf</code></li>
+                        <li>Find the line <code class="bg-gray-200 text-red-600 px-1 rounded">#net.ipv4.ip_forward=1</code></li>
+                        <li>Uncomment it (remove the <code class="bg-gray-200 text-red-600 px-1 rounded">#</code> so it looks like <code class="bg-gray-200 text-red-600 px-1 rounded">net.ipv4.ip_forward=1</code>)</li>
+                        <li>Save and exit (Ctrl+O, Enter, Ctrl+X).</li>
+                        <li>Apply changes: <code class="bg-gray-200 text-red-600 px-1 rounded">sudo sysctl -p</code></li>
+                    </ol>
+
+                    <h4 class="text-xl font-semibold text-gray-800 pt-2">Step 2: Verify Routing is Enabled</h4>
+                    <p class="text-gray-700">Run the following command on the Router VM:</p>
+                    <pre class="bg-gray-900 text-white p-4 rounded-md overflow-x-auto my-2"><code>cat /proc/sys/net/ipv4/ip_forward</code></pre>
+                    <ul class="list-disc list-inside text-gray-700">
+                        <li><strong>Output <code class="bg-gray-200 text-red-600 px-1 rounded">0</code></strong>: Routing is OFF (Client cannot reach internet).</li>
+                        <li><strong>Output <code class="bg-gray-200 text-red-600 px-1 rounded">1</code></strong>: Routing is ON (Packets will be passed between interfaces).</li>
+                    </ul>
+
+                    <h4 class="text-xl font-semibold text-gray-800 pt-2">Step 3: Test Connectivity from the "Client" VM</h4>
+                    <p class="text-gray-700">Once routing is enabled on the Router (and MASQUERADE rules from Module 7 are applied), go to your <strong>Client VM</strong> and test:</p>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-1 mt-2">
+                        <li><strong>Ping the Gateway (Router LAN IP):</strong> <code class="bg-gray-200 text-red-600 px-1 rounded">ping 10.0.2.1</code> (Proves LAN is working).</li>
+                        <li><strong>Ping an Internet IP:</strong> <code class="bg-gray-200 text-red-600 px-1 rounded">ping 8.8.8.8</code> (Proves Routing + NAT are working).</li>
+                        <li><strong>Ping a Domain Name:</strong> <code class="bg-gray-200 text-red-600 px-1 rounded">ping google.com</code> (Proves DNS is working).</li>
+                    </ol>
+
+                </section>
+
+                <!-- Module 1: Why iptables? -->
+                <section id="module-1" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 1: The Evolution of Linux Firewalls – Why `iptables` Matters in 2025</h2>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">1.1 The "Manual Transmission" Analogy</h3>
+                    <p class="text-gray-700">In the modern networking landscape, a common question arises: <strong>"Is <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> still important?"</strong>. With the advent of newer technologies like <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code> and cloud-native tools, one might assume <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> is obsolete. This is a dangerous misconception for any cybersecurity professional.</p>
+                    <p class="text-gray-700">Think of <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> like a <strong>manual transmission car</strong>.</p>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li>Modern cars (firewalls like <code class="bg-gray-200 text-red-600 px-1 rounded">UFW</code> or <code class="bg-gray-200 text-red-600 px-1 rounded">Firewalld</code>) often have automatic transmissions. They are easier to drive and handle most day-to-day tasks for you.</li>
+                        <li>However, knowing how to drive a manual transmission gives you a fundamental understanding of how the engine applies power to the wheels.</li>
+                        <li>Similarly, understanding <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> gives you deep insight into how the Linux kernel processes packets. Even when you use high-level tools like <a href="https://www.docker.com/" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Docker</a> or <a href="https://kubernetes.io/" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Kubernetes</a>, they are often manipulating <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> rules in the background. If you don't understand the underlying mechanics, you cannot troubleshoot effectively when the "automatic" systems fail.</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">1.2 The Successor: `nftables`</h3>
+                    <p class="text-gray-700">It is important to acknowledge that <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> is being succeeded by <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code> (nftables).</p>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>Performance:</strong> <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code> uses a virtual machine inside the kernel, allowing for faster processing of large rule sets.</li>
+                        <li><strong>Unification:</strong> Unlike <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code>, which has separate tools for IPv4, IPv6, and ARP (<code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">ip6tables</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">arptables</code>), <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code> unifies these into a single framework.</li>
+                        <li><strong>Current State:</strong> While the industry is moving toward <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> remains the ubiquitous standard found on almost every Linux server, embedded device, and enterprise gateway today.</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">1.3 Why We Still Use `iptables`</h3>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>Ubiquity:</strong> It is pre-installed on virtually every Linux distribution.</li>
+                        <li><strong>The Backend Role:</strong> Tools like <code class="bg-gray-200 text-red-600 px-1 rounded">UFW</code> (Uncomplicated Firewall) and <code class="bg-gray-200 text-red-600 px-1 rounded">Firewalld</code> are essentially "front-ends" that generate <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> rules for you.</li>
+                        <li><strong>Containerization:</strong> <a href="https://www.docker.com/" class="text-blue-600 hover:underline" target="_blank" rel="noopener">Docker</a> relies heavily on <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> to manage container networking and port forwarding.</li>
+                    </ol>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: Checking the Firewall Backend</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> On your <strong>Router VM</strong>, check if the system is using legacy <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> or the <code class="bg-gray-200 text-red-600 px-1 rounded">nftables</code> shim.</p>
+                            <pre><code># EXPLANATION:
+# This script checks the version of the iptables command.
+
+# Check the version of the iptables command
+sudo iptables --version
+
+# Check if the 'iptables' command is actually a symbolic link to xtables-nft-multi
+# 'ls' lists directory contents
+# '-l' shows detailed info including link targets
+# 'which' finds the path to the executable
+ls -l $(which iptables)
+
+# Output might look like: iptables -> /etc/alternatives/iptables -> /usr/sbin/iptables-nft</code></pre>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- Module 2: Architecture -->
+                <section id="module-2" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 2: The Architecture – Netfilter & Iptables</h2>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">2.1 The Framework vs. The Tool</h3>
+                    <p class="text-gray-700">It is crucial to distinguish between the two key components:</p>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>Netfilter:</strong> This is a <em><strong>framework</strong></em> inside the Linux Kernel. It consists of "hooks" in the network stack that allow kernel modules to register callback functions. When a packet traverses the network stack, it hits these hooks, and Netfilter decides what to do with it. Netfilter does the actual work.</li>
+                        <li><strong><code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code>:</strong> This is the <strong>user-space tool</strong>. It is the command-line utility you use to talk to Netfilter. You write rules in <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code>, and it pushes them into the kernel's Netfilter hooks.</li>
+                    </ol>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">2.2 Packet Flow and Chains</h3>
+                    <p class="text-gray-700">When a packet enters a network interface (NIC), it doesn't just magically appear in an application. It traverses a specific path. Netfilter organizes these paths into <strong>CHAINS</strong>.</p>
+                    
+                    <!-- HTML Diagram for Packet Flow -->
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <h4 class="text-lg font-semibold mb-6 text-center text-gray-700">Netfilter Packet Flow Diagram</h4>
+                        <div class="text-center text-sm font-mono">
+                            <!-- Incoming Path -->
+                            <div class="mb-4">
+                                <span class="font-bold">Incoming Packet (e.g., from WAN <code class="text-red-600">enp0s3</code>)</span>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-red-100 border border-red-300 rounded-md shadow-sm">
+                                    <strong>raw</strong><br>PREROUTING
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                    <strong>mangle</strong><br>PREROUTING
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-green-100 border border-green-300 rounded-md shadow-sm">
+                                    <strong>nat</strong><br>PREROUTING (DNAT)
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-gray-200 border border-gray-400 rounded-md shadow-sm">
+                                    Routing Decision
+                                </div>
+                            </div>
+
+                            <!-- Fork: To Localhost or to Forward -->
+                            <div class="flex flex-col md:flex-row justify-center items-start md:space-x-16 space-y-8 md:space-y-0">
+                                <!-- Path 1: To Localhost (INPUT) -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="text-center font-semibold text-gray-700">(Destined for Router VM)</div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                        <strong>mangle</strong><br>INPUT
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-blue-100 border border-blue-300 rounded-md shadow-sm">
+                                        <strong>filter</strong><br>INPUT
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <span class="font-bold">Local Process (e.g., SSH Server)</span>
+                                </div>
+                                
+                                <!-- Path 2: To Forward (FORWARD) -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="text-center font-semibold text-gray-700">(Destined for Client VM)</div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                        <strong>mangle</strong><br>FORWARD
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-blue-100 border border-blue-300 rounded-md shadow-sm">
+                                        <strong>filter</strong><br>FORWARD
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                        <strong>mangle</strong><br>POSTROUTING
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <div class="inline-block p-3 bg-green-100 border border-green-300 rounded-md shadow-sm">
+                                        <strong>nat</strong><br>POSTROUTING (SNAT/MASQUERADE)
+                                    </div>
+                                    <div class="text-3xl text-blue-600">↓</div>
+                                    <span class="font-bold">Outgoing Packet (e.g., to LAN <code class="text-red-600">enp0s8</code>)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Path 3: From Localhost (OUTPUT) -->
+                            <div class="mt-8 pt-8 border-t border-gray-300 border-dashed">
+                                <span class="font-bold">Local Process (e.g., <code class="text-red-600">apt update</code>)</span>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-red-100 border border-red-300 rounded-md shadow-sm">
+                                    <strong>raw</strong><br>OUTPUT
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                    <strong>mangle</strong><br>OUTPUT
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-green-100 border border-green-300 rounded-md shadow-sm">
+                                    <strong>nat</strong><br>OUTPUT
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-blue-100 border border-blue-300 rounded-md shadow-sm">
+                                    <strong>filter</strong><br>OUTPUT
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-gray-200 border border-gray-400 rounded-md shadow-sm">
+                                    (Routing Decision)
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-yellow-100 border border-yellow-300 rounded-md shadow-sm">
+                                    <strong>mangle</strong><br>POSTROUTING
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <div class="inline-block p-3 bg-green-100 border border-green-300 rounded-md shadow-sm">
+                                    <strong>nat</strong><br>POSTROUTING (SNAT)
+                                </div>
+                                <div class="text-3xl text-blue-600">↓</div>
+                                <span class="font-bold">Outgoing Packet (e.g., to WAN <code class="text-red-600">enp0s3</code>)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">2.3 The Tables</h3>
+                    <p class="text-gray-700">To organize rules further, Netfilter uses <strong>TABLES</strong>. Each table serves a specific purpose.</p>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>filter</strong> (Default): This is where you make security decisions. Does the packet pass or get dropped?
+                            <br><em>Chains:</em> <code class="bg-gray-200 text-red-600 px-1 rounded">INPUT</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">OUTPUT</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">FORWARD</code>.</li>
+                        <li><strong>nat</strong>: Used for Network Address Translation. Modifying source or destination IPs.
+                            <br><em>Chains:</em> <code class="bg-gray-200 text-red-600 px-1 rounded">PREROUTING</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">POSTROUTING</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">OUTPUT</code>.</li>
+                        <li><strong>mangle</strong>: Used for specialized packet alteration (e.g., changing the TTL, TOS, or marking packets).
+                            <br><em>Chains:</em> All 5 chains.</li>
+                        <li><strong>raw</strong>: Used to bypass connection tracking (NOTRACK). This is for high-performance needs where you don't want the overhead of tracking state.
+                            <br><em>Chains:</em> <code class="bg-gray-200 text-red-600 px-1 rounded">PREROUTING</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">OUTPUT</code>.</li>
+                    </ol>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: Mapping the Firewall Structure</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Run this on the <strong>Router VM</strong> to see the empty tables after disabling UFW.</p>
+                            <pre><code># EXPLANATION:
+# This script lists all active rules to help us visualize the Tables and Chains structure.
+
+# List rules in the default 'filter' table
+# '-t filter' specifies the table (optional here as filter is default)
+# '-L' lists the rules
+# '-v' (verbose) shows packet/byte counters
+# '-n' (numeric) prevents DNS lookups for speed
+sudo iptables -t filter -L -v -n
+
+# List rules in the 'nat' table
+# We MUST specify '-t nat' here, otherwise it defaults to filter
+sudo iptables -t nat -L -v -n
+
+# List rules in the 'mangle' table to see packet alteration chains
+sudo iptables -t mangle -L -v -n</code></pre>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- Module 3: Command Syntax -->
+                <section id="module-3" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 3: The `iptables` Command Syntax</h2>
+                    <p class="text-gray-700">The syntax of <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> can be daunting, but it follows a predictable pattern:</p>
+                    <pre class="bg-gray-900 text-white p-4 rounded-md overflow-x-auto my-2"><code>iptables [-t table] -COMMAND CHAIN_NAME [matches] -j TARGET</code></pre>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">3.1 Common Commands</h3>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-A</code> <strong>(Append):</strong> Adds a rule to the <strong>end</strong> of the chain.</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-I</code> <strong>(Insert):</strong> Adds a rule to a specific position (default is the <strong>top</strong>). <strong>Important:</strong> Rules are processed top-to-bottom. The first match wins. Inserting at the top <code class="bg-gray-200 text-red-600 px-1 rounded">-I</code> is often safer for "Allow" rules than appending <code class="bg-gray-200 text-red-600 px-1 rounded">-A</code>.</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-D</code> <strong>(Delete):</strong> Removes a rule.</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-F</code> <strong>(Flush):</strong> Deletes <strong>all</strong> rules in a chain.</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-P</code> <strong>(Policy):</strong> Sets the default behavior for a chain if no rules match (e.g., <code class="bg-gray-200 text-red-600 px-1 rounded">DROP</code> everything that isn't explicitly allowed).</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">3.2 The Importance of Order</h3>
+                    <p class="text-gray-700">Since rules are processed sequentially, a common mistake is placing a generic <code class="bg-gray-200 text-red-600 px-1 rounded">DROP</code> rule before a specific <code class="bg-gray-200 text-red-600 px-1 rounded">ACCEPT</code> rule. Once a packet matches a rule with a terminating target (like <code class="bg-gray-200 text-red-600 px-1 rounded">DROP</code> or <code class="bg-gray-200 text-red-600 px-1 rounded">ACCEPT</code>), processing stops (mostly).
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: The "Lockdown" Strategy</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Create a script named <code class="bg-gray-200 text-red-600 px-1 rounded">lockdown.sh</code> on the <strong>Router VM</strong>. This will secure the router itself.</p>
+                            <pre><code>#!/bin/bash
+# EXPLANATION:
+# This script resets the firewall to a secure state (Deny All by default).
+
+echo "Applying Lockdown..."
+
+# Flush (delete) all existing rules in the filter table
+# This ensures we are starting from a clean slate
+sudo iptables -F
+
+# Delete all user-defined chains
+# This cleans up any custom logic from previous configurations
+sudo iptables -X
+
+# Set the Default Policy for the INPUT chain to DROP
+# This means: "If a packet comes in to the Router and doesn't match any specific rule, kill it."
+sudo iptables -P INPUT DROP
+
+# Set the Default Policy for the FORWARD chain to DROP
+# We generally don't want to route traffic unless we explicitly allow it later
+sudo iptables -P FORWARD DROP
+
+# Set the Default Policy for the OUTPUT chain to ACCEPT
+# We generally trust traffic originating from our own Router
+sudo iptables -P OUTPUT ACCEPT
+
+# Verify the policies
+sudo iptables -L -n
+
+echo "Lockdown Complete."</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module 4: Basic Matches -->
+                <section id="module-4" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 4: Basic Matches – Identifying Traffic</h2>
+                    <p class="text-gray-700">To filter packets, we must describe them. We use "matches" to identify traffic based on Layer 3 (IP) and Layer 4 (TCP/UDP) headers.</p>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">4.1 IP Addresses</h3>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-s</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--source</code></strong>): Match the source IP (who sent the packet).</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-d</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--destination</code></strong>): Match the destination IP (where is it going).</li>
+                        <li>You can use single IPs (<code class="bg-gray-200 text-red-600 px-1 rounded">10.0.2.100</code>) or CIDR notation (<code class="bg-gray-200 text-red-600 px-1 rounded">10.0.2.0/24</code>).</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">4.2 Protocols and Ports</h3>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-p</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--protocol</code></strong>): <code class="bg-gray-200 text-red-600 px-1 rounded">tcp</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">udp</code>, <code class="bg-gray-200 text-red-600 px-1 rounded">icmp</code>.</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">--dport</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--destination-port</code></strong>): The port the packet is trying to reach (e.g., 80 for Web).</li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">--sport</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--source-port</code></strong>): The port the packet originated from (usually random for clients).</li>
+                        <li><strong>Note:</strong> You must specify <code class="bg-gray-200 text-red-600 px-1 rounded">-p tcp</code> or <code class="bg-gray-200 text-red-600 px-1 rounded">-p udp</code> <em>before</em> using <code class="bg-gray-200 text-red-600 px-1 rounded">--dport</code> or <code class="bg-gray-200 text-red-600 px-1 rounded">--sport</code>.</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">4.3 Interfaces</h3>
+                     <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-i</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--in-interface</code></strong>): The physical device the packet entered on.
+                            <br>In our Lab: <code class="bg-gray-200 text-red-600 px-1 rounded">enp0s3</code> (WAN) or <code class="bg-gray-200 text-red-600 px-1 rounded">enp0s8</code> (LAN).
+                        </li>
+                        <li><code class="bg-gray-200 text-red-600 px-1 rounded">-o</code> (<strong><code class="bg-gray-200 text-red-600 px-1 rounded">--out-interface</code></strong>): The physical device the packet is leaving on.
+                            <br>In our Lab: <code class="bg-gray-200 text-red-600 px-1 rounded">enp0s3</code> (WAN) or <code class="bg-gray-200 text-red-600 px-1 rounded">enp0s8</code> (LAN).
+                        </li>
+                    </ul>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: Configuring Router Access</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Create <code class="bg-gray-200 text-red-600 px-1 rounded">access_control.sh</code> on the <strong>Router VM</strong>. Allow SSH from the LAN Client (<code class="bg-gray-200 text-red-600 px-1 rounded">10.0.2.100</code>) but block a "malicious" IP on the WAN.</p>
+                            <pre><code>#!/bin/bash
+# EXPLANATION:
+# This script configures basic access control for the Router.
+
+# 1. Allow traffic on the loopback interface (localhost)
+# Crucial for system services
+sudo iptables -A INPUT -i lo -j ACCEPT
+
+# 2. Block a known malicious subnet (Simulated)
+# We put this *before* allow rules.
+sudo iptables -A INPUT -s 203.0.113.0/24 -j DROP
+
+# 3. Allow SSH (Port 22) ONLY from our LAN interface (enp0s8)
+# We don't want the internet (enp0s3) SSHing into us.
+# '-i enp0s8' ensures the request comes from inside.
+# '-s 10.0.2.0/24' restricts it to the LAN subnet.
+sudo iptables -A INPUT -i enp0s8 -s 10.0.2.0/24 -p tcp --dport 22 -j ACCEPT
+
+# 4. Allow HTTP (80) and HTTPS (443) access to the router itself (if running a web server)
+# '-m multiport' allows listing multiple ports
+sudo iptables -A INPUT -p tcp -m multiport --dports 80,443 -j ACCEPT</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module 5: Advanced Matches (State) -->
+                <section id="module-5" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 5: Advanced Matches – Connection Tracking & State</h2>
+                    <p class="text-gray-700">This is arguably the most important concept in modern firewalls. <code class="bg-gray-200 text-red-600 px-1 rounded">iptables</code> is a <strong>Stateful Firewall</strong>. This means it remembers the context of a packet.</p>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">5.1 The State Machine</h3>
+                    <p class="text-gray-700">Instead of just looking at "Source IP 10.0.2.100", the firewall looks at the <strong>Connection State</strong>:</p>
+                    <ol class="list-decimal list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>NEW</strong>: The first packet of a connection (e.g., a TCP SYN packet).</li>
+                        <li><strong>ESTABLISHED</strong>: Packets that are part of a connection that has already seen traffic in both directions.</li>
+                        <li><strong>RELATED</strong>: Packets that are starting a new connection but are associated with an existing one (Crucial for FTP or SIP).</li>
+                        <li><strong>INVALID</strong>: Packets that don't adhere to protocol standards.</li>
+                    </ol>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">5.2 Why Stateful is Better</h3>
+                    <p class="text-gray-700">If you only use static rules, you have to explicitly open high-numbered ports for return traffic, which is insecure. With stateful tracking, you simply say: <strong>"If I started this conversation (OUTPUT), allow the reply (INPUT ESTABLISHED) automatically."</strong></p>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: The "Golden Rule" of Stateful Firewalls</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Update your rules on the <strong>Router VM</strong>. This allows the Router to update itself (apt-get) and ensures we don't break ongoing SSH sessions.</p>
+                            <pre><code>#!/bin/bash
+# EXPLANATION:
+# This script enables stateful inspection.
+
+# 1. Drop invalid packets immediately
+# '-m state' loads the state module
+# '--state INVALID' matches broken packets
+sudo iptables -A INPUT -m state --state INVALID -j DROP
+
+# 2. The "Golden Rule": Allow traffic that is already part of a valid connection
+# This allows the Router to browse the web (enp0s3 replies) 
+# and allows the Client to stay connected via SSH.
+sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# 3. Limit concurrent SSH connections from the LAN
+# '-i enp0s8' specifies LAN interface
+# '-m connlimit' loads connection limit module
+# '--connlimit-above 3' matches if the source IP has more than 3 active connections
+# '-j REJECT' politely refuses extra connections
+sudo iptables -A INPUT -i enp0s8 -p tcp --syn --dport 22 -m connlimit --connlimit-above 3 -j REJECT</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module 6: Targets -->
+                <section id="module-6" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 6: Targets – The Fate of the Packet</h2>
+                    <p class="text-gray-700">When a rule matches, the <code class="bg-gray-200 text-red-600 px-1 rounded">-j</code> (jump) flag tells Netfilter what to do.</p>
+                    
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">6.1 Terminating Targets</h3>
+                    <p class="text-gray-700">These stop processing in the current chain.</p>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>ACCEPT</strong>: Let the packet through.</li>
+                        <li><strong>DROP</strong>: Silently discard the packet. (Blackhole).</li>
+                        <li><strong>REJECT</strong>: Discard the packet but send an error message back (ICMP Destination Unreachable).</li>
+                    </ul>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">6.2 Non-Terminating Targets</h3>
+                    <p class="text-gray-700">These perform an action but continue to the next rule.</p>
+                    <ul class="list-disc list-inside bg-white p-4 rounded-lg border border-gray-200 text-gray-700 space-y-2">
+                        <li><strong>LOG</strong>: Writes packet details to kernel logs (<code class="bg-gray-200 text-red-600 px-1 rounded">dmesg</code> or <code class="bg-gray-200 text-red-600 px-1 rounded">/var/log/kern.log</code>).</li>
+                        <li><strong>TEE</strong>: Mirrors the packet to another device (great for IDS/NSM).</li>
+                    </ul>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: The "Log and Drop" Pattern</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Add logging to the <strong>Router VM</strong> INPUT chain to see when packets are blocked.</p>
+                            <pre><code>#!/bin/bash
+# EXPLANATION:
+# This script appends logging rules at the end of the INPUT chain.
+
+# 1. Create a logging rule
+# This must be the LAST rule before the implicit DROP logic
+# '--log-prefix' adds a tag to the log file
+# '--log-level 4' sets the syslog level (Warning)
+sudo iptables -A INPUT -j LOG --log-prefix "IPTABLES_DROP: " --log-level 4
+
+# 2. Explicitly Drop everything else
+# Useful if your default policy isn't DROP, or just for clarity.
+sudo iptables -A INPUT -j DROP
+
+# To view these logs later, run this in a separate terminal:
+# sudo tail -f /var/log/kern.log | grep "IPTABLES_DROP"</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Module 7: NAT -->
+                <section id="module-7" class="module-content space-y-6 hidden">
+                    <h2 class="text-4xl font-extrabold text-gray-900 border-b border-gray-300 pb-4">Module 7: NAT (Network Address Translation)</h2>
+                    <p class="text-gray-700">NAT involves re-writing IP addresses. This module transforms your Xubuntu VM into a real router.</p>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">7.1 SNAT (Source NAT) & MASQUERADE</h3>
+                    <p class="text-gray-700">This is used when the internal <strong>Client (10.0.2.100)</strong> needs to access the Internet. The <strong>Router (<code class="bg-gray-200 text-red-600 px-1 rounded">enp0s3</code>)</strong> replaces the private source IP (<code class="bg-gray-200 text-red-600 px-1 rounded">10.0.2.100</code>) with its own WAN IP.</p>
+
+                    <h3 class="text-2xl font-bold text-gray-800 pt-4">7.2 DNAT (Destination NAT) / Port Forwarding</h3>
+                    <p class="text-gray-700">This is used if you want to run a Web Server on the <strong>Client (10.0.2.100)</strong> but access it from the outside world via the Router's WAN IP.</p>
+
+                    <div class="example-container bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+                        <button class="toggle-code bg-gray-100 w-full text-left p-4 font-semibold text-gray-800 hover:bg-gray-200 flex justify-between items-center rounded-t-lg">
+                            <span>Real-Life Example: Enabling the "Router" Functionality</span>
+                            <span class="toggle-arrow text-blue-600 text-sm font-medium">Show Code ▼</span>
+                        </button>
+                        <div class="code-content hidden p-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                            <p class="text-sm text-gray-600 mb-2"><strong>Task:</strong> Create <code class="bg-gray-200 text-red-600 px-1 rounded">router_enable.sh</code> on the <strong>Router VM</strong>. This enables internet access for the Client VM.</p>
+                            <pre><code>#!/bin/bash
+# EXPLANATION:
+# This script configures the Xubuntu machine to forward traffic and perform NAT.
+
+# 1. Enable IP Forwarding in the kernel
+# Without this, Linux drops packets not destined for itself.
+# We write '1' to the ip_forward system file.
+# Note: This is temporary (lost on reboot). See Module 0.4 for permanent method.
+echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
+
+# 2. Setup Masquerading (SNAT) for outbound traffic
+# '-t nat' specifies the NAT table
+# '-A POSTROUTING' - we modify the packet AFTER routing decisions
+# '-o enp0s3' - match traffic leaving via the WAN interface (Bridged)
+# '-j MASQUERADE' - rewrite source IP to the WAN IP of enp0s3
+sudo iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE
+
+# 3. Allow the forwarded traffic in the FILTER table
+# By default, our FORWARD policy is DROP (Module 3). We must open it.
+# Allow LAN (enp0s8) to go to WAN (enp0s3)
+sudo iptables -A FORWARD -i enp0s8 -o enp0s3 -j ACCEPT
+
+# Allow Established connections to come back from WAN to LAN
+sudo iptables -A FORWARD -i enp0s3 -o enp0s8 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# 4. (Optional) Port Forwarding Example
+# If we wanted to forward WAN Port 8080 to Client Port 80:
+# sudo iptables -t nat -A PREROUTING -i enp0s3 -p tcp --dport 8080 -j DNAT --to-destination 10.0.2.100:80
+# sudo iptables -A FORWARD -p tcp -d 10.0.2.100 --dport 80 -j ACCEPT</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer with Disclaimers -->
+                <footer class="mt-12 pt-8 border-t border-gray-300 text-sm text-gray-600 space-y-6">
+                    <div class="bg-yellow-50 border border-yellow-300 text-yellow-800 p-4 rounded-lg">
+                        <strong class="font-bold">⚠️ Cybersecurity Lab Warning</strong>
+                        <p class="mt-1">The skills and techniques discussed in this course are for educational and authorized purposes ONLY. All hands-on practice must be conducted in a secure, isolated lab environment (e.g., virtual machines) completely disconnected from any public or private networks. Applying these skills to any system, network, or application without explicit, written permission from the owner is illegal and may result in severe civil and criminal penalties. Practice legally and ethically.</p>
+                    </div>
+                    <div class="bg-red-50 border border-red-300 text-red-800 p-4 rounded-lg">
+                        <strong class="font-bold">Legal Disclaimer</strong>
+                        <p class="mt-1">The information provided in this course outline and all associated materials is for informational purposes only and does not constitute professional advice. The author, Cyber Soho, makes no warranties regarding the accuracy, completeness, or suitability of this information. Any reliance you place on such information is strictly at your own risk. In no event will the author be liable for any loss or damage including, without limitation, indirect or consequential loss or damage, or any loss or damage whatsoever arising from the use of this course or the information contained within.</p>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-300 text-blue-800 p-4 rounded-lg">
+                        <strong class="font-bold">Non-Affiliation & Editorial Disclaimer</strong>
+                        <p class="mt-1">This course and its content represent the editorial opinion and intellectual property of Cyber Soho. The author's relationship with Dawson College is that of a "non-tenured visiting teacher". The author is not otherwise affiliated with, endorsed by, or partnered with Dawson College, or any other organization or certification body mentioned or unmentioned. All product names, logos, and brands are property of their respective owners.</p>
+                    </div>
+                    <div class="text-center text-gray-500 pt-4">
+                        <strong>Copyright © 2025 Cyber Soho. All Rights Reserved.</strong>
+                    </div>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const moduleContents = document.querySelectorAll('.module-content');
+            const codeToggles = document.querySelectorAll('.toggle-code');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const sidebar = document.getElementById('sidebar');
+
+            // Sidebar navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('data-target');
+                    
+                    // Hide all content
+                    moduleContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+
+                    // Show target content
+                    const targetContent = document.getElementById(targetId);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+
+                    // Update active link
+                    navLinks.forEach(navLink => {
+                        navLink.classList.remove('active');
+                    });
+                    link.classList.add('active');
+
+                    // If on mobile, hide sidebar after click
+                    if (!sidebar.classList.contains('md:block')) {
+                        sidebar.classList.add('hidden');
+                    }
+                    
+                    // Scroll to top of content
+                    window.scrollTo(0, 0);
+                });
+            });
+
+            // Code block toggles
+            codeToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const content = toggle.nextElementSibling;
+                    const arrow = toggle.querySelector('.toggle-arrow');
+                    
+                    content.classList.toggle('hidden');
+                    
+                    if (content.classList.contains('hidden')) {
+                        arrow.textContent = 'Show Code ▼';
+                    } else {
+                        arrow.textContent = 'Hide Code ▲';
+                    }
+                });
+            });
+
+            // Mobile menu toggle
+            mobileMenuButton.addEventListener('click', () => {
+                sidebar.classList.toggle('hidden');
+            });
+            
+            // Add Copy Buttons to all PRE blocks
+            // This ensures every code example gets a copy button automatically
+            document.querySelectorAll('pre').forEach(pre => {
+                // Create wrapper to position button relative to code block
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-wrapper';
+                
+                // Insert wrapper before pre, then move pre inside
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+
+                // Create copy button
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.textContent = 'Copy';
+                btn.setAttribute('aria-label', 'Copy code to clipboard');
+                
+                // Add copy functionality
+                btn.addEventListener('click', async () => {
+                    try {
+                        const code = pre.querySelector('code').innerText;
+                        // Use standard clipboard API
+                        await navigator.clipboard.writeText(code);
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => {
+                            btn.textContent = 'Copy';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        // Fallback for older browsers or restricted contexts
+                        const textArea = document.createElement('textarea');
+                        textArea.value = pre.querySelector('code').innerText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            btn.textContent = 'Copied!';
+                            setTimeout(() => btn.textContent = 'Copy', 2000);
+                        } catch (err2) {
+                            btn.textContent = 'Failed';
+                        }
+                        document.body.removeChild(textArea);
+                    }
+                });
+
+                wrapper.appendChild(btn);
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+

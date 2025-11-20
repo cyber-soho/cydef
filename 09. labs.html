@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Lab: Iptables Challenges</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 
+    Chosen Palette: Lab Focused (bg-slate-50, text-slate-900, accent-indigo-600)
+    -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Code Block Styling */
+        .code-wrapper { position: relative; }
+        .code-wrapper pre {
+            background-color: #1e293b; /* slate-800 */
+            color: #f8fafc; /* slate-50 */
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Copy Button */
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+        .code-wrapper:hover .copy-btn { opacity: 1; }
+        .copy-btn:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        /* Smooth Fade for Toggles */
+        .fade-enter {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Utility for hidden elements */
+        .hidden { display: none; }
+
+        /* Modal Overlay */
+        #password-overlay {
+            background-color: rgba(15, 23, 42, 0.8); /* slate-900 with opacity */
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+
+    <!-- Persistent Top Menu -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- Brand & Lab Info -->
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">🛡️</span>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide leading-tight">Cybersecurity Lab</h1>
+                    <p class="text-red-400 font-bold text-sm bg-red-900/30 px-2 py-0.5 rounded inline-block mt-1 border border-red-800">
+                        Due date for Labs submission - November 29, 2025 via Omnivox's Lea !
+                    </p>
+                </div>
+            </div>
+
+            <!-- Navigation Elements -->
+            <nav class="flex items-center space-x-4">
+                <a href="#challenges-start" class="text-slate-300 hover:text-white font-medium transition-colors px-3 py-2 rounded hover:bg-slate-800">
+                    1. Lab Conditions
+                </a>
+                <button id="unlock-solutions-btn" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-lg border border-indigo-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    2. Unlock Solutions
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main id="challenges-start" class="flex-grow w-full max-w-5xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- LAB ENVIRONMENT CONTEXT -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center">
+                <h2 class="text-indigo-900 font-bold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    Lab Environment (Reference)
+                </h2>
+                <span class="text-xs font-mono text-indigo-600 bg-indigo-100 px-2 py-1 rounded">Subnet: 10.0.2.0/24</span>
+            </div>
+            <div class="p-6 grid md:grid-cols-2 gap-6">
+                <!-- Router Specs -->
+                <div class="border border-slate-200 rounded-lg p-4 relative group hover:border-indigo-300 transition-colors">
+                    <div class="absolute top-0 right-0 bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-bl-lg font-mono">Router VM</div>
+                    <h3 class="font-bold text-slate-800 mb-2">Xubuntu Router</h3>
+                    <ul class="text-sm space-y-2 text-slate-600">
+                        <li class="flex justify-between"><span>WAN (Internet):</span> <code class="bg-slate-100 px-1 rounded text-red-600">enp0s3</code></li>
+                        <li class="flex justify-between"><span>LAN (Gateway):</span> <code class="bg-slate-100 px-1 rounded text-indigo-600">enp0s8</code></li>
+                        <li class="flex justify-between border-t pt-2 mt-2"><span>IP Address:</span> <code class="font-mono font-bold">10.0.2.1</code></li>
+                    </ul>
+                </div>
+                <!-- Client Specs -->
+                <div class="border border-slate-200 rounded-lg p-4 relative group hover:border-green-300 transition-colors">
+                    <div class="absolute top-0 right-0 bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-bl-lg font-mono">Client VM</div>
+                    <h3 class="font-bold text-slate-800 mb-2">Client Machine</h3>
+                    <ul class="text-sm space-y-2 text-slate-600">
+                        <li class="flex justify-between"><span>Interface:</span> <code class="bg-slate-100 px-1 rounded text-indigo-600">eth0</code></li>
+                        <li class="flex justify-between"><span>Gateway:</span> <code class="bg-slate-100 px-1 rounded">10.0.2.1</code></li>
+                        <li class="flex justify-between border-t pt-2 mt-2"><span>IP Address:</span> <code class="font-mono font-bold">10.0.2.100</code></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- INSTRUCTIONS -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">How to solve these challenges:</h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Write your solution as <strong>root</strong> (`sudo su`) on the <strong>Router VM</strong> terminal.</li>
+                            <li>You can run commands directly or create a shell script (e.g., `nano task1.sh`, `chmod +x task1.sh`, `./task1.sh`).</li>
+                            <li>If you get an error, read the message, refine your command, and try again.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PART 1: THE IPTABLES COMMAND -->
+        <div class="flex items-center gap-4 mb-2">
+            <h2 class="text-2xl font-bold text-slate-800">Part 1: The Iptables Command</h2>
+            <div class="h-px bg-slate-300 flex-grow"></div>
+        </div>
+
+        <div class="space-y-6 mb-12">
+            
+            <!-- Challenge 1.1 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #1: Default Policies</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">filter table</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables commands that set the default <strong>POLICY</strong> to <strong>ACCEPT</strong> on INPUT and OUTPUT chains and <strong>DROP</strong> on FORWARD chain.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Tip:</strong> The <code>-P</code> flag sets the default Policy.
+                        </div>
+                        <pre class="hidden-code">iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 1.2 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #2: Listing Rules</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">filter table</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables command that <strong>lists only</strong> the filter table of the <strong>INPUT</strong> chain.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Tip:</strong> Use <code>-vnL</code> for verbose, numeric, list output.
+                        </div>
+                        <pre class="hidden-code">iptables -t filter -vnL INPUT</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 1.3 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #3: The NAT Table</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">nat table</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables commands that <strong>list</strong> the <strong>nat</strong> table.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">iptables -t nat -vnL</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 1.4 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #4: Flushing</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">filter table</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables command that <strong>flushes</strong> the filter table of <strong>all</strong> chains.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Tip:</strong> <code>filter</code> is the default table, so <code>-t filter</code> is optional but good practice.
+                        </div>
+                        <pre class="hidden-code">iptables -F
+#or
+iptables -t filter -F</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 1.5 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #5: Dropping Specific Traffic</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">INPUT chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write an iptables rule that <strong>drops</strong> all incoming packets to <strong>port 22/tcp</strong> (ssh). This should be the <strong>first rule</strong> in the chain.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Tip:</strong> Use <code>-I</code> (Insert) instead of <code>-A</code> (Append) to ensure it's the first rule.
+                        </div>
+                        <pre class="hidden-code">iptables -I INPUT -p tcp --dport 22 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 1.6 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-red-200">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-red-700">Challenge #6: Reset / Delete Firewall</h3>
+                        <span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-mono">Dangerous</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables commands that <strong>flush all the tables</strong> of all chains and set the <strong>ACCEPT</strong> policy on all chains. This will delete any firewall configuration.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-red-50 p-3 rounded-lg mb-3 text-sm text-red-800">
+                            <strong>Warning:</strong> This leaves the system completely exposed!
+                        </div>
+                        <pre class="hidden-code">#!/bin/bash
+
+#1. Set the ACCEPT POLICY an all CHAINS
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
+
+#2. Flush all tables from all CHAINS
+iptables -t filter -F
+iptables -t nat -F
+iptables -t mangle -F
+iptables -t raw -F</pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- PART 2: BASIC MATCHES -->
+        <div class="flex items-center gap-4 mb-2">
+            <h2 class="text-2xl font-bold text-slate-800">Part 2: Basic Matches</h2>
+            <div class="h-px bg-slate-300 flex-grow"></div>
+        </div>
+
+        <div class="space-y-6 mb-12">
+            <!-- Part 2 Content (Challenges 1-7) -->
+
+            <!-- Challenge 2.1 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #1: Filter by IP</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">INPUT/OUTPUT</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables rules that <strong>drop all incoming packets</strong> from <code>100.0.0.1</code> and <code>1.2.3.4</code> and <strong>all outgoing packets</strong> to <code>80.0.0.1</code>. These must be the <strong>first rules</strong> in the chains.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">iptables -I INPUT -s 100.0.0.1 -j DROP
+iptables -I INPUT -s 1.2.3.4 -j DROP
+
+iptables -I OUTPUT -d 80.0.0.1 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 2.2 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #2: Drop Specific Outgoing TCP</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">OUTPUT chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables rules that drop all <strong>outgoing generated packets</strong> of type TCP (port 80 and 443) to <code>www.linuxquestions.org</code>.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">iptables -A OUTPUT -p tcp --dport 80 -d www.linuxquestions.org -j DROP
+iptables -A OUTPUT -p tcp --dport 443 -d www.linuxquestions.org -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+             <!-- Challenge 2.3 -->
+             <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #3: Drop Routed Traffic</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">FORWARD chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables rules that drop all <strong>outgoing packets</strong> (routed through this machine) of type TCP (port 80 and 443) to <code>www.linuxquestions.org</code>.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Context:</strong> Since this machine is the Router, traffic from the LAN passing through to the internet uses the <code>FORWARD</code> chain.
+                        </div>
+                        <pre class="hidden-code">iptables -A FORWARD -p tcp --dport 80 -d www.linuxquestions.org -j DROP
+iptables -A FORWARD -p tcp --dport 443 -d www.linuxquestions.org -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 2.4 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #4: Drop Subnet</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">INPUT chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write an iptables rule that drops all incoming packets from network <code>27.103.0.0/16</code> (Netmask 255.255.0.0). This must be the <strong>first rule</strong> in the chain.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">iptables -I INPUT -s 27.103.0.0/16 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 2.5 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #5: Enforce DNS Server</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">FORWARD chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">The DNS Server of your LAN is set to <code>8.8.8.8</code>. You don't want to allow LAN users to change this. Write a rule to drop all UDP packets to port 53 (DNS) if they are <strong>destined to any IP address other than 8.8.8.8</strong>.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                         <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Tip:</strong> Use the <code>!</code> (not) operator before the destination IP.
+                        </div>
+                        <pre class="hidden-code">iptables -A FORWARD -p udp --dport 53 ! -d 8.8.8.8 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 2.6 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #6: Allow Loopback</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">lo interface</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write the iptables rules that <strong>allow all traffic</strong> on the loopback (<code>lo</code>) interface (both incoming and outgoing).</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 2.7 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #7: Interface Specific SSH</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">FORWARD chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">
+                        Your Linux Machine is the router.
+                        <br><br>
+                        <strong>Note for Lab:</strong> The internal LAN interface is <code>enp0s8</code> and the external WAN interface is <code>enp0s3</code>.
+                        <br><br>
+                        Write the iptables rules that allow establishing routed incoming SSH (tcp/22) connections <strong>only from the LAN</strong>. Drop SSH connections coming from the WAN.
+                    </p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                         <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Note:</strong> In standard theory these are <code>eth0/eth1</code>, but we have adapted this solution to match your <strong>Module 0 Lab Environment</strong> (<code>enp0s8</code> for LAN, <code>enp0s3</code> for WAN).
+                        </div>
+                        <pre class="hidden-code">iptables -A FORWARD -p tcp --dport 22 --syn -i enp0s8 -j ACCEPT
+iptables -A FORWARD -p tcp --dport 22 --syn -i enp0s3 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- PART 3: ADVANCED MATCHES -->
+        <div class="flex items-center gap-4 mb-2">
+            <h2 class="text-2xl font-bold text-slate-800">Part 3: Advanced Matches</h2>
+            <div class="h-px bg-slate-300 flex-grow"></div>
+        </div>
+
+        <div class="space-y-6 mb-12">
+            <!-- Challenge 3.1 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #1: Help Commands</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">man pages</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Run the iptables commands that list the help of: <strong>a)</strong> time match, <strong>b)</strong> mac match, <strong>c)</strong> limit match.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code"># a)
+iptables -m time --help
+
+# b) 
+iptables -m mac --help
+
+# c) 
+iptables -m limit --help</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.2 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #2: Stateful Firewall (Basic)</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">INPUT/OUTPUT</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Create a firewall script for your Laptop (runs Linux). All outgoing traffic is allowed, but only the <strong>return incoming traffic</strong> is permitted. No services are running on the laptop (Drop everything else).</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+iptables -F
+
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.3 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #3: Stateful Firewall (Complete)</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Security Baseline</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Consider Challenge #2. Enhance your script to also:
+                        <ul class="list-disc list-inside mt-2 ml-2">
+                            <li>Allow loopback interface traffic</li>
+                            <li>Drop INVALID packets explicitly</li>
+                            <li>Flush the firewall at the start</li>
+                        </ul>
+                    </p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+# Flushing rules
+iptables -F
+
+# Loopback
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+
+# Drop Invalid
+iptables -A INPUT -m state --state INVALID -j DROP
+iptables -A OUTPUT -m state --state INVALID -j DROP
+
+# Return Traffic
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+# Policy
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.4 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #4: Trusted Source SSH</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">INPUT chain</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Consider Challenge #3. You start an SSH Daemon on your laptop. Add a rule to allow incoming SSH connections (tcp/22) <strong>only from your work</strong> (IP address: <code>100.0.0.1</code>).</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Lab Note:</strong> To verify this works in the lab, try using the Client IP <code>10.0.2.100</code> instead of <code>100.0.0.1</code>.
+                        </div>
+                        <pre class="hidden-code"># Allowing incoming ssh connections from 100.0.0.1
+iptables -A INPUT -p tcp --dport 22 --syn -s 100.0.0.1 -j ACCEPT</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.5 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #5: MAC Filtering (Router Only)</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">MAC Match</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">The Router's MAC Address is <code>b4:6d:83:77:85:f5</code>. Write a single rule that allows communication <strong>only with the router</strong>. Drop packets from any other host in the LAN. Do not modify the policy.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Pro Tip:</strong> In the lab, find your Gateway's real MAC using <code>arp -a</code> or <code>ip neigh</code>.
+                        </div>
+                        <pre class="hidden-code">iptables -A INPUT -m mac ! --mac-source b4:6d:83:77:85:f5 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.6 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #6: MAC Whitelist Script</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Bash Loop</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">You have a server and 5 trusted hosts with MACs ending in <code>f1</code> through <code>f5</code>. Write a script that allows <strong>only these 5 hosts</strong> to communicate with the server.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+## allowed MAC addreses
+MAC="b4:6d:83:77:85:f1 b4:6d:83:77:85:f2 b4:6d:83:77:85:f3 b4:6d:83:77:85:f4 b4:6d:83:77:85:f5"
+
+for M in $MAC
+do
+	iptables -A INPUT -m mac --mac-source $M -j ACCEPT
+done
+
+# setting the drop policy
+iptables -P INPUT DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.7 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #7: Time-Based Web Access</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Time Match</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write rules permitting outgoing web traffic (TCP 80/443) only between <strong>10:00 and 18:00 UTC</strong>.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+iptables -A OUTPUT -p tcp -m multiport --dports 80,443 -m time --timestart 10:00 --timestop 18:00 -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --dports 80,443 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.8 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #8: Weekend Access Only</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Time + Weekdays</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Modify Challenge #7 to allow web traffic only on the <strong>weekend (Sat, Sun)</strong> between 10:00 and 18:00 UTC.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+iptables -A OUTPUT -p tcp -m multiport --dports 80,443 \
+	-m time --timestart 10:00 --timestop 18:00 --weekdays Sat,Sun -j ACCEPT
+iptables -A OUTPUT -p tcp -m multiport --dports 80,443 -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.9 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #9: Limit Ping</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Limit Match</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write rules that permit only <strong>2 incoming ICMP echo-request (ping)</strong> packets per second from any IP address.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+# Accept 2 pings per second
+iptables -A INPUT -p icmp --icmp-type echo-request -m limit --limit 2/s -j ACCEPT
+# Drop excess pings
+iptables -A INPUT -p icmp --icmp-type echo-request -j DROP</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 3.10 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #10: Limit TCP Connections</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">Connlimit Match</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">Write a rule that permits only <strong>10 NEW TCP connections</strong> from the same IP address.</p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+# Reject connections above 10
+iptables -A INPUT -p tcp --syn -m connlimit --connlimit-above 10 -j REJECT
+# Accept connections below limit (implicit if policy is ACCEPT, or add rule below)
+iptables -A INPUT -p tcp --syn -j ACCEPT</pre>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+        
+        <!-- PART 4: NAT & PORT FORWARDING -->
+        <div class="flex items-center gap-4 mb-2">
+            <h2 class="text-2xl font-bold text-slate-800">Part 4: NAT & Port Forwarding</h2>
+            <div class="h-px bg-slate-300 flex-grow"></div>
+        </div>
+
+        <div class="space-y-6 mb-12">
+            
+            <!-- Challenge 4.1 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #1: Basic NAT Configuration</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">SNAT / Masquerade</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">
+                        Configure the Router VM to perform Network Address Translation (NAT) for the LAN network (<code>10.0.2.0/24</code>).<br><br>
+                        1. Flush the NAT table.<br>
+                        2. Enable IP Forwarding.<br>
+                        3. Apply SNAT for the entire subnet going out the external interface (<code>enp0s3</code>). Assume the public IP is <code>80.0.0.1</code>.<br>
+                        <em>(Bonus: What target would you use if the IP was dynamic?)</em>
+                    </p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <pre class="hidden-code">#!/bin/bash
+
+# 1. Flush the nat table
+iptables -t nat -F
+
+# 2. Enable routing process (Kernel)
+echo "1" > /proc/sys/net/ipv4/ip_forward
+
+# 3. Define rules (SNAT for static IP)
+# -s: Source network
+# -o: Output interface (WAN)
+iptables -t nat -A POSTROUTING -s 10.0.2.0/24 -o enp0s3 -j SNAT --to-source 80.0.0.1
+
+# Bonus: If dynamic IP (DHCP), use MASQUERADE:
+# iptables -t nat -A POSTROUTING -s 10.0.2.0/24 -o enp0s3 -j MASQUERADE</pre>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Challenge 4.2 -->
+            <article class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-slate-800">Challenge #2: Port Forwarding (DNAT)</h3>
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full font-mono">DNAT / PREROUTING</span>
+                    </div>
+                    <p class="text-slate-600 mb-6">
+                        You have a Web Server running inside the LAN at <code>192.168.0.20</code> on port 80.<br>
+                        Configure the router so that all packets coming to the Router's <strong>public IP</strong> on port 80 are forwarded to the internal server.<br>
+                        <br>
+                        <strong>Variants:</strong> Also redirect external port <strong>8080</strong> to the internal server's port <strong>80</strong>.
+                    </p>
+                    
+                    <button class="toggle-solution w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Reveal Solution
+                    </button>
+
+                    <div class="solution-block hidden mt-6 pt-6 border-t border-slate-100">
+                        <div class="bg-indigo-50 p-3 rounded-lg mb-3 text-sm text-indigo-800">
+                            <strong>Note:</strong> Port Forwarding always happens in the <code>PREROUTING</code> chain of the <code>nat</code> table.
+                        </div>
+                        <pre class="hidden-code">#!/bin/bash
+
+# Flush PREROUTING chain
+iptables -t nat -F PREROUTING
+
+# 1. Standard Port Forwarding (80 -> 80)
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 192.168.0.20
+
+# 2. Variant: Redirect 8080 -> 80
+iptables -t nat -A PREROUTING -p tcp --dport 8080 -j DNAT --to-destination 192.168.0.20:80
+
+# 3. Bonus: Load Balancing (Round Robin)
+# iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 192.168.0.20-192.168.0.24</pre>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="mt-12 text-center text-slate-400 text-sm py-6 border-t border-slate-200">
+            <p>Copyright &copy; 2025 Cyber Soho. All Rights Reserved.</p>
+        </footer>
+
+    </main>
+
+    <!-- Password Modal -->
+    <div id="password-overlay" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all scale-100">
+            <div class="text-center mb-6">
+                <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900">Password Required</h3>
+                <div class="mt-2 text-sm text-slate-600 space-y-1">
+                    <p>Please enter the password to view the answers.</p>
+                    <p>If you want to Cancel the action, click outside the "Password Required" box.</p>
+                    <p>You can see the entered password by clicking on the "eye" icon.</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="password-input" 
+                        class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        placeholder="Enter password">
+                    <button id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="error-msg" class="text-red-500 text-sm text-center hidden">Incorrect password. Please try again.</div>
+                <button id="submit-password" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors">
+                    Unlock Solutions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- SECURITY / PASSWORD LOGIC ---
+            // Corrected hash for "password"
+            const CORRECT_HASH = "c3R1ZGVudCVeJjIwMjU="; 
+            let isAuthorized = false;
+
+            const modalOverlay = document.getElementById('password-overlay');
+            const passwordInput = document.getElementById('password-input');
+            const togglePasswordBtn = document.getElementById('toggle-password');
+            const submitPasswordBtn = document.getElementById('submit-password');
+            const errorMsg = document.getElementById('error-msg');
+            const unlockBtn = document.getElementById('unlock-solutions-btn');
+
+            // Function to open modal
+            function openModal() {
+                if (isAuthorized) return;
+                modalOverlay.classList.remove('hidden');
+                passwordInput.value = '';
+                errorMsg.classList.add('hidden');
+                passwordInput.focus();
+            }
+
+            // Function to close modal
+            function closeModal() {
+                modalOverlay.classList.add('hidden');
+            }
+
+            // Function to check password
+            function checkPassword() {
+                const input = passwordInput.value;
+                // Basic Base64 check
+                try {
+                    if (btoa(input) === CORRECT_HASH) {
+                        isAuthorized = true;
+                        closeModal();
+                        // Update UI to reflect unlocked state
+                        unlockBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+                        unlockBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-green-700');
+                        unlockBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                            </svg>
+                            Solutions Unlocked
+                        `;
+                    } else {
+                        errorMsg.classList.remove('hidden');
+                        // Shake animation effect
+                        const box = modalOverlay.firstElementChild;
+                        box.animate([
+                            { transform: 'translateX(0)' },
+                            { transform: 'translateX(-10px)' },
+                            { transform: 'translateX(10px)' },
+                            { transform: 'translateX(0)' }
+                        ], { duration: 300 });
+                    }
+                } catch (e) {
+                    errorMsg.classList.remove('hidden');
+                }
+            }
+
+            // Event Listeners for Modal
+            unlockBtn.addEventListener('click', openModal);
+            
+            submitPasswordBtn.addEventListener('click', checkPassword);
+            
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') checkPassword();
+            });
+
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                // Toggle icon could go here, simplifying for reliability
+            });
+
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+
+
+            // --- TOGGLE SOLUTION LOGIC ---
+            // Now updated to check for Authorization
+            document.addEventListener('click', (event) => {
+                const btn = event.target.closest('.toggle-solution');
+                
+                if (btn) {
+                    // SECURITY CHECK
+                    if (!isAuthorized) {
+                        openModal();
+                        return; // Stop execution here
+                    }
+
+                    const solutionBlock = btn.nextElementSibling;
+                    const isHidden = solutionBlock.classList.contains('hidden');
+                    
+                    if (isHidden) {
+                        solutionBlock.classList.remove('hidden');
+                        solutionBlock.classList.add('fade-enter-active');
+                        btn.innerHTML = `
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                            Hide Solution
+                        `;
+                        btn.classList.replace('bg-indigo-600', 'bg-slate-600');
+                        btn.classList.replace('hover:bg-indigo-700', 'hover:bg-slate-700');
+                        
+                        solutionBlock.style.animation = 'none';
+                        solutionBlock.offsetHeight; 
+                        solutionBlock.style.animation = null; 
+                    } else {
+                        solutionBlock.classList.add('hidden');
+                        solutionBlock.classList.remove('fade-enter-active');
+                        btn.innerHTML = `
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            Reveal Solution
+                        `;
+                        btn.classList.replace('bg-slate-600', 'bg-indigo-600');
+                        btn.classList.replace('hover:bg-slate-700', 'hover:bg-indigo-700');
+                    }
+                }
+            });
+
+            // --- COPY BUTTON LOGIC (Preserved) ---
+            document.querySelectorAll('pre').forEach(pre => {
+                if(pre.parentNode.classList.contains('code-wrapper')) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'code-wrapper';
+                pre.parentNode.insertBefore(wrapper, pre);
+                wrapper.appendChild(pre);
+
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.textContent = 'Copy';
+                btn.setAttribute('aria-label', 'Copy code');
+                
+                btn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(pre.innerText);
+                        btn.textContent = 'Copied!';
+                        btn.style.backgroundColor = 'rgba(34, 197, 94, 0.2)';
+                        btn.style.color = '#4ade80';
+                        setTimeout(() => {
+                            btn.textContent = 'Copy';
+                            btn.style.backgroundColor = '';
+                            btn.style.color = '';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Copy failed', err);
+                        btn.textContent = 'Error';
+                    }
+                });
+
+                wrapper.appendChild(btn);
+            });
+
+        });
+    </script>
+</body>
+</html>
