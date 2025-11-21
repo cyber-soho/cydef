@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Linux Firewall Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals with Indigo Accent -->
+    <!-- Application Structure Plan: The SPA is designed for a task-oriented user flow: 1. Discover, 2. Compare, 3. Act. It uses a top navigation to switch between three sections: 'Home' (for discovery), 'Tool Comparison' (for side-by-side analysis), and 'Setup Guides' (for action). This structure is chosen over the report's linear layout because users likely want to quickly compare tools or find a specific setup guide, not read the entire document. The 'Home' section includes a simple selector to guide new users. The 'Tool Comparison' section uses interactive filters and a bubble chart to make the report's summary table more dynamic and insightful. The 'Setup Guides' section uses a nested tab system to hide irrelevant information (e.g., RHEL instructions for a Debian user), streamlining the user's task. -->
+    <!-- Visualization & Content Choices: 1. Report Info: Summary comparison table. Goal: Quick, high-level comparison. Viz/Method: Bubble Chart (Chart.js) and interactive filterable cards. Interaction: Chart bubbles (X: Complexity, Y: OS-Preference, Size: Flexibility) are clickable to highlight a tool. Filter buttons hide/show cards. Justification: More engaging and faster to parse than a static table. 2. Report Info: Installation/Setup code snippets. Goal: Provide specific, OS-relevant instructions. Viz/Method: Nested tabbed content blocks (HTML/JS). Interaction: User clicks [Tool] tab, then [OS] tab. Justification: Prevents information overload by showing only the commands relevant to the user's selection. 3. Report Info: Tool Functions/Scenarios. Goal: Inform. Viz/Method: Text content inside the tabbed guide sections. Interaction: Read-only, revealed on tab click. Justification: Keeps detailed text paired with its relevant setup guide. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        [data-guide-content], [data-os-content] {
+            display: none;
+        }
+        [data-guide-content].active, [data-os-content].active {
+            display: block;
+        }
+        .tab-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+        .tab-btn-secondary.active {
+            background-color: #eef2ff;
+            color: #4338ca;
+            border-color: #4338ca;
+        }
+        .filter-btn.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 font-sans text-gray-800">
+
+    <header class="bg-white shadow-md sticky top-0 z-10">
+        <nav class="container mx-auto px-4 md:px-6 py-3 flex flex-wrap justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold text-indigo-700">Linux Firewall Guide</h1>
+            <div id="nav-buttons" class="flex space-x-2 md:space-x-4 mt-2 md:mt-0">
+                <button data-target="home" class="nav-btn px-3 py-2 text-sm md:text-base font-medium text-gray-700 rounded-lg hover:bg-gray-100">Home</button>
+                <button data-target="compare" class="nav-btn px-3 py-2 text-sm md:text-base font-medium text-gray-700 rounded-lg hover:bg-gray-100">Compare</button>
+                <button data-target="guides" class="nav-btn px-3 py-2 text-sm md:text-base font-medium text-gray-700 rounded-lg hover:bg-gray-100">Setup Guides</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="app-section container mx-auto px-4 md:px-6 py-12 md:py-16">
+            <div class="max-w-3xl mx-auto text-center">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Find the Right Firewall Tool</h2>
+                <p class="text-lg text-gray-600 mb-8">
+                    This guide covers the functions, installation, and deployment scenarios for the most popular Linux firewall tools. Use the sections below to compare your options and find detailed setup instructions for your specific system.
+                </p>
+            </div>
+            
+            <div class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200">
+                <h3 class="text-2xl font-semibold text-center text-indigo-700 mb-6">Which tool is for me?</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="os-select" class="block text-sm font-medium text-gray-700 mb-1">1. What's your OS family?</label>
+                        <select id="os-select" class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="any">Select an OS...</option>
+                            <option value="debian">Debian-based (Ubuntu, Mint)</option>
+                            <option value="rhel">RedHat-based (Fedora, CentOS)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="use-select" class="block text-sm font-medium text-gray-700 mb-1">2. What's your primary use?</label>
+                        <select id="use-select" class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="any">Select a use case...</option>
+                            <option value="desktop">Personal Desktop</option>
+                            <option value="simple">Simple Server (Web, Files)</option>
+                            <option value="complex">Complex/Enterprise Server</option>
+                        </select>
+                    </div>
+                    <button id="recommend-btn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">Get Recommendation</button>
+                </div>
+                <div id="recommend-result" class="mt-6 text-center p-4 bg-indigo-50 rounded-lg" style="display: none;">
+                    <h4 class="font-bold text-lg text-indigo-800">Recommendation:</h4>
+                    <p id="recommend-text" class="text-gray-700"></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="compare" class="app-section container mx-auto px-4 md:px-6 py-12 md:py-16 bg-white rounded-t-3xl shadow-xl" style="display: none;">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-4">Tool Comparison</h2>
+                <p class="text-lg text-gray-600 text-center mb-8">
+                    Compare the tools at a glance. The chart visualizes complexity vs. OS preference, with bubble size representing flexibility. Use the filters to narrow the list, or click a bubble on the chart to learn more.
+                p>
+            </div>
+            
+            <div class="chart-container mb-12">
+                <canvas id="toolChart"></canvas>
+            </div>
+            
+            <div class="flex flex-wrap gap-2 justify-center mb-8" id="filter-buttons">
+                <button class="filter-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50" data-filter="all">All</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50" data-filter="debian">Debian</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50" data-filter="rhel">RHEL</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50" data-filter="low">Low Complexity</button>
+                <button class="filter-btn px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50" data-filter="web-ui">Web UI</button>
+            </div>
+
+            <div id="tool-cards" class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                <div class="tool-card bg-amber-50 p-6 rounded-2xl shadow border border-gray-200" data-tags="debian low static">
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-2">UFW / GUFW</h3>
+                    <p class="text-sm text-gray-600 mb-4">Uncomplicated Firewall</p>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Best For:</strong> Personal desktops, single-interface servers, beginners.</li>
+                        <li><strong>Primary OS:</strong> Debian/Ubuntu</li>
+                        <li><strong>Interface:</strong> CLI / Desktop App</li>
+                        <li><strong>Logic:</strong> Global Rules</li>
+                        <li><strong>Complexity:</strong> Low</li>
+                    </ul>
+                </div>
+                <div class="tool-card bg-amber-50 p-6 rounded-2xl shadow border border-gray-200" data-tags="rhel high enterprise roaming">
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-2">Firewalld / firewall-config</h3>
+                    <p class="text-sm text-gray-600 mb-4">Dynamic Firewall Manager</p>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Best For:</strong> Laptops (roaming), complex servers, enterprise.</li>
+                        <li><strong>Primary OS:</strong> RHEL/Fedora</li>
+                        <li><strong>Interface:</strong> CLI / Desktop App</li>
+                        <li><strong>Logic:</strong> Zones (Network Trust)</li>
+                        <li><strong>Complexity:</strong> High</li>
+                    </ul>
+                </div>
+                <div class="tool-card bg-amber-50 p-6 rounded-2xl shadow border border-gray-200" data-tags="rhel debian medium web-ui remote">
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-2">Cockpit</h3>
+                    <p class="text-sm text-gray-600 mb-4">Web-based Server Management</p>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Best For:</strong> Remote server management via Web Browser.</li>
+                        <li><strong>Primary OS:</strong> RHEL (works on Debian)</li>
+                        <li><strong>Interface:</strong> Web Browser</li>
+                        <li><strong>Logic:</strong> Zones (via Firewalld)</li>
+                        <li><strong>Complexity:</strong> Medium</li>
+                    </ul>
+                </div>
+                <div class="tool-card bg-amber-50 p-6 rounded-2xl shadow border border-gray-200" data-tags="any debian rhel medium web-ui admin">
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-2">Webmin</h3>
+                    <p class="text-sm text-gray-600 mb-4">Full System Administration UI</p>
+                    <ul class="space-y-2 text-gray-700">
+                        <li><strong>Best For:</strong> System Administrators wanting a "cPanel-like" experience.</li>
+                        <li><strong>Primary OS:</strong> Any Linux</li>
+                        <li><strong>Interface:</strong> Web Browser</li>
+                        <li><strong>Logic:</strong> Module-based (UFW, Firewalld, etc.)</li>
+                        <li><strong>Complexity:</strong> Medium</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="guides" class="app-section container mx-auto px-4 md:px-6 py-12 md:py-16" style="display: none;">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-4">Setup Guides</h2>
+                <p class="text-lg text-gray-600 text-center mb-8">
+                    Once you've chosen a tool, use these guides for detailed installation and setup instructions. Select your tool and operating system to see the relevant commands and information.
+                </p>
+
+                <div class="flex flex-wrap justify-center gap-2 md:gap-4 mb-6 border-b border-gray-300 pb-4" id="guide-tabs">
+                    <button class="tab-btn px-4 py-2 font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" data-guide="ufw">UFW</button>
+                    <button class="tab-btn px-4 py-2 font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" data-guide="firewalld">Firewalld</button>
+                    <button class="tab-btn px-4 py-2 font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" data-guide="cockpit">Cockpit</button>
+                    <button class="tab-btn px-4 py-2 font-semibold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100" data-guide="webmin">Webmin</button>
+                </div>
+
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-200 min-h-[300px]">
+                    
+                    <div id="guide-ufw" data-guide-content>
+                        <h3 class="text-2xl font-bold text-indigo-700 mb-4">UFW (Uncomplicated Firewall) & GUFW</h3>
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Functions</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li><strong>Simplicity:</strong> Designed to be an easy frontend for `iptables` (and `nftables` in newer versions).</li>
+                                <li><strong>Profiles:</strong> Application-aware (e.g., allowing "Apache Full" automatically opens ports 80 and 443).</li>
+                                <li><strong>Logging:</strong> Easy toggle for logging dropped packets.</li>
+                                <li><strong>GUFW:</strong> A graphical desktop application to manage UFW with point-and-click ease.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Installation</h4>
+                            <div class="flex space-x-2 mb-3">
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="debian">Debian/Ubuntu</button>
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="rhel">RHEL/CentOS</button>
+                            </div>
+                            <div data-os-content data-os-id="debian">
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo apt update
+sudo apt install ufw gufw</code></pre>
+                            </div>
+                            <div data-os-content data-os-id="rhel">
+                                <p class="text-sm text-gray-600 mb-2">*UFW is not standard in RHEL; `firewalld` is preferred. If you must use it, it is available via the EPEL repository.*</p>
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo dnf install epel-release
+sudo dnf install ufw</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Setup & Configuration (CLI)</h4>
+                            <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash"># 1. Set Defaults
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+
+# 2. Allow SSH (Critical before enabling)
+sudo ufw allow ssh
+# OR specific port
+sudo ufw allow 2222/tcp
+
+# 3. Enable
+sudo ufw enable</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div id="guide-firewalld" data-guide-content>
+                        <h3 class="text-2xl font-bold text-indigo-700 mb-4">Firewalld & firewall-config</h3>
+                         <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Functions</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li><strong>Zones:</strong> The core feature. Define zones (e.g., `public`, `home`, `work`) with different rules.</li>
+                                <li><strong>Runtime vs. Permanent:</strong> Changes can be tested in "runtime" (lost on reboot) or written to "permanent".</li>
+                                <li><strong>Rich Rules:</strong> Allows complex logic (e.g., "Allow SSH only from this subnet...").</li>
+                                <li><strong>firewall-config:</strong> The advanced GUI for managing zones and services.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Installation</h4>
+                            <div class="flex space-x-2 mb-3">
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="rhel">RHEL/CentOS</button>
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="debian">Debian/Ubuntu</button>
+                            </div>
+                            <div data-os-content data-os-id="rhel">
+                                <p class="text-sm text-gray-600 mb-2">*Pre-installed on most RHEL-based systems.*</p>
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo dnf install firewalld firewall-config
+sudo systemctl enable --now firewalld</code></pre>
+                            </div>
+                            <div data-os-content data-os-id="debian">
+                                <p class="text-sm text-gray-600 mb-2">*Note: Installing this usually conflicts with UFW. Disable UFW first.*</p>
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo ufw disable
+sudo apt install firewalld firewall-config</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Setup & Configuration (CLI)</h4>
+                            <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash"># 1. Check Zone
+sudo firewall-cmd --get-active-zones
+
+# 2. Open Port (Permanent)
+sudo firewall-cmd --zone=public --add-service=http --permanent
+sudo firewall-cmd --reload
+
+# 3. Panic Mode (Cut all connections)
+sudo firewall-cmd --panic-on</code></pre>
+                        </div>
+                    </div>
+
+                    <div id="guide-cockpit" data-guide-content>
+                        <h3 class="text-2xl font-bold text-indigo-700 mb-4">Cockpit</h3>
+                         <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Functions</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li><strong>Web Interface:</strong> Accessed via port `9090`.</li>
+                                <li><strong>Visual Logs:</strong> See firewall logs in real-time graphs.</li>
+                                <li><strong>Firewall Management:</strong> **Important:** Cockpit's firewall UI is designed primarily for **Firewalld**.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Installation</h4>
+                            <div class="flex space-x-2 mb-3">
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="rhel">RHEL/CentOS</button>
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="debian">Debian/Ubuntu</button>
+                            </div>
+                            <div data-os-content data-os-id="rhel">
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo dnf install cockpit
+sudo systemctl enable --now cockpit.socket
+# Ensure firewall allows cockpit itself
+sudo firewall-cmd --add-service=cockpit --permanent --zone=public
+sudo firewall-cmd --reload</code></pre>
+                            </div>
+                            <div data-os-content data-os-id="debian">
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">sudo apt install cockpit
+# If you want to manage the firewall via the Cockpit UI:
+sudo apt install firewalld</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Setup & Usage</h4>
+                            <ol class="list-decimal list-inside space-y-1 text-gray-700">
+                                <li>Navigate to `https://your-server-ip:9090`.</li>
+                                <li>Login with your system user credentials.</li>
+                                <li>Go to the **Networking** tab, then click **Firewall**.</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div id="guide-webmin" data-guide-content>
+                        <h3 class="text-2xl font-bold text-indigo-700 mb-4">Webmin</h3>
+                         <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Functions</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li><strong>Modules:</strong> Has specific modules for **Linux Firewall (iptables)**, **UFW**, and **Firewalld**.</li>
+                                <li><strong>Flexibility:</strong> Unlike Cockpit, Webmin adapts to whatever firewall you have installed.</li>
+                            </ul>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-3">Installation</h4>
+                            <p class="text-sm text-gray-600 mb-2">*Webmin is rarely in default repos; you typically download the package directly.*</p>
+                            <div class="flex space-x-2 mb-3">
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="debian">Debian/Ubuntu</button>
+                                <button class="tab-btn-secondary px-3 py-1 text-sm font-medium border border-gray-300 rounded-full" data-os="rhel">RHEL/CentOS</button>
+                            </div>
+                            <div data-os-content data-os-id="debian">
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">wget https://prdownloads.sourceforge.net/webadmin/webmin_2.111_all.deb
+sudo apt install ./webmin_2.111_all.deb -y</code></pre>
+                            </div>
+                            <div data-os-content data-os-id="rhel">
+                                <pre class="bg-gray-900 text-white p-4 rounded-lg overflow-x-auto"><code class="language-bash">wget https://prdownloads.sourceforge.net/webadmin/webmin-2.111-1.noarch.rpm
+sudo dnf install ./webmin-2.111-1.noarch.rpm -y</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-2">Deployment Scenario</h4>
+                            <p class="text-gray-700">An admin manages a server but isn't comfortable with CLI. They use Webmin (Port 10000) to click "Allow" on specific ports using the <strong>Networking > Linux Firewall</strong> module.</p>
+                        </div>
+                    </div>
+
+                    <div id="guide-placeholder" class="text-center text-gray-500 pt-10">
+                        <p>Select a tool above to see its setup guide.</p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        <p>Interactive guide generated from source report.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const sections = document.querySelectorAll('.app-section');
+            const guideTabs = document.querySelectorAll('#guide-tabs .tab-btn');
+            const guideContents = document.querySelectorAll('[data-guide-content]');
+            const guidePlaceholder = document.getElementById('guide-placeholder');
+
+            function setActiveNav(targetId) {
+                navButtons.forEach(btn => {
+                    if (btn.dataset.target === targetId) {
+                        btn.classList.add('bg-indigo-100', 'text-indigo-700');
+                    } else {
+                        btn.classList.remove('bg-indigo-100', 'text-indigo-700');
+                    }
+                });
+                sections.forEach(section => {
+                    section.style.display = section.id === targetId ? 'block' : 'none';
+                });
+            }
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setActiveNav(btn.dataset.target);
+                });
+            });
+
+            setActiveNav('home');
+
+            function setActiveTab(tabs, contents, activeTab, placeholder) {
+                let contentFound = false;
+                tabs.forEach(t => t.classList.remove('active'));
+                activeTab.classList.add('active');
+
+                contents.forEach(content => {
+                    if (content.id.includes(activeTab.dataset.guide)) {
+                        content.classList.add('active');
+                        contentFound = true;
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+                if (placeholder) {
+                    placeholder.style.display = contentFound ? 'none' : 'block';
+                }
+                return contentFound;
+            }
+
+            guideTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const contentFound = setActiveTab(guideTabs, guideContents, tab, guidePlaceholder);
+                    if (contentFound) {
+                        const newActiveGuide = document.getElementById(`guide-${tab.dataset.guide}`);
+                        const osTabs = newActiveGuide.querySelectorAll('.tab-btn-secondary');
+                        const osContents = newActiveGuide.querySelectorAll('[data-os-content]');
+                        if (osTabs.length > 0) {
+                            setActiveOSTab(osTabs, osContents, osTabs[0]);
+                        }
+                    }
+                });
+            });
+
+            function setActiveOSTab(tabs, contents, activeTab) {
+                tabs.forEach(t => t.classList.remove('active'));
+                activeTab.classList.add('active');
+                contents.forEach(content => {
+                    content.style.display = content.dataset.osId === activeTab.dataset.os ? 'block' : 'none';
+                });
+            }
+
+            document.querySelectorAll('[data-guide-content]').forEach(guide => {
+                const osTabs = guide.querySelectorAll('.tab-btn-secondary');
+                const osContents = guide.querySelectorAll('[data-os-content]');
+                osTabs.forEach(tab => {
+                    tab.addEventListener('click', () => setActiveOSTab(osTabs, osContents, tab));
+                });
+            });
+
+            const recommendBtn = document.getElementById('recommend-btn');
+            const recommendResult = document.getElementById('recommend-result');
+            const recommendText = document.getElementById('recommend-text');
+            const osSelect = document.getElementById('os-select');
+            const useSelect = document.getElementById('use-select');
+
+            recommendBtn.addEventListener('click', () => {
+                const os = osSelect.value;
+                const use = useSelect.value;
+                let rec = 'UFW / GUFW';
+                let reason = 'It is simple, default on Debian-based systems, and great for desktops and simple servers.';
+
+                if (os === 'rhel' && (use === 'complex' || use === 'simple')) {
+                    rec = 'Firewalld';
+                    reason = 'It is the default on RHEL and its zone-based system is powerful for servers.';
+                } else if (use === 'complex') {
+                    rec = 'Firewalld';
+                    reason = 'Its zone-based logic and rich rules are ideal for complex server environments.';
+                } else if (os === 'debian' && use === 'desktop') {
+                    rec = 'UFW / GUFW';
+                    reason = 'GUFW provides an easy graphical interface perfect for desktop use on Ubuntu/Mint.';
+                }
+
+                recommendText.innerHTML = `<strong>${rec}</strong><br>${reason}`;
+                recommendResult.style.display = 'block';
+            });
+
+            const filterButtons = document.querySelectorAll('#filter-buttons .filter-btn');
+            const toolCards = document.querySelectorAll('#tool-cards .tool-card');
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const filter = btn.dataset.filter;
+
+                    toolCards.forEach(card => {
+                        const tags = card.dataset.tags;
+                        if (filter === 'all' || tags.includes(filter)) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            const ctx = document.getElementById('toolChart').getContext('2d');
+            const toolChart = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'UFW',
+                        data: [{ x: 1, y: 1, r: 10 }],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                    }, {
+                        label: 'Firewalld',
+                        data: [{ x: 3, y: 2, r: 20 }],
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                    }, {
+                        label: 'Cockpit',
+                        data: [{ x: 2, y: 2.5, r: 15 }],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                    }, {
+                        label: 'Webmin',
+                        data: [{ x: 2, y: 3, r: 25 }],
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Complexity →' },
+                            min: 0,
+                            max: 4,
+                            ticks: {
+                                stepSize: 1,
+                                callback: (value) => ['', 'Low', 'Medium', 'High', ''][value]
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: 'OS Preference →' },
+                            min: 0,
+                            max: 4,
+                             ticks: {
+                                stepSize: 1,
+                                callback: (value) => ['', 'Debian', 'RHEL', 'Agnostic', ''][value]
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    return `${label} (Complexity: ${context.parsed.x}, Flexibility: ${context.parsed.r})`;
+                                }
+                            }
+                        }
+                    },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const datasetIndex = elements[0].datasetIndex;
+                            const toolName = toolChart.data.datasets[datasetIndex].label.toLowerCase().split(' ')[0];
+                            setActiveNav('guides');
+                            const targetTab = document.querySelector(`#guide-tabs [data-guide="${toolName}"]`);
+                            if(targetTab) {
+                                targetTab.click();
+                                targetTab.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
