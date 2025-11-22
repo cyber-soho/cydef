@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Router Configuration Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Warm Neutrals (Stone/Gray with Teal Accent) -->
+    <!-- Application Structure Plan: A guided, step-by-step tutorial SPA. A persistent vertical navigation menu lists all 9 steps from the report. Clicking a step updates the main content area to display only the information for that step (using JS to show/hide content divs). This structure is best for a "how-to" guide, as it makes the linear process easy to follow and reference, which is the primary user goal. -->
+    <!-- Visualization & Content Choices: Report Info: Step-by-step process. Goal: Guide user. Viz: N/A (no data). Presentation: Interactive Stepper (HTML/Tailwind/JS). Interaction: Click-to-navigate steps. Justification: Mirrors the report's process-oriented nature. Report Info: Code blocks/commands. Goal: Inform/Action. Presentation: Styled <pre><code> blocks (HTML/Tailwind). Interaction: JS-based "Copy to Clipboard" button for each command block. Justification: High utility for a technical user. Report Info: Notes/Troubleshooting. Goal: Warn/Inform. Presentation: Highlighted callout boxes (HTML/Tailwind). Justification: Draws attention to critical information. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        .step-link.active {
+            background-color: #0d9488;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .step-link.active .step-circle {
+            background-color: #ffffff;
+            color: #0d9488;
+        }
+        .step-link:not(.active) .step-line {
+            display: none;
+        }
+        .step-content {
+            display: none;
+        }
+        .step-content.active {
+            display: block;
+        }
+        .code-block {
+            position: relative;
+            background-color: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4b5563;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .copy-btn:hover {
+            background-color: #6b7280;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <div class="min-h-screen container mx-auto p-4 md:p-8">
+        <header class="mb-8 pb-4 border-b border-stone-300">
+            <h1 class="text-3xl md:text-4xl font-bold text-teal-800">Linux Router Configuration Guide</h1>
+            <p class="mt-2 text-lg text-stone-600">An interactive guide to converting a Xubuntu VM into a functional router.</p>
+        </header>
+
+        <div class="flex flex-col md:flex-row gap-8">
+            
+            <!-- Sidebar Navigation -->
+            <nav class="w-full md:w-1/4 lg:w-1/5">
+                <h2 class="text-xl font-semibold mb-4 text-stone-700">Configuration Steps</h2>
+                <ul class="space-y-1">
+                    <li><a href="#step-0" data-step="0" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">0</span>
+                        <span>Introduction</span>
+                    </a></li>
+                    <li><a href="#step-1" data-step="1" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">1</span>
+                        <span>Network Topology</span>
+                    </a></li>
+                    <li><a href="#step-2" data-step="2" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">2</span>
+                        <span>LAN Configuration</span>
+                    </a></li>
+                    <li><a href="#step-3" data-step="3" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">3</span>
+                        <span>Firewall & Routing</span>
+                    </a></li>
+                    <li><a href="#step-4" data-step="4" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">4</span>
+                        <span>Allow LAN Traffic</span>
+                    </a></li>
+                    <li><a href="#step-5" data-step="5" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">5</span>
+                        <span>Enable Forwarding</span>
+                    </a></li>
+                    <li><a href="#step-6" data-step="6" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">6</span>
+                        <span>Enable NAT</span>
+                    </a></li>
+                    <li><a href="#step-7" data-step="7" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">7</span>
+                        <span>Apply Changes</span>
+                    </a></li>
+                    <li><a href="#step-8" data-step="8" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">8</span>
+                        <span>Final Verification</span>
+                    </a></li>
+                    <li><a href="#step-9" data-step="9" class="step-link flex items-center p-3 rounded-lg hover:bg-stone-200 transition-colors duration-200">
+                        <span class="step-circle flex items-center justify-center w-6 h-6 rounded-full bg-stone-300 text-stone-600 font-bold text-sm mr-3">9</span>
+                        <span>Lab Notes</span>
+                    </a></li>
+                </ul>
+            </nav>
+
+            <!-- Content Area -->
+            <main class="w-full md:w-3/4 lg:w-4/5">
+                
+                <!-- Step 0: Introduction -->
+                <section id="step-0" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">Introduction</h2>
+                    <p class="mb-4 text-stone-700">This guide details the process of converting a Xubuntu 24.04 LTS Virtual Machine into a functional Linux Router. You will learn to configure network interfaces, enable IP forwarding, and set up Network Address Translation (NAT) using UFW and Gufw. This section outlines the project's parameters.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-stone-100 p-4 rounded-lg">
+                            <h3 class="font-semibold text-stone-800">Operating System</h3>
+                            <p class="text-stone-600">Xubuntu 24.04 LTS (VirtualBox)</p>
+                        </div>
+                        <div class="bg-stone-100 p-4 rounded-lg">
+                            <h3 class="font-semibold text-stone-800">Role</h3>
+                            <p class="text-stone-600">Router VM Configuration</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Step 1: Network Topology -->
+                <section id="step-1" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">1. Network Topology & Interface Identification</h2>
+                    <p class="mb-4 text-stone-700">The first step is to identify which network interface connects to the internet (WAN) and which connects to your internal network (LAN). This is crucial for setting up the routing rules correctly. We use the `ip address` command to list all interfaces and their configurations.</p>
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Command Used:</h3>
+                    <div class="code-block mb-4">
+                        <pre><code>ip address</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Results Identified:</h3>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>
+                            <strong class="text-stone-700">WAN Interface (Internet):</strong> `enp0s3`
+                            <ul class="list-none list-inside ml-6 text-sm text-stone-600 space-y-1">
+                                <li><strong>Configuration:</strong> Bridged Adapter (DHCP from physical router)</li>
+                                <li><strong>IP:</strong> www.xxx.yyy.zzz (This is the IP from your home router's DHCP server)</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <strong class="text-stone-700">LAN Interface (Internal):</strong> `enp0s8`
+                            <ul class="list-none list-inside ml-6 text-sm text-stone-600 space-y-1">
+                                <li><strong>Configuration:</strong> Internal Network ("lan")</li>
+                                <li><strong>IP Target:</strong> `192.168.1.1` (This will be our router's gateway IP)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </section>
+
+                <!-- Step 2: LAN Configuration -->
+                <section id="step-2" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">2. LAN Interface Configuration</h2>
+                    <p class="mb-4 text-stone-700">Now we must assign a static IP address to the internal LAN interface (`enp0s8`). This address will serve as the default gateway for all client machines on the internal network. This was done using the GUI (Advanced Network Configuration).</p>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">IPv4 Settings (for `enp0s8`):</h3>
+                    <ul class="list-disc list-inside space-y-2 bg-stone-100 p-4 rounded-lg">
+                        <li><strong>Method:</strong> Manual</li>
+                        <li><strong>Address:</strong> `192.168.1.1`</li>
+                        <li><strong>Netmask:</strong> `24` (or 255.255.255.0)</li>
+                        <li class="font-bold text-red-600"><strong>Gateway:</strong> *Left Blank* (This is critical to prevent routing conflicts!)</li>
+                    </ul>
+
+                    <h3 class="text-lg font-semibold mt-4 mb-2 text-stone-800">Verification:</h3>
+                    <p class="mb-2 text-stone-700">After saving, confirm the router itself still has internet access.</p>
+                    <div class="code-block">
+                        <pre><code>ping google.com</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                </section>
+
+                <!-- Step 3: Firewall & Routing -->
+                <section id="step-3" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">3. Firewall & Routing Configuration</h2>
+                    <p class="mb-4 text-stone-700">This section covers the core of the router setup: enabling packet forwarding and sharing the internet connection (NAT). We will use a hybrid method combining the **Gufw** (GUI) for simple rules and **nano** (CLI text editor) for advanced configuration that the GUI doesn't support.</p>
+                    <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r-lg">
+                        <p><strong class="font-bold">Key Tools:</strong></p>
+                        <ul class="list-disc list-inside ml-4">
+                            <li><strong>UFW (Uncomplicated Firewall):</strong> The backend firewall.</li>
+                            <li><strong>Gufw (GUI):</strong> For managing basic allow/deny rules.</li>
+                            <li><strong>Nano (Text Editor):</strong> For editing configuration files.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Step 4: Allow LAN Traffic -->
+                <section id="step-4" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">4. Step A: Allow LAN Traffic (via Gufw)</h2>
+                    <p class="mb-4 text-stone-700">First, we must tell the firewall to trust traffic coming from our internal LAN. Since Gufw cannot configure NAT, we use it just for this access rule.</p>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li>Open **Firewall Configuration** (Gufw).</li>
+                        <li>Unlock settings (if required).</li>
+                        <li>Add a new rule with these properties:
+                            <ul class="list-disc list-inside ml-8 mt-2 p-4 bg-stone-100 rounded-lg">
+                                <li><strong>Action:</strong> Allow</li>
+                                <li><strong>Direction:</strong> In</li>
+                                <li><strong>From:</strong> `192.168.1.0/24` (The entire LAN subnet)</li>
+                                <li><strong>To:</strong> Any</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </section>
+
+                <!-- Step 5: Enable Forwarding -->
+                <section id="step-5" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">5. Step B: Enable Packet Forwarding (File Edit)</h2>
+                    <p class="mb-4 text-stone-700">By default, UFW drops all forwarded packets for security. We must change this policy to `ACCEPT` to allow our router to pass traffic from the LAN to the WAN.</p>
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">File to Edit:</h3>
+                    <div class="code-block mb-4">
+                        <pre><code>sudo nano /etc/default/ufw</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Change Required:</h3>
+                    <p class="mb-2 text-stone-700">Find this line:</p>
+                    <pre class="code-block bg-red-100 text-red-800 border border-red-300 mb-2"><code># OLD
+DEFAULT_FORWARD_POLICY="DROP"</code></pre>
+                    <p class="mb-2 text-stone-700">And change it to:</p>
+                    <pre class="code-block bg-green-100 text-green-800 border border-green-300"><code># NEW
+DEFAULT_FORWARD_POLICY="ACCEPT"</code></pre>
+                </section>
+                
+                <!-- Step 6: Enable NAT -->
+                <section id="step-6" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">6. Step C: Enable NAT / Masquerading (File Edit)</h2>
+                    <p class="mb-4 text-stone-700">This is the "Internet Sharing" part. We add rules to the `*nat` table, which is processed *before* UFW's main filter. This rule tells the kernel to rewrite the source IP of packets from the LAN (`192.168.1.0/24`) to match the router's public IP on the WAN interface (`enp0s3`).</p>
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">File to Edit:</h3>
+                    <div class="code-block mb-4">
+                        <pre><code>sudo nano /etc/ufw/before.rules</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Addition:</h3>
+                    <p class="mb-2 text-stone-700">Place this exact block at the **very top** of the file, after any comments but before the `*filter` line:</p>
+                    <div class="code-block">
+<pre><code># NAT table rules
+*nat
+:POSTROUTING ACCEPT [0:0]
+# Masquerade traffic from LAN (enp0s8) to WAN (enp0s3)
+-A POSTROUTING -s 192.168.1.0/24 -o enp0s3 -j MASQUERADE
+COMMIT</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                </section>
+
+                <!-- Step 7: Apply Changes -->
+                <section id="step-7" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">7. Applying Changes</h2>
+                    <p class="mb-4 text-stone-700">To make all our new configurations active, the firewall must be reloaded. This ensures it reads the new `DEFAULT_FORWARD_POLICY` and the new `before.rules` NAT configuration.</p>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Method 1 (GUI):</h3>
+                    <ol class="list-decimal list-inside space-y-2 bg-stone-100 p-4 rounded-lg">
+                        <li>In the Gufw window, switch Status **OFF**.</li>
+                        <li>Wait one second.</li>
+                        <li>Switch Status back **ON**.</li>
+                    </ol>
+
+                    <h3 class="text-lg font-semibold mt-4 mb-2 text-stone-800">Method 2 (CLI):</h3>
+                    <div class="code-block">
+                        <pre><code>sudo ufw disable && sudo ufw enable</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                </section>
+
+                <!-- Step 8: Final Verification -->
+                <section id="step-8" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">8. Final Verification</h2>
+                    <p class="mb-4 text-stone-700">The final step is to confirm that the rules are loaded correctly into the kernel's firewall tables. We check two things: the UFW status (for our LAN rule) and the `iptables` NAT table (for our MASQUERADE rule).</p>
+                    
+                    <h3 class="text-lg font-semibold mb-2 text-stone-800">Check UFW Status:</h3>
+                    <p class="mb-2 text-stone-700">This confirms the `ALLOW` rule for the LAN is active.</p>
+                    <div class="code-block mb-4">
+                        <pre><code>sudo ufw status verbose</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+
+                    <h3 class="text-lg font-semibold mt-4 mb-2 text-stone-800">Check NAT Rules:</h3>
+                    <p class="mb-2 text-stone-700">This confirms the `MASQUERADE` rule is loaded from `before.rules`.</p>
+                    <div class="code-block">
+                        <pre><code>sudo iptables -t nat -L POSTROUTING -n -v</code></pre>
+                        <button class="copy-btn">Copy</button>
+                    </div>
+                </section>
+
+                <!-- Step 9: Lab Notes -->
+                <section id="step-9" class="step-content bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-4 text-teal-700">9. Lab Notes & Troubleshooting</h2>
+                    <p class="mb-4 text-stone-700">This section contains important troubleshooting notes and key takeaways from the lab. These are critical for understanding *why* certain steps were taken and how to avoid common problems.</p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-r-lg">
+                            <h3 class="font-bold">Gufw Display Error</h3>
+                            <p>Initially, `gufw` failed to launch via CLI due to a display server permission error (`Gtk-WARNING`).</p>
+                            <p class="mt-1"><strong class="font-medium">Solution:</strong> Rebooting the VM resolved the display server/root permission conflict, allowing Gufw to open normally.</p>
+                        </div>
+                        
+                        <div class="bg-red-100 border-l-4 border-red-500 text-red-800 p-4 rounded-r-lg">
+                            <h3 class="font-bold">Critical: Gateway Setting</h3>
+                            <p>It is absolutely critical that the LAN interface (`enp0s8`) does **not** have a Gateway IP set in the network manager. If it does, it will override the router's correct default route to the internet (via `enp0s3`), and the router will lose internet access.</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-lg font-semibold mt-6 mb-2 text-stone-800">End of Lab & Next Steps</h3>
+                    <p class="text-stone-700">The Router VM is now successfully acting as a gateway. The next logical step is to configure your Client VM on the "lan" network to use this router.</p>
+                    <ul class="list-disc list-inside mt-2 bg-stone-100 p-4 rounded-lg">
+                        <li><strong>Client IP:** (e.g., `192.168.1.10`)</li>
+                        <li><strong>Client Netmask:** `24` (or `255.255.255.0`)</li>
+                        <li><strong>Client Default Gateway:</strong> `192.168.1.1` (The router's LAN IP)</li>
+                        <li><strong>Client DNS:</strong> `8.8.8.8` (or any public DNS)</li>
+                    </ul>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const links = document.querySelectorAll('.step-link');
+            const contents = document.querySelectorAll('.step-content');
+            const copyButtons = document.querySelectorAll('.copy-btn');
+
+            function setActiveStep(stepIndex) {
+                links.forEach((link, idx) => {
+                    if (idx == stepIndex) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                });
+                contents.forEach((content, idx) => {
+                    if (idx == stepIndex) {
+                        content.classList.add('active');
+                    } else {
+                        content.classList.remove('active');
+                    }
+                });
+            }
+
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const step = this.getAttribute('data-step');
+                    setActiveStep(step);
+                    window.location.hash = '#step-' + step;
+                });
+            });
+
+            copyButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const codeBlock = this.previousElementSibling;
+                    const code = codeBlock.innerText;
+                    
+                    try {
+                        const textArea = document.createElement('textarea');
+                        textArea.value = code;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+
+                        this.innerText = 'Copied!';
+                        setTimeout(() => {
+                            this.innerText = 'Copy';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        this.innerText = 'Error';
+                    }
+                });
+            });
+
+            let initialStep = 0;
+            if (window.location.hash) {
+                const hashStep = window.location.hash.split('-')[1];
+                if (hashStep && !isNaN(hashStep) && hashStep < contents.length) {
+                    initialStep = parseInt(hashStep);
+                }
+            }
+            setActiveStep(initialStep);
+        });
+    </script>
+</body>
+</html>
+
+
