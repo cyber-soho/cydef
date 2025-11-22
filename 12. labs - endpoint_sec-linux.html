@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Endpoint Hardening Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutral (White/Gray) with Indigo Accent -->
+    <!-- Application Structure Plan: A thematic, dashboard-style SPA. Navigation shifts from the report's linear 1-8 exercise list to four logical themes: Overview, Access Control, Threat Monitoring, and System Hygiene. This allows users (like managers or analysts) to immediately find relevant information (e.g., all detection tools) without reading the full linear report. Interaction is focused on tabs/accordions within each theme to reveal details (like commands and log snippets) on demand, preventing information overload. -->
+    <!-- Visualization & Content Choices:
+    - Lynis Score (Ex 3): Report Info -> Lynis score change 61->63. Goal -> Inform high-level result. Viz -> Chart.js Doughnut chart (data: [63, 37]) showing final Hardening Index. Interaction -> Chart animation. Justification -> More engaging than text "Score: 63". Library -> Chart.js (Canvas).
+    - SSH Config (Ex 1): Report Info -> PermitRootLogin changed. Goal -> Show config change. Viz -> HTML/CSS "diff" block. Interaction -> None. Justification -> Clearer than a full text block. Method -> HTML/Tailwind.
+    - AppArmor (Ex 2): Report Info -> Profile modified, 'w' to 'r'. Goal -> Show process/result. Viz -> 3-step HTML flex layout (Generate, Modify, Result). Interaction -> None. Justification -> Simplifies the multi-step process. Method -> HTML/Tailwind.
+    - AuditD Logs (Ex 7): Report Info -> Logs for cat, bash, chmod. Goal -> Organize complex data. Viz -> Tabbed interface for Read, Write, Attribute events. Interaction -> JS-powered tabs to show/hide log snippets. Justification -> Prevents a wall of text; user selects event of interest. Method -> HTML/Tailwind/JS.
+    - FIM/AV (Ex 5, 6): Report Info -> md5sum/clamav steps. Goal -> Show process/result. Viz -> Simple 3-step HTML flow diagrams. Interaction -> None. Justification -> Clearly shows the test-fail/test-detect logic. Method -> HTML/Tailwind.
+    - All other data (commands, tool lists, results): Presented in styled HTML cards/lists.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-color: #4f46e5;
+            color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        .tab-button:not(.active) {
+            border-color: transparent;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <span class="text-2xl font-bold text-indigo-600">Linux Hardening Report</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#overview" class="nav-link text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Overview</a>
+                        <a href="#access-control" class="nav-link text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Access Control</a>
+                        <a href="#monitoring" class="nav-link text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Threat Monitoring</a>
+                        <a href="#hygiene" class="nav-link text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">System Hygiene</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+                        <span class="sr-only">Open main menu</span>
+                        <!-- Icon when menu is closed -->
+                        <span id="menu-icon-open" class="block text-2xl font-bold">&#9776;</span>
+                        <!-- Icon when menu is open -->
+                        <span id="menu-icon-close" class="hidden text-2xl font-bold">&times;</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#overview" class="nav-link text-gray-500 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Overview</a>
+                <a href="#access-control" class="nav-link text-gray-500 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Access Control</a>
+                <a href="#monitoring" class="nav-link text-gray-500 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Threat Monitoring</a>
+                <a href="#hygiene" class="nav-link text-gray-500 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">System Hygiene</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        
+        <section id="overview" class="mb-20">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Dashboard Overview</h2>
+            <p class="text-lg text-gray-600 mb-8">This report summarizes the 8 exercises performed to harden a Xubuntu 24.04 endpoint. The system's security posture was significantly improved by implementing access controls, threat monitoring, and system hygiene best practices.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Lynis Hardening Score</h3>
+                    <p class="text-gray-600 mb-4">The initial audit score of 61 was improved by implementing fixes suggested by Lynis, demonstrating measurable security enhancement.</p>
+                    <div class="flex items-center justify-center space-x-8">
+                        <div class="text-center">
+                            <span class="text-5xl font-bold text-red-500">61</span>
+                            <span class="block text-sm text-gray-500">Initial Score</span>
+                        </div>
+                        <div class="text-5xl font-light text-gray-300">&rarr;</div>
+                        <div class="text-center">
+                            <span class="text-5xl font-bold text-green-500">63</span>
+                            <span class="block text-sm text-gray-500">Final Score</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Security Tools Implemented</h3>
+                    <p class="text-gray-600 mb-4">A suite of security and management tools was installed to provide layered defense and easier administration.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">Cockpit</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">Lynis</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">ClamAV</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">AuditD</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">Fail2ban</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">AppArmor</span>
+                        <span class="bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">gnome-system-tools</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="access-control" class="mb-20">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Access Control</h2>
+            <p class="text-lg text-gray-600 mb-8">This section details how user and application access was secured, from initial login policies to fine-grained, application-level restrictions.</p>
+            
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">User Account & Password Policy</h3>
+                    <p class="text-gray-600 mb-6">Inactive accounts were locked, and a mandatory password rotation policy was enforced using the Cockpit web interface.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">Inactive Account Locked</h4>
+                            <p class="text-sm text-gray-600 mb-3">User 'bob' was locked to prevent unauthorized access from legacy accounts.</p>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">
+                                <span class="text-green-400">$</span> sudo usermod -L bob<br>
+                                <span class="text-green-400">$</span> sudo passwd -S bob<br>
+                                <span class="text-gray-400">bob L ... (Locked)</span>
+                            </code>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">Password Aging Policy</h4>
+                            <p class="text-sm text-gray-600 mb-3">Policy for user 'alice' set via Cockpit, requiring password changes every 90 days.</p>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">
+                                <span class="text-green-400">$</span> sudo chage -l alice<br>
+                                <span class="text-gray-400">...</span><br>
+                                <span class="text-gray-400">Maximum number of days between password change : 90</span>
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">SSH Hardening</h3>
+                    <p class="text-gray-600 mb-6">Remote root login was disabled in the SSH configuration to mitigate brute-force attacks against the most privileged user.</p>
+                    <div class="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                        <div class="text-gray-500 mb-1">/etc/ssh/sshd_config</div>
+                        <div class="text-red-400"><span class="mr-2">-</span>#PermitRootLogin prohibit-password</div>
+                        <div class="text-green-400"><span class="mr-2">+</span>PermitRootLogin no</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Mandatory Access Control (AppArmor)</h3>
+                    <p class="text-gray-600 mb-6">A custom AppArmor profile was generated for a test script, then manually edited to enforce a "deny write" policy, successfully blocking an unauthorized action.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="flex flex-col items-center bg-gray-50 p-4 rounded-lg">
+                            <span class="text-indigo-600 bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl mb-3">1</span>
+                            <h4 class="font-medium text-gray-800 mb-2">Generate Profile</h4>
+                            <p class="text-sm text-gray-600 text-center">Used `aa-genprof` to learn the script's normal behavior (including writing a file).</p>
+                        </div>
+                        <div class="flex flex-col items-center bg-gray-50 p-4 rounded-lg">
+                            <span class="text-indigo-600 bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl mb-3">2</span>
+                            <h4 class="font-medium text-gray-800 mb-2">Modify Policy</h4>
+                            <p class="text-sm text-gray-600 text-center mb-2">Edited the profile to change file write (`w`) permission to read (`r`).</p>
+                            <div class="bg-gray-900 text-gray-100 p-2 rounded-md text-xs w-full font-mono">
+                                <div class="text-red-400">- owner .../secret.txt w,</div>
+                                <div class="text-green-400">+ owner .../secret.txt r,</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center bg-gray-50 p-4 rounded-lg">
+                            <span class="text-indigo-600 bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl mb-3">3</span>
+                            <h4 class="font-medium text-gray-800 mb-2">Verify Block</h4>
+                            <p class="text-sm text-gray-600 text-center mb-2">The system log confirmed AppArmor blocked the unauthorized write action.</p>
+                             <div class="bg-gray-900 text-gray-100 p-2 rounded-md text-xs w-full font-mono">
+                                <div class="text-red-400">apparmor="DENIED"</div>
+                                <div class="text-gray-400">... requested_mask="wc"</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="monitoring" class="mb-20">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">Threat & Integrity Monitoring</h2>
+            <p class="text-lg text-gray-600 mb-8">This section covers the real-time detection systems implemented to monitor for threats, malware, and unauthorized file changes.</p>
+            <div class="space-y-8">
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">File Integrity Monitoring (FIM)</h3>
+                    <p class="text-gray-600 mb-6">Used `md5sum` to create a "golden" hash of a file. A simulated tamper was immediately detected when the hash no longer matched.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">1. Baseline Hash</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">md5sum ... > ...md5</code>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">2. Simulate Tamper</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">echo " " >> ...txt</code>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">3. Verification</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">
+                                <span class="text-green-400">$</span> md5sum -c ...md5<br>
+                                <span class="text-red-400">... FAILED</span>
+                            </code>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Antivirus (ClamAV)</h3>
+                    <p class="text-gray-600 mb-6">Installed `clamav` with the `clamtk` GUI. After updating virus definitions, it successfully detected the EICAR test virus.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">1. Update Signatures</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">sudo freshclam</code>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">2. Create EICAR Sample</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">echo 'X5O!P%...' > ...</code>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">3. Detected</h4>
+                            <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">
+                                <span class="text-gray-400">ClamTK Result:</span><br>
+                                <span class="text-red-400">Found: eicar-signature</span>
+                            </code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABBED CONTAINER WITH ID FOR JS -->
+                <div class="bg-white p-6 rounded-lg shadow-md" id="audit-tabs-container">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Event Auditing (AuditD)</h3>
+                    <p class="text-gray-600 mb-6">Configured `auditd` to monitor a critical file. All interactions were logged, providing a clear forensic trail. Click tabs to see what was logged for each action.</p>
+                    <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto mb-4">
+                        <span class="text-green-400">$</span> sudo auditctl -w /home/user/Desktop/audit_target.txt -p rwxa -k audit_demo
+                    </code>
+                    <div>
+                        <div class="border-b border-gray-200">
+                            <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                                <button class="tab-button active px-4 py-2 border-b-2 font-medium text-sm" data-tab="read">Read Event (cat)</button>
+                                <button class="tab-button px-4 py-2 border-b-2 font-medium text-sm" data-tab="write">Write Event (echo)</button>
+                                <button class="tab-button px-4 py-2 border-b-2 font-medium text-sm" data-tab="attrib">Attribute Event (chmod)</button>
+                            </nav>
+                        </div>
+                        <div class="mt-4" id="audit-contents">
+                            <div id="tab-read" class="tab-content active">
+                                <code class="block bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                                    <span class="text-gray-400">type=SYSCALL ...</span> <span class="text-yellow-400">comm="cat"</span> <span class="text-gray-400">exe="/usr/bin/cat" ...</span> <span class="text-indigo-400">key="audit_demo"</span>
+                                </code>
+                            </div>
+                            <div id="tab-write" class="tab-content">
+                                <code class="block bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                                    <span class="text-gray-400">type=SYSCALL ...</span> <span class="text-yellow-400">comm="bash"</span> <span class="text-gray-400">... a2=O_WRONLY|O_CREAT|O_APPEND ...</span> <span class="text-indigo-400">key="audit_demo"</span>
+                                </code>
+                            </div>
+                            <div id="tab-attrib" class="tab-content">
+                                <code class="block bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
+                                    <span class="text-gray-400">type=SYSCALL ...</span> <span class="text-yellow-400">comm="chmod"</span> <span class="text-gray-400">exe="/usr/bin/chmod" ...</span> <span class="text-indigo-400">key="audit_demo"</span>
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="hygiene" class="mb-12">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 mb-4">System Auditing & Hygiene</h2>
+            <p class="text-lg text-gray-600 mb-8">This section outlines the preventative maintenance and auditing performed, from the initial Lynis scan to disabling unused services and cleaning the system.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Lynis Audit Result</h3>
+                    <p class="text-gray-600 mb-4">The final audit shows a Hardening Index of 63, representing the system's security posture *after* applying fixes.</p>
+                    <div class="chart-container">
+                        <canvas id="lynisChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Services & Packages</h3>
+                    <p class="text-gray-600 mb-6">Unnecessary services were disabled to reduce the attack surface, and the system was cleaned of orphaned packages and old kernels.</p>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                        <h4 class="font-medium text-gray-800 mb-2">Services Disabled</h4>
+                        <ul class="list-disc list-inside text-gray-600 space-y-1">
+                            <li>`cupsd` (Printing Service)</li>
+                            <li>`avahi-daemon` (Network Discovery)</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-medium text-gray-800 mb-2">Final System Cleanup</h4>
+                        <p class="text-sm text-gray-600 mb-3">The final cleanup confirmed no orphaned dependencies remain.</p>
+                        <code class="block bg-gray-900 text-gray-100 p-3 rounded-md text-sm overflow-x-auto">
+                            <span class="text-green-400">$</span> sudo apt autoremove --purge<br>
+                            <span class="text-gray-400">...</span><br>
+                            <span class="text-gray-400">0 upgraded, 0 newly installed, 0 to remove...</span>
+                        </code>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+            Interactive Lab Report | Generated 2025-11-21
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // Lynis Doughnut Chart
+            const lynisCtx = document.getElementById('lynisChart').getContext('2d');
+            new Chart(lynisCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hardened', 'Improvement Gap'],
+                    datasets: [{
+                        data: [63, 37],
+                        backgroundColor: [
+                            '#4f46e5', // indigo-600
+                            '#e5e7eb'  // gray-200
+                        ],
+                        borderColor: [
+                            '#ffffff',
+                            '#ffffff'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: 'Inter'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            bodyFont: {
+                                size: 14,
+                                family: 'Inter'
+                            },
+                            titleFont: {
+                                size: 14,
+                                family: 'Inter'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ROBUST TAB LOGIC
+            // Scopes selection to the specific container 'audit-tabs-container'
+            const tabContainer = document.getElementById('audit-tabs-container');
+            
+            if (tabContainer) {
+                const tabButtons = tabContainer.querySelectorAll('.tab-button');
+                const tabContents = tabContainer.querySelectorAll('.tab-content');
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetTab = button.getAttribute('data-tab');
+
+                        // Remove active state from all buttons
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        // Add active state to clicked button
+                        button.classList.add('active');
+
+                        // Hide all contents
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        // Show target content
+                        const targetContent = document.getElementById('tab-' + targetTab);
+                        if (targetContent) {
+                            targetContent.classList.add('active');
+                        }
+                    });
+                });
+            }
+
+
+            // Mobile Menu Logic
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('menu-icon-open');
+            const iconClose = document.getElementById('menu-icon-close');
+
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                iconOpen.classList.toggle('hidden');
+                iconClose.classList.toggle('hidden');
+                iconClose.classList.toggle('block'); // Ensure it becomes visible
+            });
+
+            // Smooth scroll for nav links
+            document.querySelectorAll('a.nav-link').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    if (this.getAttribute('href').startsWith('#')) {
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href');
+                        const targetElement = document.querySelector(targetId);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({
+                                behavior: 'smooth'
+                            });
+                        }
+                        // Close mobile menu if open
+                        if (!mobileMenu.classList.contains('hidden')) {
+                            mobileMenu.classList.add('hidden');
+                            iconOpen.classList.remove('hidden');
+                            iconClose.classList.add('hidden');
+                            iconClose.classList.remove('block');
+                        }
+                    }
+                });
+            });
+
+        });
+    </script>
+
+</body>
+</html>
