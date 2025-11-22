@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuardian: IPTables Architect</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .tab-active { background-color: #1e293b; color: white; }
+        .tab-inactive { color: #94a3b8; }
+        .tab-inactive:hover { color: white; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans overflow-hidden h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar -->
+    <nav class="w-full md:w-64 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
+        <div class="p-4 border-b border-slate-800 flex items-center gap-2">
+            <i data-lucide="shield" class="text-blue-500"></i>
+            <h1 class="font-bold text-lg tracking-tight">NetGuardian</h1>
+        </div>
+
+        <div class="p-4 space-y-4 overflow-y-auto flex-1">
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-500 uppercase">Controls</label>
+                <button onclick="toggleModal(true)" class="w-full flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium transition-colors text-white">
+                    <i data-lucide="network" class="w-4 h-4"></i> Load Scenario
+                </button>
+                <button onclick="switchTab('designer')" id="btn-designer" class="w-full flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors tab-active">
+                    <i data-lucide="server" class="w-4 h-4"></i> Designer
+                </button>
+                <button onclick="switchTab('script')" id="btn-script" class="w-full flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors tab-inactive">
+                    <i data-lucide="download" class="w-4 h-4"></i> View Script
+                </button>
+                <!-- NEW GUIDE BUTTON -->
+                <button onclick="toggleGuide(true)" class="w-full flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors text-yellow-400 hover:bg-slate-800">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> User Guide
+                </button>
+            </div>
+
+            <div class="space-y-2 border-t border-slate-800 pt-4">
+                <label class="text-xs font-semibold text-slate-500 uppercase">Global Settings</label>
+                <div class="flex items-center justify-between text-sm p-2 bg-slate-900 rounded border border-slate-800">
+                    <span>Enable NAT</span>
+                    <input type="checkbox" id="chk-nat" checked onchange="updateGlobalSettings()" class="accent-blue-500">
+                </div>
+                <div class="flex items-center justify-between text-sm p-2 bg-slate-900 rounded border border-slate-800">
+                    <span>Kernel Forwarding</span>
+                    <input type="checkbox" id="chk-sysctl" checked onchange="updateGlobalSettings()" class="accent-blue-500">
+                </div>
+            </div>
+            
+            <div class="bg-slate-900 p-3 rounded text-xs text-slate-400 border border-slate-800 mt-auto">
+                <p class="font-bold text-slate-300 mb-1">Status:</p>
+                <p id="status-interfaces">Interfaces: 0</p>
+                <p id="status-rules">Rules: 0</p>
+                <p id="status-zones">Zones: 0</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        
+        <!-- Scenario Modal -->
+        <div id="scenario-modal" class="hidden absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                    <h3 class="font-bold text-lg">Select Topology</h3>
+                    <button onclick="toggleModal(false)"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <div id="scenario-list" class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+                    <!-- Scenarios injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Guide Modal (NEW) -->
+        <div id="guide-modal" class="hidden absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-4xl w-full h-[80vh] flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 shrink-0">
+                    <h3 class="font-bold text-lg flex items-center gap-2"><i data-lucide="book-open" class="text-yellow-400"></i> NetGuardian User Manual</h3>
+                    <button onclick="toggleGuide(false)" class="hover:text-white text-slate-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="p-6 overflow-y-auto space-y-8 text-sm leading-relaxed">
+                    
+                    <section>
+                        <h4 class="text-xl font-bold text-blue-400 mb-2">1. Getting Started</h4>
+                        <p class="text-slate-300 mb-2">NetGuardian creates <strong>iptables</strong> bash scripts based on the logic of "Zones" and "Flows".</p>
+                        <ul class="list-disc list-inside text-slate-400 space-y-1 ml-2">
+                            <li><strong>Define Interfaces:</strong> Map physical ports (eth0) to Zones (WAN, LAN).</li>
+                            <li><strong>Check Matrix:</strong> The grid shows what is allowed. Red means DROP, Green means ACCEPT.</li>
+                            <li><strong>Create Rules:</strong> Add specific policies (e.g., Allow LAN to WAN).</li>
+                            <li><strong>Generate:</strong> The tool writes the bash script for you.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h4 class="text-xl font-bold text-yellow-400 mb-2">2. Deployment Scenarios</h4>
+                        
+                        <div class="mb-4">
+                            <h5 class="font-bold text-white mb-1">A. Host on LAN & Firewall (Gateway)</h5>
+                            <p class="text-slate-400 mb-2">The most common setup. You have one firewall protecting a local network.</p>
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800 font-mono text-xs text-green-400">
+                                Interface 1: eth0 -> WAN (External)<br>
+                                Interface 2: eth1 -> LAN (Internal)<br>
+                                Rule: Source: LAN -> Dest: WAN | Action: ACCEPT
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="font-bold text-white mb-1">B. DMZ Setup (3-Legged Firewall)</h5>
+                            <p class="text-slate-400 mb-2">Used when you host public servers (Web, Mail) but want to protect the LAN.</p>
+                            <div class="bg-slate-950 p-3 rounded border border-slate-800 font-mono text-xs text-green-400">
+                                Interface 1: eth0 -> WAN<br>
+                                Interface 2: eth1 -> LAN<br>
+                                Interface 3: eth2 -> DMZ<br>
+                                Rule 1: WAN -> DMZ (Port 80/443) [Public Access]<br>
+                                Rule 2: LAN -> DMZ (Port 22) [Management]<br>
+                                Rule 3: DMZ -> LAN [DROP] (Crucial for security)
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5 class="font-bold text-white mb-1">C. Dual-Homed Firewall (Advanced)</h5>
+                            <p class="text-slate-400 mb-2">
+                                In a high-security environment where the DMZ sits <em>between</em> two physical firewalls. 
+                                <br><br>
+                                <span class="text-yellow-500">NOTE:</span> You must use this tool twice to generate two separate scripts.
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-slate-950 p-3 rounded border border-slate-800">
+                                    <strong class="text-blue-300 block mb-2">1. Outer Firewall (Edge)</strong>
+                                    <ul class="list-disc list-inside text-slate-500 text-xs">
+                                        <li>IF 1: WAN (Public IP)</li>
+                                        <li>IF 2: DMZ_OUT (10.0.0.1)</li>
+                                        <li>Policy: Allow WAN -> DMZ (Web)</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-slate-950 p-3 rounded border border-slate-800">
+                                    <strong class="text-blue-300 block mb-2">2. Inner Firewall (Core)</strong>
+                                    <ul class="list-disc list-inside text-slate-500 text-xs">
+                                        <li>IF 1: DMZ_IN (10.0.0.2)</li>
+                                        <li>IF 2: LAN (192.168.1.1)</li>
+                                        <li>Policy: Allow LAN -> DMZ (Mgmt)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h4 class="text-xl font-bold text-purple-400 mb-2">3. How to Upgrade & Maintain</h4>
+                        <p class="text-slate-300 mb-2">Your firewall rules are not static; they evolve.</p>
+                        <ol class="list-decimal list-inside text-slate-400 space-y-2">
+                            <li><strong>Save your Config:</strong> Currently, this tool runs in the browser memory. Keep a note of your interface names/zones.</li>
+                            <li><strong>Make Changes:</strong> Open this tool, re-enter your topology, and add the new rule (e.g., "Open Port 3306 for SQL").</li>
+                            <li><strong>Regenerate:</strong> Go to "View Script" and copy the new code.</li>
+                            <li><strong>Apply on Server:</strong> Paste the content into <code>/etc/firewall.sh</code> (or your location) and run it. The script automatically flushes old rules (<code>iptables -F</code>) before applying new ones, ensuring a clean state.</li>
+                        </ol>
+                    </section>
+
+                    <div class="bg-blue-900/20 border border-blue-800 p-4 rounded-lg">
+                        <h5 class="font-bold text-blue-400 flex items-center gap-2"><i data-lucide="info"></i> Pro Tip: Persistence</h5>
+                        <p class="text-slate-400 mt-1">
+                            To make rules survive a reboot on Linux, install `iptables-persistent` (Debian/Ubuntu) and save the active rules after running your script: 
+                            <code class="bg-slate-900 px-1 py-0.5 rounded text-white">netfilter-persistent save</code>
+                        </p>
+                    </div>
+
+                </div>
+                <div class="p-4 border-t border-slate-800 bg-slate-950 text-right">
+                    <button onclick="toggleGuide(false)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded transition-colors">Close Guide</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Designer View -->
+        <div id="view-designer" class="flex flex-col h-full overflow-hidden">
+            <div class="p-6 bg-slate-900 border-b border-slate-800 shrink-0">
+                <h2 class="text-xl font-bold mb-2">Network Topology & Rules</h2>
+                <p class="text-slate-400 text-sm">Define your physical interfaces and their logical zones, then build traffic policies.</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-8">
+                <!-- Interfaces Section -->
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-blue-400 flex items-center gap-2">
+                            <i data-lucide="network" class="w-4 h-4"></i> Interfaces
+                        </h3>
+                        <button onclick="addInterface()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 flex items-center gap-1 text-white">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Add Interface
+                        </button>
+                    </div>
+                    <div id="interface-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Interfaces injected here -->
+                    </div>
+                </section>
+
+                <!-- Traffic Matrix Section -->
+                <section class="hidden md:block">
+                    <h3 class="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Traffic Flow Matrix
+                    </h3>
+                    <div class="overflow-x-auto bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <table class="w-full text-sm" id="matrix-table">
+                            <!-- Matrix injected here -->
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Rules Section -->
+                <section class="pb-20">
+                    <h3 class="text-lg font-semibold text-blue-400 mb-4 flex items-center gap-2">
+                        <i data-lucide="lock" class="w-4 h-4"></i> Firewall Rules
+                    </h3>
+
+                    <!-- Add Rule Form -->
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 mb-6 grid grid-cols-1 md:grid-cols-7 gap-3 items-end shadow-lg">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs text-slate-400 mb-1">Source</label>
+                            <select id="new-src" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-2 text-sm text-white"></select>
+                        </div>
+                        <div class="md:col-span-1 flex justify-center pb-2">
+                            <i data-lucide="arrow-right" class="text-slate-500"></i>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs text-slate-400 mb-1">Destination</label>
+                            <select id="new-dst" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-2 text-sm text-white"></select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs text-slate-400 mb-1">Port/App</label>
+                            <select id="new-port-preset" onchange="applyPortPreset()" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-2 text-sm text-white">
+                                <option value="custom">Custom...</option>
+                                <!-- Presets injected -->
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs text-slate-400 mb-1">Protocol</label>
+                            <select id="new-proto" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-2 text-sm uppercase text-white">
+                                <option value="tcp">TCP</option>
+                                <option value="udp">UDP</option>
+                                <option value="icmp">ICMP</option>
+                                <option value="all">ALL</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs text-slate-400 mb-1">Action</label>
+                            <select id="new-action" onchange="updateActionColor(this)" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-2 text-sm font-bold text-green-400">
+                                <option value="ACCEPT">ACCEPT</option>
+                                <option value="DROP">DROP</option>
+                                <option value="REJECT">REJECT</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <button onclick="addNewRule()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded transition-colors flex justify-center items-center gap-1">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Rule List -->
+                    <div id="rule-list" class="space-y-2">
+                        <!-- Rules injected here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Script View -->
+        <div id="view-script" class="hidden flex-col h-full bg-slate-950">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-100">Generated Bash Script</h2>
+                    <p class="text-xs text-slate-400">Save this to a file (e.g., firewall.sh), chmod +x, and run as root.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copyScript()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-sm transition-colors text-white">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                    </button>
+                    <!-- Download functionality simulated -->
+                    <button onclick="downloadScript()" class="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm transition-colors text-white">
+                        <i data-lucide="download" class="w-3 h-3"></i> Download
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-hidden relative group">
+                <textarea id="script-area" readonly class="w-full h-full bg-[#0d1117] text-[#c9d1d9] font-mono text-sm p-6 resize-none focus:outline-none" style="white-space: pre;"></textarea>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Application Logic -->
+    <script>
+        // --- DATA CONSTANTS ---
+        const COMMON_PORTS = [
+            { label: 'SSH (22)', port: '22', proto: 'tcp' },
+            { label: 'HTTP (80)', port: '80', proto: 'tcp' },
+            { label: 'HTTPS (443)', port: '443', proto: 'tcp' },
+            { label: 'DNS (53)', port: '53', proto: 'udp' },
+            { label: 'FTP (21)', port: '21', proto: 'tcp' },
+            { label: 'SMTP (25)', port: '25', proto: 'tcp' },
+            { label: 'MySQL (3306)', port: '3306', proto: 'tcp' },
+            { label: 'RDP (3389)', port: '3389', proto: 'tcp' },
+            { label: 'ICMP (Ping)', port: 'any', proto: 'icmp' },
+        ];
+
+        const SCENARIOS = {
+            basic_gw: {
+                name: "Home/Office Gateway",
+                desc: "Standard firewall. LAN users can access WAN. WAN is blocked.",
+                interfaces: [
+                    { id: 'if1', name: 'eth0', zone: 'WAN', type: 'external', ip: 'dhcp' },
+                    { id: 'if2', name: 'eth1', zone: 'LAN', type: 'internal', ip: '192.168.1.1' }
+                ],
+                rules: [
+                    { id: 1, src: 'LAN', dst: 'WAN', proto: 'all', port: 'any', action: 'ACCEPT', comment: 'Allow LAN to Internet' },
+                    { id: 2, src: 'WAN', dst: 'self', proto: 'tcp', port: '22', action: 'DROP', comment: 'Block SSH from WAN' },
+                ],
+                nat: true
+            },
+            dmz_host: {
+                name: "DMZ Bastion",
+                desc: "LAN, WAN, and a DMZ for public servers.",
+                interfaces: [
+                    { id: 'if1', name: 'eth0', zone: 'WAN', type: 'external', ip: 'dhcp' },
+                    { id: 'if2', name: 'eth1', zone: 'LAN', type: 'internal', ip: '192.168.1.1' },
+                    { id: 'if3', name: 'eth2', zone: 'DMZ', type: 'dmz', ip: '10.0.0.1' }
+                ],
+                rules: [
+                    { id: 1, src: 'LAN', dst: 'WAN', proto: 'all', port: 'any', action: 'ACCEPT', comment: 'LAN to WAN' },
+                    { id: 2, src: 'LAN', dst: 'DMZ', proto: 'tcp', port: '22', action: 'ACCEPT', comment: 'Mgmt to DMZ' },
+                    { id: 3, src: 'WAN', dst: 'DMZ', proto: 'tcp', port: '80', action: 'ACCEPT', comment: 'Public Web' },
+                    { id: 4, src: 'DMZ', dst: 'LAN', proto: 'all', port: 'any', action: 'DROP', comment: 'Isolate DMZ' }
+                ],
+                nat: true
+            },
+            dual_homed_edge: {
+                name: "Dual-Homed (Edge Node)",
+                desc: "Outer Firewall. Sits between WAN and DMZ.",
+                interfaces: [
+                    { id: 'if1', name: 'eth0', zone: 'WAN', type: 'external', ip: 'public_ip' },
+                    { id: 'if2', name: 'eth1', zone: 'DMZ_OUT', type: 'dmz', ip: '10.0.0.1' }
+                ],
+                rules: [
+                    { id: 1, src: 'WAN', dst: 'DMZ_OUT', proto: 'tcp', port: '443', action: 'ACCEPT', comment: 'Inbound HTTPS' },
+                ],
+                nat: false
+            },
+            hostile_environment: {
+                name: "Hostile Environment (Paranoid)",
+                desc: "Strict output filtering. No one talks to anyone unless explicit.",
+                interfaces: [
+                    { id: 'if1', name: 'wlan0', zone: 'PUBLIC_WIFI', type: 'external', ip: 'dhcp' }
+                ],
+                rules: [
+                    { id: 1, src: 'self', dst: 'PUBLIC_WIFI', proto: 'udp', port: '53', action: 'ACCEPT', comment: 'Allow DNS Out' },
+                    { id: 2, src: 'self', dst: 'PUBLIC_WIFI', proto: 'tcp', port: '443', action: 'ACCEPT', comment: 'Allow HTTPS Out' },
+                    { id: 3, src: 'self', dst: 'PUBLIC_WIFI', proto: 'all', port: 'any', action: 'DROP', comment: 'Block everything else' }
+                ],
+                nat: false
+            }
+        };
+
+        // --- STATE ---
+        let appState = {
+            interfaces: [],
+            rules: [],
+            enableNat: true,
+            enableSysctl: true
+        };
+
+        let currentCustomPort = '80'; // To hold value for adding new rule
+
+        // --- INITIALIZATION ---
+        function init() {
+            // Load preset
+            const portSelect = document.getElementById('new-port-preset');
+            COMMON_PORTS.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.port;
+                opt.text = p.label;
+                opt.dataset.proto = p.proto;
+                portSelect.appendChild(opt);
+            });
+
+            loadScenario('basic_gw');
+            renderScenariosList();
+        }
+
+        // --- CORE ACTIONS ---
+        function loadScenario(key) {
+            const s = SCENARIOS[key];
+            appState.interfaces = JSON.parse(JSON.stringify(s.interfaces));
+            appState.rules = JSON.parse(JSON.stringify(s.rules));
+            appState.enableNat = s.nat;
+            
+            document.getElementById('chk-nat').checked = s.nat;
+            document.getElementById('chk-sysctl').checked = true; // Default
+            
+            updateUI();
+            toggleModal(false);
+        }
+
+        function updateGlobalSettings() {
+            appState.enableNat = document.getElementById('chk-nat').checked;
+            appState.enableSysctl = document.getElementById('chk-sysctl').checked;
+            renderScript();
+        }
+
+        // --- INTERFACE MANAGEMENT ---
+        function addInterface() {
+            const id = appState.interfaces.length + 1;
+            appState.interfaces.push({ 
+                id: `if${Date.now()}`, 
+                name: `eth${id}`, 
+                zone: 'NEW_ZONE', 
+                type: 'internal', 
+                ip: '0.0.0.0' 
+            });
+            updateUI();
+        }
+
+        function removeInterface(id) {
+            appState.interfaces = appState.interfaces.filter(i => i.id !== id);
+            updateUI();
+        }
+
+        function updateInterface(id, field, value) {
+            const iface = appState.interfaces.find(i => i.id === id);
+            if(iface) {
+                iface[field] = (field === 'zone') ? value.toUpperCase() : value;
+                updateUI(); // Ideally we'd debounce this or just re-render dependent parts, but full render is safe here
+            }
+        }
+
+        // --- RULE MANAGEMENT ---
+        function addNewRule() {
+            const src = document.getElementById('new-src').value;
+            const dst = document.getElementById('new-dst').value;
+            const proto = document.getElementById('new-proto').value;
+            const action = document.getElementById('new-action').value;
+            
+            // Determine port
+            const portPreset = document.getElementById('new-port-preset');
+            let port = portPreset.value;
+            if (port === 'custom') {
+                 port = prompt("Enter Port Number:", "8080") || "any";
+            }
+
+            appState.rules.push({
+                id: Date.now(),
+                src, dst, proto, port, action,
+                comment: 'User Rule'
+            });
+            updateUI();
+        }
+
+        function removeRule(id) {
+            appState.rules = appState.rules.filter(r => r.id != id);
+            updateUI();
+        }
+
+        function moveRule(index, direction) {
+            if (direction === -1 && index === 0) return;
+            if (direction === 1 && index === appState.rules.length - 1) return;
+
+            const rules = appState.rules;
+            const temp = rules[index];
+            rules[index] = rules[index + direction];
+            rules[index + direction] = temp;
+            updateUI();
+        }
+
+        // --- UI RENDERING ---
+        function getZones() {
+            const z = ['self'];
+            appState.interfaces.forEach(i => {
+                if(!z.includes(i.zone)) z.push(i.zone);
+            });
+            return z;
+        }
+
+        function updateUI() {
+            renderStats();
+            renderInterfaces();
+            renderMatrix();
+            renderRules();
+            updateDropdowns();
+            renderScript();
+            lucide.createIcons();
+        }
+
+        function renderStats() {
+            document.getElementById('status-interfaces').innerText = `Interfaces: ${appState.interfaces.length}`;
+            document.getElementById('status-rules').innerText = `Rules: ${appState.rules.length}`;
+            document.getElementById('status-zones').innerText = `Zones: ${getZones().length}`;
+        }
+
+        function renderInterfaces() {
+            const container = document.getElementById('interface-list');
+            container.innerHTML = '';
+            
+            appState.interfaces.forEach(iface => {
+                const el = document.createElement('div');
+                el.className = 'bg-slate-800/50 border border-slate-700 p-3 rounded-lg relative group';
+                el.innerHTML = `
+                    <button onclick="removeInterface('${iface.id}')" class="absolute top-2 right-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                    <div class="grid gap-2">
+                        <div>
+                            <label class="text-xs text-slate-500">Device Name</label>
+                            <input onchange="updateInterface('${iface.id}', 'name', this.value)" value="${iface.name}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-yellow-400 font-mono">
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <label class="text-xs text-slate-500">Zone Name</label>
+                                <input onchange="updateInterface('${iface.id}', 'zone', this.value)" value="${iface.zone}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm font-bold">
+                            </div>
+                            <div class="flex-1">
+                                <label class="text-xs text-slate-500">IP Addr</label>
+                                <input onchange="updateInterface('${iface.id}', 'ip', this.value)" value="${iface.ip}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function renderMatrix() {
+            const table = document.getElementById('matrix-table');
+            const zones = getZones();
+            
+            let html = `<thead><tr><th class="p-2 text-slate-500 font-normal italic">Source \\ Dest</th>`;
+            zones.forEach(z => html += `<th class="p-2 text-blue-300 border-b border-slate-800">${z}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            zones.forEach(src => {
+                html += `<tr><td class="p-2 font-bold text-emerald-400 border-r border-slate-800">${src}</td>`;
+                zones.forEach(dst => {
+                    if (src === dst) {
+                        html += `<td class="bg-slate-900/50"></td>`;
+                    } else {
+                        const flows = appState.rules.filter(r => r.src === src && r.dst === dst);
+                        html += `<td class="p-2 border border-slate-800/50 text-center">`;
+                        if (flows.length > 0) {
+                            html += `<div class="flex flex-col gap-1">`;
+                            flows.forEach(r => {
+                                const colorClass = r.action === 'ACCEPT' ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-red-900/30 text-red-400 border-red-800';
+                                html += `<span class="text-[10px] px-1 rounded border ${colorClass}">${r.action === 'ACCEPT' ? 'ALLOW' : 'DROP'} ${r.port === 'any' ? 'ALL' : r.port}</span>`;
+                            });
+                            html += `</div>`;
+                        } else {
+                            html += `<span class="text-slate-700 text-xs">-</span>`;
+                        }
+                        html += `</td>`;
+                    }
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody>`;
+            table.innerHTML = html;
+        }
+
+        function renderRules() {
+            const container = document.getElementById('rule-list');
+            if (appState.rules.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-10 italic">No rules defined. Traffic will hit default policy (DROP).</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            
+            appState.rules.forEach((rule, idx) => {
+                const el = document.createElement('div');
+                el.className = "bg-slate-900 border border-slate-800 p-3 rounded flex items-center gap-4 hover:border-slate-600 transition-colors";
+                const badgeColor = rule.action === 'ACCEPT' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400';
+                
+                el.innerHTML = `
+                    <div class="flex flex-col gap-1">
+                        <button onclick="moveRule(${idx}, -1)" class="text-slate-600 hover:text-blue-400"><i data-lucide="move-up" class="w-3 h-3"></i></button>
+                        <button onclick="moveRule(${idx}, 1)" class="text-slate-600 hover:text-blue-400"><i data-lucide="move-down" class="w-3 h-3"></i></button>
+                    </div>
+                    <div class="flex-1 grid grid-cols-12 gap-2 items-center">
+                        <div class="col-span-2 font-mono text-xs text-slate-400">${idx + 1}</div>
+                        <div class="col-span-2 font-bold text-emerald-400">${rule.src}</div>
+                        <div class="col-span-1 text-slate-500"><i data-lucide="arrow-right" class="w-3 h-3"></i></div>
+                        <div class="col-span-2 font-bold text-blue-400">${rule.dst}</div>
+                        <div class="col-span-2 text-sm"><span class="px-2 py-0.5 bg-slate-800 rounded border border-slate-700 text-slate-300 text-xs uppercase">${rule.proto}/${rule.port}</span></div>
+                        <div class="col-span-2"><span class="font-bold text-xs px-2 py-1 rounded ${badgeColor}">${rule.action}</span></div>
+                        <div class="col-span-1 text-right">
+                             <button onclick="removeRule(${rule.id})" class="text-slate-600 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function updateDropdowns() {
+            const zones = getZones();
+            const srcSel = document.getElementById('new-src');
+            const dstSel = document.getElementById('new-dst');
+            
+            // Save current selection if possible, else default
+            const currSrc = srcSel.value || zones[0];
+            const currDst = dstSel.value || 'WAN';
+
+            srcSel.innerHTML = '';
+            dstSel.innerHTML = '';
+
+            zones.forEach(z => {
+                srcSel.add(new Option(z, z));
+                dstSel.add(new Option(z, z));
+            });
+
+            // Restore selection if valid
+            if (zones.includes(currSrc)) srcSel.value = currSrc;
+            if (zones.includes(currDst)) dstSel.value = currDst;
+        }
+
+        function applyPortPreset() {
+            const select = document.getElementById('new-port-preset');
+            const protoSel = document.getElementById('new-proto');
+            const selectedOpt = select.options[select.selectedIndex];
+            
+            if(select.value !== 'custom') {
+                protoSel.value = selectedOpt.dataset.proto;
+            }
+        }
+
+        function updateActionColor(select) {
+            select.style.color = select.value === 'ACCEPT' ? '#4ade80' : '#f87171';
+        }
+
+        // --- SCRIPT GENERATION ---
+        function renderScript() {
+            const date = new Date().toISOString();
+            const interfaces = appState.interfaces;
+            const rules = appState.rules;
+            const enableSysctl = appState.enableSysctl;
+            const enableNat = appState.enableNat;
+
+            let script = `#!/bin/bash
+#
+# Generated by NetGuardian: IPTables Architect
+# Created: ${date}
+#
+# WARNING: Review carefully before applying.
+#
+
+# 1. Configuration Variables
+IPT="/sbin/iptables"
+${interfaces.map(i => `${i.zone}_IF="${i.name}"  # ${i.ip}`).join('\n')}
+
+echo "Starting Firewall..."
+
+# 2. Flush Existing Rules
+$IPT -F
+$IPT -X
+$IPT -t nat -F
+$IPT -t nat -X
+$IPT -t mangle -F
+$IPT -t mangle -X
+
+# 3. Set Default Policies (Security First)
+$IPT -P INPUT DROP
+$IPT -P FORWARD DROP
+$IPT -P OUTPUT ACCEPT
+
+# 4. Kernel Sysctl Settings
+${enableSysctl ? 'echo 1 > /proc/sys/net/ipv4/ip_forward' : '# Forwarding disabled by user config'}
+
+# 5. Base Chain Rules
+# Allow Loopback
+$IPT -A INPUT -i lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
+
+# Allow Established and Related connections (Stateful Inspection)
+$IPT -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$IPT -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Drop Invalid Packets
+$IPT -A INPUT -m conntrack --ctstate INVALID -j DROP
+$IPT -A FORWARD -m conntrack --ctstate INVALID -j DROP
+
+# 6. User Defined Rules
+echo "Applying User Rules..."
+`;
+
+            rules.forEach(rule => {
+                let cmd = "";
+                const comment = `-m comment --comment "${rule.comment || 'User Rule'}"`;
+                const proto = rule.proto !== 'all' ? `-p ${rule.proto}` : '';
+                const dport = (rule.port !== 'any' && rule.proto !== 'icmp' && rule.proto !== 'all') ? `--dport ${rule.port}` : '';
+                const icmp = (rule.proto === 'icmp' && rule.port !== 'any') ? `--icmp-type ${rule.port}` : '';
+                
+                let chain = "FORWARD";
+                let inIf = "";
+                let outIf = "";
+
+                const srcIface = interfaces.find(i => i.zone === rule.src);
+                const dstIface = interfaces.find(i => i.zone === rule.dst);
+
+                if (rule.dst === 'self') {
+                    chain = "INPUT";
+                    if (srcIface) inIf = `-i $${srcIface.zone}_IF`;
+                } else if (rule.src === 'self') {
+                    chain = "OUTPUT";
+                    if (dstIface) outIf = `-o $${dstIface.zone}_IF`;
+                } else {
+                    chain = "FORWARD";
+                    if (srcIface) inIf = `-i $${srcIface.zone}_IF`;
+                    if (dstIface) outIf = `-o $${dstIface.zone}_IF`;
+                }
+
+                const matches = [proto, dport, icmp, inIf, outIf, `-j ${rule.action}`, comment].filter(Boolean).join(' ');
+                script += `$IPT -A ${chain} ${matches}\n`;
+            });
+
+            if (enableNat) {
+                script += `\n# 7. NAT (Masquerade)\n`;
+                const externalIfaces = interfaces.filter(i => i.type === 'external');
+                externalIfaces.forEach(ext => {
+                    script += `$IPT -t nat -A POSTROUTING -o $${ext.zone}_IF -j MASQUERADE\n`;
+                });
+                if (externalIfaces.length === 0) script += `# No external interfaces defined for NAT.\n`;
+            }
+
+            script += `\necho "Firewall Configured Successfully."\n`;
+
+            document.getElementById('script-area').value = script;
+        }
+
+        // --- NAVIGATION & MODALS ---
+        function switchTab(tab) {
+            const designerView = document.getElementById('view-designer');
+            const scriptView = document.getElementById('view-script');
+            const btnDesigner = document.getElementById('btn-designer');
+            const btnScript = document.getElementById('btn-script');
+
+            if(tab === 'designer') {
+                designerView.classList.remove('hidden');
+                scriptView.classList.add('hidden');
+                scriptView.classList.remove('flex');
+                
+                btnDesigner.classList.add('tab-active');
+                btnDesigner.classList.remove('tab-inactive');
+                btnScript.classList.add('tab-inactive');
+                btnScript.classList.remove('tab-active');
+            } else {
+                renderScript();
+                designerView.classList.add('hidden');
+                scriptView.classList.remove('hidden');
+                scriptView.classList.add('flex');
+
+                btnScript.classList.add('tab-active');
+                btnScript.classList.remove('tab-inactive');
+                btnDesigner.classList.add('tab-inactive');
+                btnDesigner.classList.remove('tab-active');
+            }
+        }
+
+        function toggleModal(show) {
+            const m = document.getElementById('scenario-modal');
+            if(show) m.classList.remove('hidden');
+            else m.classList.add('hidden');
+        }
+
+        function toggleGuide(show) {
+            const m = document.getElementById('guide-modal');
+            if(show) m.classList.remove('hidden');
+            else m.classList.add('hidden');
+        }
+
+        function renderScenariosList() {
+            const list = document.getElementById('scenario-list');
+            list.innerHTML = '';
+            Object.entries(SCENARIOS).forEach(([key, data]) => {
+                const btn = document.createElement('button');
+                btn.className = "text-left p-4 rounded-lg border border-slate-700 hover:border-blue-500 hover:bg-slate-800 transition-all group";
+                btn.onclick = () => loadScenario(key);
+                btn.innerHTML = `
+                    <h4 class="font-bold text-blue-400 group-hover:text-blue-300">${data.name}</h4>
+                    <p class="text-sm text-slate-400 mt-1">${data.desc}</p>
+                    <div class="mt-3 text-xs flex gap-2">
+                        <span class="px-2 py-1 bg-slate-950 rounded">${data.interfaces.length} Interfaces</span>
+                        <span class="px-2 py-1 bg-slate-950 rounded">${data.nat ? 'NAT On' : 'No NAT'}</span>
+                    </div>
+                `;
+                list.appendChild(btn);
+            });
+        }
+
+        function copyScript() {
+            const ta = document.getElementById('script-area');
+            ta.select();
+            document.execCommand('copy');
+            alert('Script copied to clipboard!');
+        }
+
+        function downloadScript() {
+            const ta = document.getElementById('script-area');
+            const blob = new Blob([ta.value], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "firewall.sh";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Start
+        window.onload = init;
+
+    </script>
+</body>
+</html>
