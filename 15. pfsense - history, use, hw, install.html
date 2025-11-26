@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Module: Deployment and Management of pfSense Firewalls</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #2980b9;
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --code-bg: #e8eff5;
+            --code-border: #cfd8dc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* A4 Paper Simulation */
+        .page {
+            background: white;
+            width: 21cm;
+            min-height: 29.7cm;
+            padding: 2cm;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden; /* Prevents spillover */
+        }
+
+        /* Responsive adjustment for screens smaller than A4 */
+        @media screen and (max-width: 21cm) {
+            .page {
+                width: 100%;
+                padding: 20px;
+                height: auto;
+                min-height: auto;
+            }
+        }
+
+        /* Typography */
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            font-size: 24pt;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 18pt;
+            margin-top: 25px;
+            border-left: 5px solid var(--accent-color);
+            padding-left: 10px;
+        }
+
+        h3 {
+            color: #444;
+            font-size: 14pt;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-bottom: 15px;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Requested Custom Formatting */
+        
+        /* Code Box ` ` */
+        .code-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--code-border);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            color: #c7254e;
+            font-size: 0.95em;
+        }
+
+        /* Block Code for larger snippets */
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            margin: 15px 0;
+            white-space: pre-wrap;
+            position: relative;
+        }
+
+        /* Bold ** ** */
+        strong {
+            font-weight: 700;
+            color: #000;
+        }
+
+        /* Italic * * */
+        em {
+            font-style: italic;
+            color: #555;
+        }
+
+        /* Bold Italic *** *** */
+        strong em, em strong {
+            font-weight: 700;
+            font-style: italic;
+            color: #000;
+            text-decoration: underline dotted #2980b9;
+        }
+
+        /* Hyperlinks */
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent-color);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        a:hover {
+            background-color: var(--accent-color);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Footer Styles */
+        .footer-section {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 3px solid #ccc;
+            font-size: 0.8em;
+            color: #666;
+            background-color: #fff;
+        }
+
+        .disclaimer-box {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fafafa;
+        }
+
+        .warning-header {
+            color: #d32f2f;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .copyright {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Page 1 -->
+    <div class="page">
+        <h1>Lecture 02: The Architecture, History, and Deployment of pfSense</h1>
+        <p><strong>Course:</strong> Network Defense & Perimeter Security (420-2C1-DW)</p>
+        <p><strong>Duration:</strong> 1 Hour</p>
+        <hr>
+
+        <h2>Part I: Introduction to pfSense and Open Source Security</h2>
+
+        <p>Welcome to this comprehensive lecture on one of the most significant tools in modern network administration: <strong>pfSense</strong>. In the realm of cybersecurity, the firewall remains the gatekeeper, the first line of defense against external threats. Today, we will explore why <strong>pfSense</strong> has become the de facto standard for open-source perimeter security, how it compares to proprietary giants like Cisco, and the technical intricacies of deploying it effectively.</p>
+
+        <h3>1.1 What is pfSense?</h3>
+        <p>At its core, <strong>pfSense</strong> is an open-source firewall and router distribution based on <strong><em>FreeBSD</em></strong> (Berkeley Software Distribution). It is not merely software you install on top of Windows or Linux; it is a complete operating system customized specifically to function as a network appliance. It utilizes the packet filtering tool known as <span class="code-box">pf</span> (Packet Filter), which was originally developed for OpenBSD and ported to FreeBSD.</p>
+
+        <p>Unlike traditional consumer routers that are "black boxes" with limited functionality, <strong>pfSense</strong> offers enterprise-grade features. It allows network administrators to control traffic with granular precision, manage <strong>VLANs</strong> (Virtual Local Area Networks), and establish secure tunnels via <strong>VPN</strong> (Virtual Private Network) protocols.</p>
+        [Image of pfSense dashboard]
+        
+        <p>For official documentation and the source code, you should always refer to the <a href="https://www.pfsense.org" target="_blank">Official pfSense Website</a>.</p>
+
+        <h3>1.2 The Historical Context and Evolution</h3>
+        <p>To understand the value of <strong>pfSense</strong>, we must look at its history. In the early 2000s, the landscape of firewalls was dominated by expensive, proprietary hardware from vendors like Cisco and Juniper. Small businesses and hobbyists were often left with inferior consumer-grade gear.</p>
+
+        <p>In 2004, the <strong>pfSense</strong> project was started by <strong>Chris Buechler</strong> and <strong>Scott Ullrich</strong>. It began as a fork of <strong>m0n0wall</strong>, another embedded firewall project. While m0n0wall was fantastic for low-power, embedded devices, it lacked the scalability to run on full desktop or server hardware effectively. The developers of <strong>pfSense</strong> envisioned a solution that could scale from a small home router to a massive data center gateway.</p>
+
+        <p>Since then, it has grown to become widely regarded as one of the most popular open-source firewalls globally. It challenged the notion that you need to pay thousands of dollars for features like <strong>IDS/IPS</strong> (Intrusion Detection System / Intrusion Prevention System) or <strong>HA</strong> (High Availability). The project is currently managed by <a href="https://www.netgate.com" target="_blank">Netgate</a>, which provides commercial support and hardware while maintaining the open-source Community Edition.</p>
+    </div>
+
+    <!-- Page 2 -->
+    <div class="page">
+        <h2>Part II: Technical Capabilities and Use Cases</h2>
+
+        <h3>2.1 Core Features vs. Proprietary Solutions</h3>
+        <p>When we compare <strong>pfSense</strong> to a proprietary solution, such as the Cisco <strong>ASA</strong> (Adaptive Security Appliance), the most immediate difference is the licensing model. With Cisco or Palo Alto Networks, you often pay a "per-user" or "per-feature" license fee. If you want to enable <strong>VPN</strong> capabilities for 50 remote workers, you pay extra. If you want web filtering, you pay a subscription.</p>
+
+        <p>In contrast, <strong>pfSense</strong> provides these high-level features at no cost. There are no artificial limitations on the number of firewall states, the number of <strong>VPN</strong> tunnels, or the number of connected interfaces. The only limitation is the physical hardware you run it on.</p>
+
+        <p>Key technical features include:</p>
+        <ul>
+            <li><strong>Stateful Packet Inspection (SPI):</strong> It tracks the state of network connections (such as TCP streams or UDP communication) and blocks packets that do not match a known active connection.</li>
+            <li><strong>Traffic Shaping:</strong> The ability to prioritize traffic (like <strong>VoIP</strong> - Voice over Internet Protocol) to ensure call quality even when the network is congested.</li>
+            <li><strong>High Availability (CARP):</strong> Using the <strong>CARP</strong> (Common Address Redundancy Protocol), two <strong>pfSense</strong> units can be configured as a failover cluster. If the primary hardware fails, the secondary takes over seamlessly with no dropped connections.</li>
+        </ul>
+
+        <h3>2.2 The Package Ecosystem</h3>
+        <p>One of the strongest arguments for using <strong>pfSense</strong> is its extensibility through the Package Manager. Just as you install apps on a smartphone, you can install packages to extend the firewall's capabilities. Two of the most critical packages mentioned in our syllabus are:</p>
+
+        <ol>
+            <li><strong>Snort:</strong> An open-source network intrusion prevention system (<strong>NIPS</strong>). It performs real-time traffic analysis and packet logging. You can configure <span class="code-box">Snort</span> to block traffic from specific countries or block traffic that matches known malware signatures.</li>
+            <li><strong>Squid:</strong> A caching proxy server. It can speed up web browsing by caching frequently visited web pages and can also be used for content filtering (e.g., blocking social media sites during work hours).</li>
+        </ol>
+
+        <p>Additional functionality includes serving as a <strong>DHCP</strong> (Dynamic Host Configuration Protocol) server, a <strong>DNS</strong> (Domain Name System) resolver, and even a <strong>NTP</strong> (Network Time Protocol) server for your local network.</p>
+
+        <h3>2.3 Deployment Scenarios</h3>
+        <p>Due to its scalability, <strong>pfSense</strong> is versatile enough to serve in various scenarios:</p>
+        <ul>
+            <li><strong><em>Home Networks:</em></strong> Enthusiasts use it to separate IoT (Internet of Things) devices from their main computers using <strong>VLANs</strong>.</li>
+            <li><strong><em>SMEs (Small and Medium Enterprises):</em></strong> It serves as the main gateway, handling multi-WAN connections (load balancing between two internet providers) to ensure uptime.</li>
+            <li><strong><em>Large Enterprises:</em></strong> It can be used as a purely internal firewall to segment departments (e.g., separating the HR network from the Engineering network).</li>
+        </ul>
+    </div>
+
+    <!-- Page 3 -->
+    <div class="page">
+        <h2>Part III: Hardware Selection and Architecture</h2>
+
+        <p>Unlike software you install on a laptop, a firewall must be reliable. It runs 24/7. Therefore, hardware choice is critical. You generally have three paths for deployment: Official Hardware, Custom Hardware (DIY), or Virtualization/Cloud.</p>
+
+        <h3>3.1 Netgate Appliances (Official Hardware)</h3>
+        <p>The company behind <strong>pfSense</strong>, <a href="https://www.netgate.com" target="_blank">Netgate</a>, sells official appliances. These are pre-tested and optimized. They range from small ARM-based units like the <strong>SG-1100</strong> (suitable for home offices) to rack-mounted beasts like the <strong>XG-1541</strong> powered by Intel Xeon processors.</p>
+        
+        <p><strong>Why buy official?</strong> The primary advantage is support and guaranteed compatibility. The <strong>XG-7100</strong>, for example, includes <strong>SFP</strong> (Small Form-factor Pluggable) ports for fiber optic connections, which are essential in enterprise data centers.</p>
+
+        <h3>3.2 Custom Hardware (The DIY Route)</h3>
+        <p>Because <strong>pfSense</strong> runs on x86-64 hardware, you can build your own. However, there are specific architectural requirements you must be aware of.</p>
+
+        <p><strong>The CPU Requirement:</strong>
+        Modern versions of <strong>pfSense</strong> (2.5 and above) heavily benefit from processors that support <strong>AES-NI</strong> (Advanced Encryption Standard New Instructions). This is a specialized instruction set built into the CPU that accelerates encryption and decryption. If you plan to run a <strong>VPN</strong> (OpenVPN or IPsec), <strong>AES-NI</strong> is virtually mandatory. Without it, your CPU utilization will spike, and your throughput will crawl.</p>
+        
+        <p><strong>Network Interface Cards (NICs):</strong>
+        Not all network cards are created equal. In the <strong><em>FreeBSD</em></strong> community, it is widely known that <span class="code-box">Intel</span> network cards are the gold standard. They have excellent driver support and offload processing tasks from the main CPU. Realtek cards, often found in cheaper consumer motherboards, can be unstable under heavy load in a <strong>pfSense</strong> environment.</p>
+
+        <h3>3.3 Cloud and Virtualization</h3>
+        <p>We are increasingly seeing <strong>pfSense</strong> deployed in the cloud. It is compatible with major providers like <strong>AWS</strong> (Amazon Web Services) and <strong>Azure</strong>.
+        <br>
+        <em>Pricing Model:</em> In the cloud, you might pay an hourly rate (e.g., $0.34/hour to $0.66/hour) for the compute instance. While this eliminates the need for hardware maintenance, the annual cost can eventually exceed the price of a physical appliance. This route is best for organizations that have moved their entire infrastructure to the cloud and need a consistent firewall interface.</p>
+    </div>
+
+    <!-- Page 4 -->
+    <div class="page">
+        <h2>Part IV: Preparation for Installation</h2>
+
+        <p>Before we insert a USB stick and hope for the best, we must prepare our installation media properly. This is a critical step often overlooked by novices.</p>
+
+        <h3>4.1 Downloading the Image</h3>
+        <p>You must download the installer directly from the <a href="https://www.pfsense.org/download/" target="_blank">Official pfSense Download Page</a>. You will be presented with choices regarding the "Architecture" and the "Installer" type.</p>
+
+        <ul>
+            <li><strong>Architecture:</strong> You will almost always choose <strong>AMD64</strong> (64-bit). The older <strong>i386</strong> (32-bit) architecture is no longer supported in recent versions.</li>
+            <li><strong>Installer Type:</strong>
+                <ul>
+                    <li><span class="code-box">USB Memstick Installer</span>: For installing on physical hardware via USB.</li>
+                    <li><span class="code-box">ISO Image</span>: For installing on Virtual Machines (VMware, VirtualBox, Hyper-V).</li>
+                </ul>
+            </li>
+            <li><strong>Console:</strong>
+                <ul>
+                    <li><span class="code-box">VGA</span>: Choose this if your hardware has a monitor output (VGA, HDMI) and you have a keyboard attached.</li>
+                    <li><span class="code-box">Serial</span>: Choose this for "headless" appliances that do not have a video output port and are configured via a specific console cable.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>4.2 The Importance of Checksums</h3>
+        <p>Security begins before installation. Once you download the file, you must verify its integrity using a <strong>SHA256</strong> (Secure Hash Algorithm 256-bit) checksum.
+        <br><br>
+        <strong>Why?</strong> In a "Supply Chain Attack," hackers might compromise a download mirror and replace the legitimate software with a tainted version containing a backdoor. By calculating the hash of your downloaded file and comparing it to the hash published on the official website, you ensure the file is bit-for-bit identical to the original.</p>
+        
+
+        <p>To verify on Windows, you might use PowerShell:</p>
+        <div class="code-block">Get-FileHash pfSense-CE-memstick-2.7.2-RELEASE-amd64.img.gz</div>
+
+        <h3>4.3 Preparing the Installation Media</h3>
+        <p>If installing physically, you need a USB drive (4GB or larger is recommended, though the image is smaller). You cannot simply copy-paste the file onto the USB. You must "burn" the image bit-by-bit.</p>
+        
+        <p>On a UNIX-like system (Linux or macOS), this is often done with the <span class="code-box">dd</span> command. Be extremely careful with this command, as pointing it to the wrong drive will wipe your data permanently:</p>
+        
+        <div class="code-block">sudo dd if=pfsense-installer.img of=/dev/rdisk2 bs=1m status=progress</div>
+
+        <p>For Windows users, tools like <strong>Rufus</strong> or <strong>BalenaEtcher</strong> provide a safer graphical interface to accomplish this task. Ensure you format the USB as <strong>MS-DOS (FAT)</strong> before writing, though most writing tools will handle the reformatting for you.</p>
+    </div>
+
+    <!-- Page 5 -->
+    <div class="page">
+        <h2>Part V: The Installation Process (Step-by-Step)</h2>
+
+        <p>Now that we have our hardware and our verified media, let's walk through the actual installation. This process assumes a standard physical installation using the VGA console.</p>
+
+        <h3>5.1 Boot and BIOS/UEFI Settings</h3>
+        <p>Insert the USB stick into the firewall device. Power it on. You may need to enter the <strong>BIOS</strong> (Basic Input/Output System) or <strong>UEFI</strong> settings to change the boot order, ensuring the USB drive is prioritized over the internal hard drive.</p>
+        
+        <p>If you are using a <strong>Serial Console</strong>, you must connect your computer to the firewall using a serial cable (often a DB9 to USB adapter). You will use software like <strong>PuTTY</strong> (Windows) or <span class="code-box">screen</span> (Linux/macOS). The standard connection settings for pfSense are:</p>
+        <ul>
+            <li><strong>Speed (Baud Rate):</strong> 115200</li>
+            <li><strong>Data bits:</strong> 8</li>
+            <li><strong>Parity:</strong> None</li>
+            <li><strong>Stop bits:</strong> 1</li>
+        </ul>
+
+        <h3>5.2 The Copyright and License</h3>
+        <p>Upon booting, you will see the <strong><em>FreeBSD</em></strong> boot menu, followed by the pfSense installer. The first screen asks you to accept the copyright notice. While many users blindly click "Accept," it is worth noting that while the software is open source, the trademark "pfSense" is owned by Netgate. You cannot modify the code and sell it as "pfSense" without permission.</p>
+
+        <h3>5.3 Filesystem Selection: ZFS vs. UFS</h3>
+        <p>The installer will ask how you want to partition your disk. The default option is "Auto (ZFS)".</p>
+        
+        <p><strong>Recommendation:</strong> Always choose <strong>ZFS</strong> (Zettabyte File System) if your hardware supports it.
+        <br>
+        <strong>ZFS</strong> is a transactional file system. In the event of a sudden power loss (which happens frequently in home labs or small offices without UPS units), <strong>ZFS</strong> is extremely resilient against data corruption. <strong>UFS</strong> (Unix File System), the older default, often required manual file system checks (<span class="code-box">fsck</span>) after a crash.</p>
+
+        <h3>5.4 Interface Assignment (The "Wizards")</h3>
+        <p>Once the OS is installed, the system will reboot. Remove the USB stick. The system will boot up and present you with a text-based menu. This is a crucial moment: <strong>Interface Assignment.</strong></p>
+
+        <p>pfSense needs to know which physical network port corresponds to which logical role:</p>
+        <ul>
+            <li><strong>WAN (Wide Area Network):</strong> This is your "upstream" connection to the internet/modem. It is the insecure side.</li>
+            <li><strong>LAN (Local Area Network):</strong> This is your "downstream" connection to your computers/switches. It is the secure side.</li>
+        </ul>
+
+        <p>The system might name your network cards cryptically, such as <span class="code-box">igb0</span>, <span class="code-box">igb1</span> (for Intel drivers) or <span class="code-box">re0</span>, <span class="code-box">re1</span> (for Realtek). You must know which cable is plugged into which port. A helpful trick is to unplug the cable and watch the console to see which interface reports "Link Down".</p>
+    </div>
+
+    <!-- Page 6 -->
+    <div class="page">
+        <h2>Part VI: Post-Installation and Configuration</h2>
+
+        <h3>6.1 The Console Menu</h3>
+        <p>After interfaces are assigned, you will see the famous pfSense Console Menu, options 1 through 16. This menu is your lifeline if you lock yourself out of the web interface.</p>
+
+        <div class="code-block">
+ 0) Logout (SSH only)                  9) pfTop
+ 1) Assign Interfaces                 10) Filter Logs
+ 2) Set interface(s) IP address       11) Restart webConfigurator
+ 3) Reset webConfigurator password    12) PHP shell + pfSense tools
+ 4) Reset to factory defaults         13) Update from console
+ 5) Halt system                       14) Enable SS
+ 6) Reboot                            15) Restore recent configuration
+ 7) Ping host                         16) Restart PHP-FPM
+ 8) Shell
+        </div>
+
+        <p>Typically, the <strong>LAN</strong> interface defaults to the IP address <span class="code-box">192.168.1.1</span>. If your existing network uses a different subnet (e.g., 10.0.0.x), you must use <strong>Option 2</strong> to change the LAN IP address to match your environment <em>before</em> you can access the web GUI.</p>
+
+        <h3>6.2 Accessing the WebGUI</h3>
+        <p>Connect a computer to the <strong>LAN</strong> port of the firewall. Open a web browser and navigate to the LAN IP (e.g., <span class="code-box">https://192.168.1.1</span>). You will likely see a "Self-Signed Certificate Warning." This is normal, as the firewall generated its own security certificate. Proceed past the warning.</p>
+
+        <p><strong>Default Credentials:</strong>
+        <br>Username: <span class="code-box">admin</span>
+        <br>Password: <span class="code-box">pfsense</span></p>
+
+        <p><em>Security Warning:</em> Your absolute first priority is to change this password. Leaving default credentials active is the most common vulnerability in network hardware.</p>
+
+        <h3>6.3 The Setup Wizard</h3>
+        <p>Upon first login, a wizard guides you through the initial setup. Key steps include:</p>
+        <ol>
+            <li><strong>Hostname and Domain:</strong> Give your firewall a name (e.g., <span class="code-box">firewall.cyberlab.local</span>).</li>
+            <li><strong>DNS Servers:</strong> You can define upstream DNS servers (like Google's 8.8.8.8) or allow the firewall to query root servers directly.</li>
+            <li><strong>Time Server:</strong> NTP settings. Accurate time is vital for log analysis and security certificates.</li>
+            <li><strong>WAN Configuration:</strong> If you are connecting to a residential ISP, this is usually set to <strong>DHCP</strong>. If you have a dedicated business line, you will select <strong>Static IPv4</strong> and enter the details provided by your ISP.</li>
+        </ol>
+    </div>
+
+    <!-- Page 7 -->
+    <div class="page">
+        <h2>Part VII: Advanced Concepts and Best Practices</h2>
+
+        <h3>7.1 Virtualization Considerations (VMware/VirtualBox)</h3>
+        <p>Many of you will practice this in a lab environment using Virtual Machines. When installing pfSense in a VM, you must configure the network adapters correctly in the hypervisor <em>before</em> booting the VM.</p>
+        
+        <p>You need at least two virtual network adapters:</p>
+        <ul>
+            <li><strong>Adapter 1 (WAN):</strong> Usually set to "Bridged" mode (to get a real IP from your physical network) or "NAT" (if you want it isolated behind your host).</li>
+            <li><strong>Adapter 2 (LAN):</strong> Usually set to "Internal Network" or "Host-Only." This creates a private virtual switch where you can connect other VMs (like a Windows 10 client) to test the firewall rules.</li>
+        </ul>
+        
+
+        <h3>7.2 Rule Management Basics</h3>
+        <p>By default, <strong>pfSense</strong> operates on a "Default Deny" basis on the WAN interface (blocking all incoming traffic) and "Default Allow" on the LAN interface (allowing all outgoing traffic). This gets you online immediately.</p>
+        
+        <p>When creating rules, remember that rules are processed from the <strong>top down</strong>. The first rule that matches a packet is the one that is applied. If you have a "Block All" rule at the top, no traffic will pass, regardless of the "Allow" rules below it.</p>
+
+        <h3>7.3 Backup and Restoration</h3>
+        <p>One of the great features of <strong>pfSense</strong> is that the entire configuration is stored in a single <strong>XML</strong> (Extensible Markup Language) file. You can download this file via <strong>Diagnostics > Backup & Restore</strong>. If your hardware fails, you simply install a fresh copy of pfSense on new hardware, upload the XML file, and you are back in business in minutes.</p>
+
+        <h2>Part VIII: Conclusion</h2>
+        <p>We have covered the trajectory of pfSense from a modest fork of m0n0wall to an enterprise-grade security solution. We have discussed the hardware implications—why <strong>AES-NI</strong> matters and why Intel NICs are preferred. We have also walked through the installation process, emphasizing the importance of checksum verification and file system selection.</p>
+
+        <p>In the coming labs, you will perform this installation yourself. You will configure the interfaces, set up your first <strong>DHCP</strong> scope, and begin writing firewall rules to filter traffic. Remember, a firewall is only as secure as its configuration. The default install is secure, but every port you open increases your attack surface.</p>
+    </div>
+
+    <!-- Footer Section with Required Legal Text -->
+    <div class="page" style="display: flex; flex-direction: column; justify-content: flex-end;">
+        <div class="footer-section">
+            <div class="disclaimer-box">
+                <span class="warning-header">CYBERSECURITY LAB WARNING</span>
+                <p><strong>Educational Purpose Only:</strong> All tools, scripts, software, and techniques introduced in this course are strictly for educational and defensive research purposes. They are intended to be used exclusively within the designated isolated lab environments (e.g., Cyber Range, Virtual Machines) provided or sanctioned by the institution.</p>
+                <p><strong>Prohibited Actions:</strong> Students are strictly prohibited from using these tools or techniques on live networks, public infrastructure, or any systems for which they do not have explicit, written authorization. This includes, but is not limited to, the college network, public Wi-Fi, or corporate networks.</p>
+                <p><strong>Legal Consequences:</strong> Unauthorized penetration testing, scanning, or exploitation of networks is a crime under the Criminal Code of Canada (e.g., Section 342.1 - Unauthorized Use of Computer) and international laws. Violation of these terms will result in immediate academic failure of the course and may be referred to law enforcement authorities.</p>
+                <p><strong>Ethical Responsibility:</strong> As future cybersecurity professionals, you are bound by a code of ethics to protect systems and data. Using your skills for malicious intent violates this trust and professional standards.</p>
+            </div>
+
+            <div class="disclaimer-box">
+                <span class="warning-header">LEGAL DISCLAIMER</span>
+                <p>The information provided in this document/software is for educational and informational purposes only. While every effort has been made to ensure the accuracy and reliability of the information, Cyber Soho makes no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability with respect to the software or the information, products, services, or related graphics contained within. Any reliance you place on such information is therefore strictly at your own risk.</p>
+            </div>
+
+            <div class="disclaimer-box">
+                <span class="warning-header">NON-AFFILIATION & EDITORIAL DISCLAIMER</span>
+                <p>This course and its materials may contain references to third-party hardware, software, and organizations (e.g., Cisco, pfSense, Netgate, Microsoft, Kali Linux). These references are for educational comparison and instruction only. Cyber Soho is not affiliated with, endorsed by, or sponsored by these entities unless explicitly stated. All trademarks and registered trademarks are the property of their respective owners.</p>
+            </div>
+
+            <div class="copyright">
+                Copyright © 2025 Cyber Soho. All Rights Reserved.
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
+
