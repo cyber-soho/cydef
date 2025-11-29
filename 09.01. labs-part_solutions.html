@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>zNetGuardian: Solutions Walkthrough</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Reusing zNetGuardian Theme */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        
+        /* Simulated Screenshot Container */
+        .sim-screenshot {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+            position: relative;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .sim-label {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background-color: #3b82f6;
+            color: white;
+            padding: 2px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .code-block {
+            font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            border: 1px solid #30363d;
+            margin-top: 0.5rem;
+        }
+        .rule-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 2fr 2fr 1fr;
+            gap: 1rem;
+            align-items: center;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+<body class="max-w-4xl mx-auto p-6 md:p-12">
+
+    <!-- Header -->
+    <header class="mb-12 border-b border-slate-700 pb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <i data-lucide="shield" class="text-blue-500 w-8 h-8"></i>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+                zNetGuardian Solution Walkthrough
+            </h1>
+        </div>
+        <p class="text-slate-400 text-lg">
+            Visual Solutions to Configuring iptables rules using Net Guardian Architect (OPTIONAL) - Lab # 1, due on Nov. 29 !
+        </p>
+    </header>
+
+    <!-- PART 1 -->
+    <section class="mb-16">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <span class="bg-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+            Part 1: The Iptables Command
+        </h2>
+
+        <!-- Challenge 1.1 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-blue-300 mb-2">Challenge #1: Default Policies</h3>
+            <p class="text-slate-400 mb-4">Set INPUT/OUTPUT to ACCEPT and FORWARD to DROP.</p>
+            
+            <div class="sim-screenshot">
+                <span class="sim-label">Script View (Architect)</span>
+                <p class="text-slate-400 text-sm mb-2">In the <strong>View Script</strong> tab, find section 3. zNetGuardian defaults to specific security policies.</p>
+                <div class="code-block">
+# 3. Set Default Policies
+$IPT -P INPUT ACCEPT    <span class="text-green-500"># Changed from DROP</span>
+$IPT -P FORWARD DROP
+$IPT -P OUTPUT ACCEPT
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 1.2 & 1.3 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-blue-300 mb-2">Challenge #2 & #3: Listing Tables</h3>
+            <p class="text-slate-400 mb-4">These are runtime operational commands, not configuration rules. You run these directly in the terminal.</p>
+            <div class="sim-screenshot">
+                <span class="sim-label">Terminal / Console</span>
+                <div class="code-block">
+<span class="text-slate-500"># Challenge 2: List Filter table of INPUT chain</span>
+iptables -t filter -vnL INPUT
+
+<span class="text-slate-500"># Challenge 3: List NAT table</span>
+iptables -t nat -vnL
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 1.4 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-blue-300 mb-2">Challenge #4: Flushing</h3>
+            <p class="text-slate-400 mb-4">The Architect automatically handles flushing at the start of every generated script to ensure a clean slate.</p>
+            <div class="sim-screenshot">
+                <span class="sim-label">Script View (Architect)</span>
+                <div class="code-block">
+# 2. Flush Existing Rules
+$IPT -F
+$IPT -X
+$IPT -t nat -F
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 1.5 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-blue-300 mb-2">Challenge #5: Dropping Specific Traffic (SSH)</h3>
+            <p class="text-slate-400 mb-4">Drop incoming packets to port 22 (SSH).</p>
+            
+            <div class="sim-screenshot">
+                <span class="sim-label">Designer View (Rule Builder)</span>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="grid grid-cols-5 gap-2 text-xs text-slate-500 uppercase font-semibold mb-2">
+                        <div>Source</div>
+                        <div>Destination</div>
+                        <div>Proto/Port</div>
+                        <div>Action</div>
+                        <div>Chain (Auto)</div>
+                    </div>
+                    <!-- Rule Simulation -->
+                    <div class="grid grid-cols-5 gap-2 items-center">
+                        <div class="bg-slate-900 border border-slate-600 p-2 rounded text-emerald-400 font-bold">ANY</div>
+                        <div class="bg-slate-900 border border-slate-600 p-2 rounded text-blue-400 font-bold">Self (Router)</div>
+                        <div class="bg-slate-900 border border-slate-600 p-2 rounded text-white">TCP / 22</div>
+                        <div class="bg-red-900/50 border border-red-800 p-2 rounded text-red-400 font-bold text-center">DROP</div>
+                        <div class="text-slate-500 text-xs italic">INPUT</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-slate-500">Generated Code:</div>
+                <div class="code-block">iptables -I INPUT -p tcp --dport 22 -j DROP</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PART 2 -->
+    <section class="mb-20">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+            <span class="bg-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+            Part 2: Basic Matches
+        </h2>
+
+        <!-- Challenge 2.1 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #1: Filter by IP</h3>
+            <p class="text-slate-400 mb-4">Drop incoming from <code>100.0.0.1</code> & <code>1.2.3.4</code>. Drop outgoing to <code>80.0.0.1</code>.</p>
+
+            <div class="sim-screenshot">
+                <span class="sim-label">Designer View Rules</span>
+                <div class="space-y-2">
+                    <!-- Row 1 -->
+                    <div class="rule-row">
+                        <div class="text-slate-500 text-xs">Rule 1</div>
+                        <div class="text-emerald-400 font-bold">100.0.0.1</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">Self</div>
+                        <div class="text-slate-300">ALL / Any</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                    <!-- Row 2 -->
+                    <div class="rule-row">
+                        <div class="text-slate-500 text-xs">Rule 2</div>
+                        <div class="text-emerald-400 font-bold">1.2.3.4</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">Self</div>
+                        <div class="text-slate-300">ALL / Any</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                    <!-- Row 3 -->
+                    <div class="rule-row">
+                        <div class="text-slate-500 text-xs">Rule 3</div>
+                        <div class="text-emerald-400 font-bold">Self</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">80.0.0.1</div>
+                        <div class="text-slate-300">ALL / Any</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2.2 & 2.3 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #2 & #3: Drop LinuxQuestions (Web)</h3>
+            <p class="text-slate-400 mb-4">Drop traffic to <code>www.linuxquestions.org</code> on ports 80/443. (Covers both Output and Forward).</p>
+
+            <div class="sim-screenshot">
+                <span class="sim-label">Designer View Rules</span>
+                <div class="space-y-2">
+                    <!-- Output Rule -->
+                    <div class="rule-row border-l-4 border-l-blue-500">
+                        <div class="text-slate-500 text-xs">Output</div>
+                        <div class="text-emerald-400 font-bold">Self</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold text-xs truncate">www.linuxquestions.org</div>
+                        <div class="text-slate-300 text-xs">TCP / 80,443</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                    <!-- Forward Rule -->
+                    <div class="rule-row border-l-4 border-l-yellow-500">
+                        <div class="text-slate-500 text-xs">Forward</div>
+                        <div class="text-emerald-400 font-bold">LAN Subnet</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold text-xs truncate">www.linuxquestions.org</div>
+                        <div class="text-slate-300 text-xs">TCP / 80,443</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-slate-500">Bash Output:</div>
+                <div class="code-block">
+iptables -A OUTPUT -p tcp --dport 80 -d www.linuxquestions.org -j DROP
+iptables -A FORWARD -p tcp --dport 443 -d www.linuxquestions.org -j DROP
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2.4 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #4: Drop Subnet</h3>
+            <p class="text-slate-400 mb-4">Drop incoming packets from <code>27.103.0.0/16</code>.</p>
+            
+            <div class="sim-screenshot">
+                <span class="sim-label">Rule Configuration</span>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700 flex items-center gap-4">
+                    <div class="flex-1">
+                        <label class="text-xs text-slate-500">Source IP/CIDR</label>
+                        <div class="text-emerald-400 font-mono font-bold bg-slate-900 p-2 rounded border border-slate-600">27.103.0.0/16</div>
+                    </div>
+                    <i data-lucide="arrow-right" class="text-slate-500"></i>
+                    <div class="flex-1">
+                        <label class="text-xs text-slate-500">Destination</label>
+                        <div class="text-blue-400 font-bold bg-slate-900 p-2 rounded border border-slate-600">Self</div>
+                    </div>
+                    <div class="w-24">
+                        <label class="text-xs text-slate-500">Action</label>
+                        <div class="text-red-400 font-bold bg-red-900/30 p-2 rounded text-center border border-red-900">DROP</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2.5 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #5: Enforce DNS</h3>
+            <p class="text-slate-400 mb-4">Drop DNS (UDP/53) traffic NOT destined for <code>8.8.8.8</code>.</p>
+            
+            <div class="sim-screenshot">
+                <span class="sim-label">Advanced Rule Logic</span>
+                <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                    <div class="flex items-center gap-4 mb-3">
+                        <span class="text-sm text-slate-400">Condition:</span>
+                        <code class="bg-slate-900 text-yellow-400 px-2 py-1 rounded">! -d 8.8.8.8</code>
+                    </div>
+                    <div class="rule-row">
+                        <div class="text-slate-500 text-xs">Rule</div>
+                        <div class="text-emerald-400 font-bold">LAN</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">NOT 8.8.8.8</div>
+                        <div class="text-slate-300">UDP / 53</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2.6 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #6: Allow Loopback</h3>
+            <p class="text-slate-400 mb-4">zNetGuardian includes this automatically in the "Base Chain Rules".</p>
+            <div class="sim-screenshot">
+                <span class="sim-label">Script View (Base Rules)</span>
+                <div class="code-block">
+# 5. Base Chain Rules
+# Allow Loopback
+$IPT -A INPUT -i lo -j ACCEPT
+$IPT -A OUTPUT -o lo -j ACCEPT
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2.7 -->
+        <div class="mb-12">
+            <h3 class="text-xl font-semibold text-indigo-300 mb-2">Challenge #7: Interface Specific SSH</h3>
+            <p class="text-slate-400 mb-4">Allow SSH from LAN (<code>enp0s8</code>), Drop from WAN (<code>enp0s3</code>).</p>
+            
+            <div class="sim-screenshot">
+                <span class="sim-label">Interface Definitions</span>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-slate-900 p-2 rounded border border-slate-600">
+                        <div class="text-xs text-slate-500">Interface 1</div>
+                        <div class="font-bold text-yellow-400">enp0s8 (LAN)</div>
+                    </div>
+                    <div class="bg-slate-900 p-2 rounded border border-slate-600">
+                        <div class="text-xs text-slate-500">Interface 2</div>
+                        <div class="font-bold text-red-400">enp0s3 (WAN)</div>
+                    </div>
+                </div>
+
+                <span class="sim-label" style="top: 85px;">Rules</span>
+                <div class="space-y-2 mt-8">
+                    <div class="rule-row border-l-4 border-l-green-500">
+                        <div class="text-slate-500 text-xs">Safe</div>
+                        <div class="text-emerald-400 font-bold">LAN (enp0s8)</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">Self</div>
+                        <div class="text-slate-300">TCP / 22</div>
+                        <div class="text-green-400 font-bold bg-green-900/30 px-2 py-1 rounded text-center">ACCEPT</div>
+                    </div>
+                    <div class="rule-row border-l-4 border-l-red-500">
+                        <div class="text-slate-500 text-xs">Block</div>
+                        <div class="text-emerald-400 font-bold">WAN (enp0s3)</div>
+                        <i data-lucide="arrow-right" class="text-slate-600 w-4 h-4"></i>
+                        <div class="text-blue-400 font-bold">Self</div>
+                        <div class="text-slate-300">TCP / 22</div>
+                        <div class="text-red-400 font-bold bg-red-900/30 px-2 py-1 rounded text-center">DROP</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <footer class="text-center text-slate-500 pb-12 border-t border-slate-800 pt-6">
+        <p>Generated by zNetGuardian Visualizer | 2025</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
