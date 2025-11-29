@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firewall Bypassing Techniques & Tools | Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Warm neutral light background */
+            color: #1e293b;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar for the terminal */
+        .terminal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .terminal-scroll::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        /* Chart Container Strict Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Schematic Box Styling */
+        .packet-box {
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: white;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.875rem;
+            min-width: 80px;
+        }
+        .packet-arrow {
+            color: #64748b;
+            font-size: 1.25rem;
+            margin: 0 4px;
+        }
+        
+        .active-tab {
+            border-bottom: 2px solid #0f172a;
+            color: #0f172a;
+            font-weight: 600;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Professional - Slate (Neutrals) + Indigo (Action) + Emerald/Rose (Status) -->
+    <!-- Application Structure Plan: 
+         1. Hero Section: Brief context setting.
+         2. Analytical Dashboard: A high-level view of the techniques categorized (Recon, Evasion, Tunneling, Attack) using a Donut Chart.
+         3. Interactive Explorer: The core layout. Left sidebar (or top grid on mobile) for filtering and selecting techniques. 
+            Right panel for the "Deep Dive" view.
+         4. Deep Dive View:
+            - Header: Title & Category.
+            - Context Block: Explanation & Real-Life Scenario.
+            - Interactive CLI Simulator: A 'terminal' window that types out the command from the report and shows output, providing a 'hands-on' feel.
+            - Visual Schematic/Chart: Dynamic HTML/CSS diagrams or Chart.js visualizations specific to the technique (e.g., visualizing Port States or Tunneling layers).
+            - Toolkit: Cards for Primary Tool vs Alternatives.
+         5. Scenario Challenge: A small interactive footer section asking "What would you use?" to test knowledge retention.
+         Why this structure? It moves from abstract (categories) to concrete (CLI execution), allowing users to build a mental model before diving into syntax.
+    -->
+    <!-- Visualization & Content Choices:
+         - Category Overview: Donut Chart (Chart.js) -> Goal: Organize -> Shows the breadth of techniques.
+         - Port State Viz: Bar Chart (Chart.js) -> Goal: Inform -> Visualizes Open vs Closed vs Filtered.
+         - Tunneling/Spoofing Schematics: HTML Flexbox diagrams -> Goal: Explain -> Uses standard boxes and arrows to show flow without SVG.
+         - Terminal Simulator: Vanilla JS text animation -> Goal: Engage -> Simulates the actual admin experience described in the source.
+         - NO SVG/Mermaid: All visuals are CSS shapes, Unicode, or Canvas.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-800">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-8 w-8 bg-slate-900 rounded-md flex items-center justify-center text-white font-bold text-lg">FW</div>
+                <h1 class="text-xl font-bold text-slate-900">Firewall Bypassing <span class="text-indigo-600 font-normal">Interactive Guide</span></h1>
+            </div>
+            <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-600">
+                <button onclick="scrollToSection('dashboard')" class="hover:text-indigo-600 transition-colors">Overview</button>
+                <button onclick="scrollToSection('explorer')" class="hover:text-indigo-600 transition-colors">Techniques</button>
+                <button onclick="scrollToSection('scenario')" class="hover:text-indigo-600 transition-colors">Challenge</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- Intro Section -->
+        <section class="max-w-4xl mx-auto text-center space-y-4">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Understand the Attack Surface</h2>
+            <p class="text-lg text-slate-600 leading-relaxed">
+                Firewalls are the gatekeepers of network security, but they are not infallible. This interactive report breaks down 
+                <strong>18 critical techniques</strong> used by security professionals to test rules, evade detection, and bypass restrictions. 
+                Explore the methods below to understand the tools and tactics involved.
+            </p>
+        </section>
+
+        <!-- Dashboard / Overview Section -->
+        <section id="dashboard" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4">
+                    <h3 class="text-2xl font-bold text-slate-900">Technique Categories</h3>
+                    <p class="text-slate-600">
+                        We have categorized the 18 techniques into four logical domains. Understanding these categories helps in identifying the intent behind a bypass attempt.
+                    </p>
+                    <ul class="space-y-3 mt-4">
+                        <li class="flex items-start gap-3">
+                            <span class="w-3 h-3 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0"></span>
+                            <div>
+                                <span class="font-semibold text-slate-900">Reconnaissance:</span> 
+                                <span class="text-slate-500 text-sm">Mapping the network, identifying open ports, and fingerprinting services (e.g., Port Scanning, Firewalking).</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></span>
+                            <div>
+                                <span class="font-semibold text-slate-900">Packet Manipulation:</span> 
+                                <span class="text-slate-500 text-sm">Modifying packet headers to trick filters or abuse protocol logic (e.g., Fragmentation, Spoofing).</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-3 h-3 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></span>
+                            <div>
+                                <span class="font-semibold text-slate-900">Tunneling:</span> 
+                                <span class="text-slate-500 text-sm">Encapsulating forbidden protocols inside allowed ones like ICMP, DNS, or HTTP.</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="w-3 h-3 rounded-full bg-rose-500 mt-1.5 flex-shrink-0"></span>
+                            <div>
+                                <span class="font-semibold text-slate-900">Application/Proxy:</span> 
+                                <span class="text-slate-500 text-sm">Leveraging higher-layer intermediaries or logic flaws (e.g., Proxies, XSS, MITM).</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="flex flex-col items-center justify-center bg-slate-50 rounded-lg p-6">
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-4 text-center">Distribution of the 18 Source Techniques</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Explorer Section -->
+        <section id="explorer" class="scroll-mt-20">
+            <div class="flex flex-col lg:flex-row gap-6 h-auto lg:h-[800px]">
+                
+                <!-- Sidebar: List of Techniques -->
+                <div class="w-full lg:w-1/3 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50">
+                        <h3 class="font-bold text-slate-700 mb-2">Technique Library</h3>
+                        <div class="relative">
+                            <input type="text" id="searchInput" placeholder="Search techniques..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
+                        </div>
+                        <div class="flex gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar">
+                            <button class="filter-btn active-filter px-3 py-1 text-xs rounded-full bg-slate-800 text-white whitespace-nowrap" data-category="all">All</button>
+                            <button class="filter-btn px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 whitespace-nowrap" data-category="Reconnaissance">Recon</button>
+                            <button class="filter-btn px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 whitespace-nowrap" data-category="Packet Manipulation">Packet</button>
+                            <button class="filter-btn px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 whitespace-nowrap" data-category="Tunneling">Tunneling</button>
+                            <button class="filter-btn px-3 py-1 text-xs rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 whitespace-nowrap" data-category="Application/Proxy">App/Proxy</button>
+                        </div>
+                    </div>
+                    <div id="techniqueList" class="overflow-y-auto flex-1 p-2 space-y-1">
+                        <!-- List items injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Main Detail View -->
+                <div class="w-full lg:w-2/3 flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
+                    
+                    <!-- Content injected here -->
+                    <div id="detailView" class="flex flex-col h-full overflow-y-auto">
+                        <!-- Empty State -->
+                        <div class="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
+                            <div class="text-6xl mb-4">👆</div>
+                            <h3 class="text-xl font-medium text-slate-600">Select a technique to begin</h3>
+                            <p class="text-sm mt-2 max-w-xs">Explore definitions, CLI commands, and real-world examples from the sidebar.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Scenario Challenge Footer -->
+        <section id="scenario" class="bg-indigo-900 rounded-2xl shadow-lg p-8 md:p-12 text-center text-white relative overflow-hidden transition-all duration-300">
+            <div class="relative z-10 max-w-2xl mx-auto space-y-6">
+                <div class="inline-block bg-indigo-800/50 rounded-full px-4 py-1 text-xs font-semibold tracking-wider uppercase mb-2 border border-indigo-500/30" id="quiz-badge">Challenge</div>
+                <h2 class="text-3xl font-bold" id="quiz-question">Select a technique to test your knowledge</h2>
+                <div id="quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                    <!-- Dynamic Options -->
+                </div>
+                <div id="answerFeedback" class="hidden mt-4 p-4 bg-indigo-950/50 rounded-lg border border-indigo-400/30 text-indigo-200 text-sm animate-fade-in"></div>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-700 rounded-full opacity-50 blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500 rounded-full opacity-30 blur-3xl"></div>
+        </section>
+
+    </main>
+
+    <!-- Data & Logic -->
+    <script>
+        // --- DATA ---
+        // Converted from Source Report with Added Quiz Data
+        const techniques = [
+            {
+                id: 1,
+                title: "Port Scanning",
+                category: "Reconnaissance",
+                explanation: "Probing a server to determine which ports are open, closed, or filtered. Identifies the 'attack surface'.",
+                tool: "Nmap",
+                toolLink: "https://nmap.org/",
+                alternatives: [{name: "Masscan", link: "https://github.com/robertdavidgraham/masscan"}, {name: "ZMap", link: "https://zmap.io/"}],
+                scenario: "Verify that ONLY ports 80 and 443 are reachable, ensuring port 22 is blocked.",
+                cli: "nmap -p 80,443,22 192.168.1.15",
+                output: "PORT    STATE    SERVICE\n22/tcp  filtered ssh\n80/tcp  open     http\n443/tcp open     https",
+                vizType: "chart",
+                quiz: {
+                    question: "You need to quickly check if Port 22 is filtered on 100 hosts without completing the TCP handshake. Which tool/method is best?",
+                    options: [
+                        { text: "Ping Sweep", isCorrect: false, feedback: "Ping uses ICMP (usually) to check if a host is up, not if a specific TCP port is open." },
+                        { text: "Nmap SYN Scan", isCorrect: true, feedback: "Correct! Nmap SYN scan (Stealth Scan) checks port status without completing the connection." },
+                        { text: "SSH Login", isCorrect: false, feedback: "Attempting to login is slow, noisy, and requires authentication, not just enumeration." },
+                        { text: "Traceroute", isCorrect: false, feedback: "Traceroute maps the network path, it doesn't scan specific port states efficiently." }
+                    ]
+                }
+            },
+            {
+                id: 2,
+                title: "Firewalking",
+                category: "Reconnaissance",
+                explanation: "Using traceroute-like mechanisms to analyze IP packet responses and map allowed Layer 4 protocols.",
+                tool: "Firewalk",
+                toolLink: "#",
+                alternatives: [{name: "Hping3", link: "https://github.com/antirez/hping"}, {name: "Nmap (--traceroute)", link: "https://nmap.org/"}],
+                scenario: "Mapping allowed ports through a legacy firewall with lost documentation without triggering alerts.",
+                cli: "firewalk -n -S 80 -D 81 -p TCP 10.0.0.1 192.168.1.5",
+                output: "Scanning 192.168.1.5...\nTCP port 80 open (reached target).\nTrace complete.",
+                vizType: "schematic",
+                schematicType: "pass-drop",
+                quiz: {
+                    question: "In Firewalking, how do you determine if a packet successfully passed through the gateway?",
+                    options: [
+                        { text: "The Gateway sends an ACK", isCorrect: false, feedback: "Gateways usually just forward packets; they don't ACK unless you connect to them directly." },
+                        { text: "TTL Expires at Target", isCorrect: true, feedback: "Correct! If the response comes from the Target (or hop after gateway), the packet passed through." },
+                        { text: "The Gateway drops it", isCorrect: false, feedback: "If the gateway drops it, the packet did NOT pass through." },
+                        { text: "DNS Resolution fails", isCorrect: false, feedback: "DNS resolution is unrelated to the packet path analysis of Firewalking." }
+                    ]
+                }
+            },
+            {
+                id: 3,
+                title: "Banner Grabbing",
+                category: "Reconnaissance",
+                explanation: "Connecting to an open port to read the welcome message (banner) and identify software versions.",
+                tool: "Netcat (nc)",
+                toolLink: "https://netcat.sourceforge.net/",
+                alternatives: [{name: "Telnet", link: "https://www.gnu.org/software/inetutils/"}, {name: "WhatWeb", link: "https://github.com/urbanadventurer/WhatWeb"}],
+                scenario: "Checking if a mail server reveals 'Postfix' or 'Exchange' versions, which helps verify firewall header stripping.",
+                cli: "nc -v 192.168.1.20 25",
+                output: "Connection to 192.168.1.20 25 port [tcp/smtp] succeeded!\n220 mail.example.com ESMTP Postfix (Ubuntu)",
+                vizType: "none",
+                quiz: {
+                    question: "Which tool is the simplest way to manually connect to a raw TCP port and see what the server says?",
+                    options: [
+                        { text: "Ping", isCorrect: false, feedback: "Ping is for ICMP reachability, not TCP data connection." },
+                        { text: "Netcat (nc)", isCorrect: true, feedback: "Correct! Netcat creates a raw TCP connection, displaying whatever the server sends back." },
+                        { text: "Wireshark", isCorrect: false, feedback: "Wireshark captures packets passively; it doesn't initiate active connections." },
+                        { text: "Dig", isCorrect: false, feedback: "Dig is for DNS queries, not TCP banner grabbing." }
+                    ]
+                }
+            },
+            {
+                id: 4,
+                title: "IP Address Spoofing",
+                category: "Packet Manipulation",
+                explanation: "Modifying packet headers to mimic a trusted IP address.",
+                tool: "Hping3",
+                toolLink: "https://github.com/antirez/hping",
+                alternatives: [{name: "Scapy", link: "https://scapy.net/"}, {name: "Nemesis", link: "https://github.com/libnet/nemesis"}],
+                scenario: "Testing Anti-Spoofing rules by sending packets from WAN claiming to be from internal LAN.",
+                cli: "hping3 -S 10.0.0.5 -a 192.168.1.100 -c 5",
+                output: "HPING 10.0.0.5 (eth0 10.0.0.5): S set, 40 headers + 0 data bytes\n[No Reply - Target replied to 192.168.1.100]",
+                vizType: "schematic",
+                schematicType: "spoofing",
+                quiz: {
+                    question: "When you spoof a source IP in a TCP SYN packet, where does the server send the SYN-ACK response?",
+                    options: [
+                        { text: "Back to you", isCorrect: false, feedback: "The server trusts the header. It doesn't know your real IP." },
+                        { text: "To the Spoofed IP", isCorrect: true, feedback: "Correct! The server replies to the address written in the source field." },
+                        { text: "To the Firewall", isCorrect: false, feedback: "It goes to the firewall only if the spoofed IP is behind it, but destination is the spoofed IP." },
+                        { text: "It drops it", isCorrect: false, feedback: "Servers generally reply unless configured to drop or if the IP is invalid." }
+                    ]
+                }
+            },
+            {
+                id: 5,
+                title: "Source Routing",
+                category: "Packet Manipulation",
+                explanation: "Sender specifies the exact path of routers, bypassing default firewall paths.",
+                tool: "Scapy",
+                toolLink: "https://scapy.net/",
+                alternatives: [{name: "Netcat (old)", link: "#"}, {name: "Nmap (--ip-options)", link: "https://nmap.org/"}],
+                scenario: "Diagnosing routing loops or checking if 'Loose Source Route' is enabled (security risk).",
+                cli: ">>> packet = IP(dst='5.6.7.8', options=IPOption('1.2.3.4')) / TCP(dport=80)\n>>> sr1(packet)",
+                output: "Begin emission:\nFinished sending 1 packets.\nReceived 1 packets, got 1 answers...",
+                vizType: "none",
+                quiz: {
+                    question: "Why is Source Routing considered a security risk and usually disabled?",
+                    options: [
+                        { text: "It is too slow", isCorrect: false, feedback: "Speed isn't the primary security concern." },
+                        { text: "It bypasses path controls", isCorrect: true, feedback: "Correct! It allows an attacker to dictate the path, potentially avoiding firewalls or checkpoints." },
+                        { text: "It uses too much bandwidth", isCorrect: false, feedback: "Packet size increase is negligible." },
+                        { text: "It crashes routers", isCorrect: false, feedback: "Modern routers handle it fine, but simply drop the packets for security." }
+                    ]
+                }
+            },
+            {
+                id: 6,
+                title: "Tiny Fragments",
+                category: "Packet Manipulation",
+                explanation: "Splitting TCP headers into tiny packets to bypass firewalls that only check the first packet.",
+                tool: "Fragroute",
+                toolLink: "https://www.monkey.org/~dugsong/fragroute/",
+                alternatives: [{name: "Nmap (-f)", link: "https://nmap.org/"}],
+                scenario: "Testing IDS to see if it can reassemble fragments or if the attack slips through.",
+                cli: "nmap -f -p 80 192.168.1.15",
+                output: "Starting Nmap...\nNmap scan report for 192.168.1.15\nHost is up (0.002s latency).\nPORT   STATE SERVICE\n80/tcp open  http",
+                vizType: "schematic",
+                schematicType: "fragment",
+                quiz: {
+                    question: "How does the 'Tiny Fragments' attack fool a simple packet filter?",
+                    options: [
+                        { text: "By using UDP instead of TCP", isCorrect: false, feedback: "Fragmentation applies to IP, regardless of transport protocol." },
+                        { text: "Splitting the Header", isCorrect: true, feedback: "Correct! It pushes the TCP flags (like SYN) into the second packet, so the first packet looks benign." },
+                        { text: "Encrypting the packet", isCorrect: false, feedback: "Encryption is a different layer (SSL/TLS/VPN)." },
+                        { text: "Spoofing the IP", isCorrect: false, feedback: "Spoofing hides the source, fragmentation hides the content." }
+                    ]
+                }
+            },
+            {
+                id: 7,
+                title: "IP Address vs URL",
+                category: "Application/Proxy",
+                explanation: "Accessing a resource by IP to bypass DNS blocking or URL string filters.",
+                tool: "Browser / Ping",
+                toolLink: "#",
+                alternatives: [{name: "nslookup", link: "#"}],
+                scenario: "Bypassing a block on 'facebook.com' by typing its direct numerical IP.",
+                cli: "ping -c 1 example.com\n# Then browse to http://93.184.216.34",
+                output: "PING example.com (93.184.216.34) 56(84) bytes of data.\n64 bytes from 93.184.216.34: icmp_seq=1 ttl=56 time=14.2 ms",
+                vizType: "none",
+                quiz: {
+                    question: "If a company blocks 'facebook.com' but you access it via '31.13.66.1', what failed?",
+                    options: [
+                        { text: "Port Blocking", isCorrect: false, feedback: "Port 80/443 was open for both." },
+                        { text: "DNS/URL Filtering", isCorrect: true, feedback: "Correct! The filter checked the string name but didn't block the destination IP address." },
+                        { text: "Switch Routing", isCorrect: false, feedback: "Routing works fine; it delivered the packet." },
+                        { text: "Browser Cache", isCorrect: false, feedback: "Cache doesn't bypass a network filter." }
+                    ]
+                }
+            },
+            {
+                id: 8,
+                title: "Anonymous Surfing Sites",
+                category: "Application/Proxy",
+                explanation: "Using a third-party web proxy. Firewall sees the proxy, not the blocked target.",
+                tool: "Tor Browser",
+                toolLink: "https://www.torproject.org/",
+                alternatives: [{name: "I2P", link: "https://geti2p.net/en/"}, {name: "Privoxy", link: "https://www.privoxy.org/"}],
+                scenario: "Testing if content filters correctly categorize 'Anonymizer' sites.",
+                cli: "[GUI Tool - No CLI Command]",
+                output: "Connection Established via Circuit: \nThis Browser -> Relay 1 -> Relay 2 -> Target Site",
+                vizType: "schematic",
+                schematicType: "proxy",
+                quiz: {
+                    question: "When using a web-based anonymizer, what IP address does your corporate firewall see you connecting to?",
+                    options: [
+                        { text: "The Blocked Site", isCorrect: false, feedback: "The whole point is to hide that destination." },
+                        { text: "The Anonymizer Site", isCorrect: true, feedback: "Correct! The firewall sees a connection to 'Unblock-Web.com', which it allows." },
+                        { text: "Your own IP", isCorrect: false, feedback: "That's the source, not the destination." },
+                        { text: "Google DNS", isCorrect: false, feedback: "DNS is separate from the HTTP connection." }
+                    ]
+                }
+            },
+            {
+                id: 9,
+                title: "Using a Proxy Server",
+                category: "Application/Proxy",
+                explanation: "Routing client traffic through an intermediary. Firewall sees connection to proxy only.",
+                tool: "Squid Proxy",
+                toolLink: "http://www.squid-cache.org/",
+                alternatives: [{name: "Tinyproxy", link: "https://tinyproxy.github.io/"}, {name: "Dante", link: "https://www.inet.no/dante/"}],
+                scenario: "Allowing internal servers to update (yum/apt) via DMZ proxy without direct internet access.",
+                cli: "export http_proxy='http://192.168.1.50:3128'\ncurl -v http://google.com",
+                output: "* Connected to 192.168.1.50 (192.168.1.50) port 3128\n> GET http://google.com HTTP/1.1\n< HTTP/1.1 200 OK",
+                vizType: "none",
+                quiz: {
+                    question: "Why would an admin set up a Squid Proxy in the DMZ for internal servers?",
+                    options: [
+                        { text: "To play games", isCorrect: false, feedback: "It's a server environment." },
+                        { text: "Controlled Internet Access", isCorrect: true, feedback: "Correct! It allows internal servers to fetch updates without giving them full, dangerous internet access." },
+                        { text: "To speed up LAN", isCorrect: false, feedback: "Proxies often add slight latency, though they cache content." },
+                        { text: "To block Port 80", isCorrect: false, feedback: "It facilitates Port 80 traffic, it doesn't block it." }
+                    ]
+                }
+            },
+            {
+                id: 10,
+                title: "ICMP Tunneling",
+                category: "Tunneling",
+                explanation: "Encapsulating data (TCP) inside ICMP Echo (Ping) packets to bypass port blocks.",
+                tool: "Ptunnel",
+                toolLink: "https://www.cs.uit.no/~daniels/PingTunnel/",
+                alternatives: [{name: "Hans", link: "https://github.com/friedrich/hans"}, {name: "Icmptunnel", link: "https://github.com/DhavalKapil/icmptunnel"}],
+                scenario: "Restoring SSH access to a server that blocks port 22 but allows Ping.",
+                cli: "sudo ptunnel -p 192.168.1.10 -lp 8000 -da 127.0.0.1 -dp 22\nssh -p 8000 user@localhost",
+                output: "[Ptunnel] Tunnel established.\n[SSH] Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0 generic x86_64)",
+                vizType: "schematic",
+                schematicType: "encapsulation",
+                quiz: {
+                    question: "You are blocked from SSH (22) but can Ping the server. What tool restores access?",
+                    options: [
+                        { text: "Nmap", isCorrect: false, feedback: "Nmap is for scanning, not tunneling data." },
+                        { text: "Ptunnel", isCorrect: true, feedback: "Correct! Ptunnel wraps the TCP SSH session inside ICMP Ping packets." },
+                        { text: "Telnet", isCorrect: false, feedback: "Telnet uses TCP, which is blocked." },
+                        { text: "Tracert", isCorrect: false, feedback: "Tracert is for path mapping." }
+                    ]
+                }
+            },
+            {
+                id: 11,
+                title: "ACK Tunneling",
+                category: "Packet Manipulation",
+                explanation: "Sending TCP packets with ACK flag. Stateless firewalls may allow them assuming an established connection.",
+                tool: "Nmap (-sA)",
+                toolLink: "https://nmap.org/",
+                alternatives: [{name: "Hping3 (-A)", link: "https://github.com/antirez/hping"}],
+                scenario: "Determine if a firewall is Stateful (tracks connections) or Stateless.",
+                cli: "nmap -sA -p 80 192.168.1.15",
+                output: "PORT   STATE      SERVICE\n80/tcp unfiltered http\n\n(Unfiltered = Firewall let it through = Stateless/Misconfigured)",
+                vizType: "none",
+                quiz: {
+                    question: "If Nmap reports a port as 'unfiltered' during an ACK scan, what does it mean?",
+                    options: [
+                        { text: "The port is Open", isCorrect: false, feedback: "ACK scans don't confirm open/closed, only reachability." },
+                        { text: "The Firewall let it through", isCorrect: true, feedback: "Correct! The firewall didn't block the ACK, suggesting it might be stateless." },
+                        { text: "The Port is Closed", isCorrect: false, feedback: "The host sends a RST if closed, but 'unfiltered' refers to the firewall action." },
+                        { text: "The Host is Down", isCorrect: false, feedback: "No response would mean filtered or down." }
+                    ]
+                }
+            },
+            {
+                id: 12,
+                title: "HTTP Tunneling",
+                category: "Tunneling",
+                explanation: "Encapsulating non-HTTP protocols (SSH, RDP) inside HTTP POST/GET requests.",
+                tool: "Chisel",
+                toolLink: "https://github.com/jpillora/chisel",
+                alternatives: [{name: "HTTPTunnel", link: "http://http-tunnel.sourceforge.net/"}, {name: "Corkscrew", link: "https://github.com/bryanpkc/corkscrew"}],
+                scenario: "Wrapping RDP traffic in HTTPS to manage a Windows server behind a firewall allowing only port 443.",
+                cli: "./chisel client 1.2.3.4:8080 R:5000:localhost:22",
+                output: "client: Connecting to ws://1.2.3.4:8080\nclient: Connected (Latency 25ms)\nclient: Reverse tunnelling enabled",
+                vizType: "none",
+                quiz: {
+                    question: "How does HTTP Tunneling bypass a firewall that only allows web traffic?",
+                    options: [
+                        { text: "It uses Port 21", isCorrect: false, feedback: "Port 21 is FTP, which is likely blocked." },
+                        { text: "It hides data in POST requests", isCorrect: true, feedback: "Correct! It wraps the forbidden protocol (like RDP) inside legitimate-looking HTTP packets." },
+                        { text: "It corrupts the firewall", isCorrect: false, feedback: "It evades the rules, it doesn't break the device." },
+                        { text: "It uses UDP", isCorrect: false, feedback: "HTTP uses TCP." }
+                    ]
+                }
+            },
+            {
+                id: 13,
+                title: "SSH Tunneling",
+                category: "Tunneling",
+                explanation: "Using SSH to create an encrypted tunnel forwarding local ports to remote destinations.",
+                tool: "OpenSSH",
+                toolLink: "https://www.openssh.com/",
+                alternatives: [{name: "PuTTY", link: "#"}, {name: "Sshuttle", link: "https://github.com/sshuttle/sshuttle"}],
+                scenario: "Accessing a database (port 3306) securely via a jump box.",
+                cli: "ssh -L 9000:localhost:3306 user@remote-server.com\nmysql -h 127.0.0.1 -P 9000 -u root -p",
+                output: "Welcome to the MySQL monitor.\nYour MySQL connection id is 15\nServer version: 8.0.26 MySQL Community Server",
+                vizType: "none",
+                quiz: {
+                    question: "Which SSH flag sets up a 'Local' port forward (mapping a local port to a remote one)?",
+                    options: [
+                        { text: "-D", isCorrect: false, feedback: "-D is for Dynamic forwarding (SOCKS proxy)." },
+                        { text: "-L", isCorrect: true, feedback: "Correct! -L (Local) forwards local_port:remote_host:remote_port." },
+                        { text: "-R", isCorrect: false, feedback: "-R is for Remote forwarding (reverse tunnel)." },
+                        { text: "-X", isCorrect: false, feedback: "-X is for X11 forwarding." }
+                    ]
+                }
+            },
+            {
+                id: 14,
+                title: "DNS Tunneling",
+                category: "Tunneling",
+                explanation: "Encoding data inside DNS queries and responses.",
+                tool: "Iodine",
+                toolLink: "https://code.kryo.se/iodine/",
+                alternatives: [{name: "Dnscat2", link: "https://github.com/iagox86/dnscat2"}, {name: "OzymanDNS", link: "#"}],
+                scenario: "Bypassing Captive Portals (hotels/airports) that allow DNS resolution before login.",
+                cli: "iodine -f -P 'pass123' tunnel.mytunnel.com",
+                output: "Opened dns0\nSetting IP of dns0 to 10.0.0.2\nSending DNS queries for tunnel.mytunnel.com... Connection setup complete.",
+                vizType: "schematic",
+                schematicType: "encapsulation",
+                quiz: {
+                    question: "Where is the payload hidden in a DNS Tunneling attack?",
+                    options: [
+                        { text: "In the TCP Header", isCorrect: false, feedback: "DNS mostly uses UDP, and the data isn't in the header." },
+                        { text: "In Subdomains and TXT records", isCorrect: true, feedback: "Correct! Data is encoded like 'encoded-data.attacker.com'." },
+                        { text: "In the IP TTL", isCorrect: false, feedback: "TTL is for routing loops, not payload." },
+                        { text: "In the MAC Address", isCorrect: false, feedback: "MAC addresses don't travel over the internet." }
+                    ]
+                }
+            },
+            {
+                id: 15,
+                title: "External Systems (Pivoting)",
+                category: "Application/Proxy",
+                explanation: "Using a compromised 'bastion' host to reach targets that are otherwise blocked.",
+                tool: "Metasploit",
+                toolLink: "https://www.metasploit.com/",
+                alternatives: [{name: "Sliver", link: "https://github.com/BishopFox/sliver"}, {name: "Ligolo-ng", link: "https://github.com/nicocha30/ligolo-ng"}],
+                scenario: "Admin uses DMZ Web Server to run SQL queries on Internal DB because direct workstation access is blocked.",
+                cli: "meterpreter > portfwd add -l 3333 -p 3306 -r 10.10.10.5",
+                output: "[*] Local TCP relay created: :3333 <-> 10.10.10.5:3306",
+                vizType: "schematic",
+                schematicType: "pivot",
+                quiz: {
+                    question: "In pivoting, what is the role of the 'Bastion Host'?",
+                    options: [
+                        { text: "To block the attack", isCorrect: false, feedback: "Ideally yes, but here it is the compromised entry point." },
+                        { text: "The Bridge/Pivot Point", isCorrect: true, feedback: "Correct! It sits between the attacker and the restricted internal network." },
+                        { text: "The final target", isCorrect: false, feedback: "It's the stepping stone, not usually the final goal." },
+                        { text: "The DNS Server", isCorrect: false, feedback: "It can be any accessible server." }
+                    ]
+                }
+            },
+            {
+                id: 16,
+                title: "MITM Attack",
+                category: "Application/Proxy",
+                explanation: "Intercepting traffic by spoofing the gateway (ARP Spoofing) to inspect packets before the firewall.",
+                tool: "Bettercap",
+                toolLink: "https://www.bettercap.org/",
+                alternatives: [{name: "Ettercap", link: "https://www.ettercap-project.org/"}, {name: "Wireshark", link: "https://www.wireshark.org/"}],
+                scenario: "Inserting a monitor in the traffic flow to inspect packets without router reconfiguration.",
+                cli: "sudo bettercap -iface eth0\nset arp.spoof.targets 192.168.1.15; arp.spoof on",
+                output: "[sys.log] [inf] arp.spoof started\n[endpoint.new] 192.168.1.15 detected as generic.",
+                vizType: "none",
+                quiz: {
+                    question: "How does ARP Spoofing allow you to bypass firewall inspection logic?",
+                    options: [
+                        { text: "It deletes the firewall", isCorrect: false, feedback: "It does not remove hardware." },
+                        { text: "It redirects traffic to YOU first", isCorrect: true, feedback: "Correct! You become the 'gateway', letting you modify packets before the firewall sees them." },
+                        { text: "It uses DNS", isCorrect: false, feedback: "ARP is Layer 2, DNS is Layer 7." },
+                        { text: "It encrypts the traffic", isCorrect: false, feedback: "It usually doesn't, though it can inspect SSL if combined with SSLStrip." }
+                    ]
+                }
+            },
+            {
+                id: 17,
+                title: "Content (Steganography)",
+                category: "Application/Proxy",
+                explanation: "Hiding payloads inside allowed file types (like JPEGs) to bypass DLP filters.",
+                tool: "Steghide",
+                toolLink: "https://steghide.sourceforge.net/",
+                alternatives: [{name: "OpenStego", link: "https://www.openstego.com/"}, {name: "ExifTool", link: "https://exiftool.org/"}],
+                scenario: "Bypassing Data Loss Prevention by hiding sensitive text inside family photos.",
+                cli: "steghide embed -cf picture.jpg -ef secret.txt -p 'pass123'",
+                output: "embedding \"secret.txt\" in \"picture.jpg\"... done",
+                vizType: "none",
+                quiz: {
+                    question: "Why does Steganography bypass Data Loss Prevention (DLP) systems?",
+                    options: [
+                        { text: "It uses port 443", isCorrect: false, feedback: "Port usage isn't the key factor here." },
+                        { text: "The file looks like a normal image", isCorrect: true, feedback: "Correct! The structure matches a JPG/PNG, so filters ignoring binary content miss the hidden data." },
+                        { text: "It deletes the file", isCorrect: false, feedback: "Then there is nothing to exfiltrate." },
+                        { text: "It uses huge files", isCorrect: false, feedback: "File size doesn't bypass DLP." }
+                    ]
+                }
+            },
+            {
+                id: 18,
+                title: "XSS Attack",
+                category: "Application/Proxy",
+                explanation: "Injecting scripts into a trusted site to force an internal user's browser to send requests.",
+                tool: "BeEF",
+                toolLink: "https://beefproject.com/",
+                alternatives: [{name: "XSStrike", link: "https://github.com/s0md3v/XSStrike"}, {name: "OWASP ZAP", link: "https://www.zaproxy.org/"}],
+                scenario: "Attacker uses XSS to force an admin's browser to change firewall rules from the inside.",
+                cli: "<script>fetch('http://192.168.1.1/config?allow=true');<\/script>",
+                output: "(Browser Console)\nFetch API initiated to Router IP...\n200 OK (Config Changed)",
+                vizType: "none",
+                quiz: {
+                    question: "In an XSS firewall bypass, who actually sends the command to the firewall?",
+                    options: [
+                        { text: "The Attacker", isCorrect: false, feedback: "The attacker is outside and blocked." },
+                        { text: "The Admin's Browser", isCorrect: true, feedback: "Correct! The malicious script runs inside the trusted admin's session behind the firewall." },
+                        { text: "The DNS Server", isCorrect: false, feedback: "DNS isn't involved in sending the config command." },
+                        { text: "The Proxy", isCorrect: false, feedback: "Proxies might be involved, but the origin is the victim browser." }
+                    ]
+                }
+            }
+        ];
+
+        // --- CHART: Categories Donut ---
+        function initCategoryChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            // Count categories
+            const counts = {};
+            techniques.forEach(t => {
+                counts[t.category] = (counts[t.category] || 0) + 1;
+            });
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(counts),
+                    datasets: [{
+                        data: Object.values(counts),
+                        backgroundColor: [
+                            '#6366f1', // Indigo (Recon)
+                            '#10b981', // Emerald (Packet)
+                            '#f59e0b', // Amber (Tunneling)
+                            '#f43f5e'  // Rose (App)
+                        ],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw} techniques`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- APP LOGIC ---
+        
+        // Render List
+        function renderList(category = "all") {
+            const container = document.getElementById('techniqueList');
+            container.innerHTML = '';
+
+            techniques.forEach(tech => {
+                if (category === "all" || tech.category === category) {
+                    const btn = document.createElement('button');
+                    btn.className = `w-full text-left p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-1 group`;
+                    btn.onclick = () => selectTechnique(tech.id);
+                    btn.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-slate-700 group-hover:text-indigo-700 text-sm">${tech.title}</span>
+                            <span class="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">${tech.category.split(' ')[0]}</span>
+                        </div>
+                    `;
+                    container.appendChild(btn);
+                }
+            });
+        }
+
+        // Render Dynamic Quiz
+        function renderQuiz(data) {
+            const questionEl = document.getElementById('quiz-question');
+            const optionsContainer = document.getElementById('quiz-options');
+            const feedbackEl = document.getElementById('answerFeedback');
+            const badgeEl = document.getElementById('quiz-badge');
+
+            // Reset UI
+            feedbackEl.classList.add('hidden');
+            optionsContainer.innerHTML = '';
+            
+            // Update Text
+            badgeEl.textContent = `Challenge: ${data.title}`;
+            questionEl.textContent = data.quiz.question;
+
+            // Generate Buttons
+            data.quiz.options.forEach(opt => {
+                const btn = document.createElement('button');
+                // Escape single quotes for the onclick string
+                const feedbackSafe = opt.feedback.replace(/'/g, "\\'");
+                btn.onclick = () => checkAnswer(opt.isCorrect, feedbackSafe);
+                btn.className = opt.isCorrect 
+                    ? `bg-white text-indigo-900 hover:bg-indigo-50 p-4 rounded-lg font-bold shadow-md transition-colors text-sm border border-transparent`
+                    : `bg-indigo-800 hover:bg-indigo-700 p-4 rounded-lg border border-indigo-700 transition-colors text-sm font-medium`;
+                
+                // For demonstration, we hide the visual difference initially so it's a real quiz
+                // Override class to generic look initially
+                btn.className = `bg-indigo-800 hover:bg-indigo-700 p-4 rounded-lg border border-indigo-700 transition-colors text-sm font-medium text-white text-left`;
+                
+                btn.innerText = opt.text;
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        // Select Technique & Render Detail
+        function selectTechnique(id) {
+            const data = techniques.find(t => t.id === id);
+            const container = document.getElementById('detailView');
+            
+            // Update the Quiz Section immediately
+            renderQuiz(data);
+
+            // Generate Alternatives HTML
+            const alts = data.alternatives.map(a => 
+                `<a href="${a.link}" target="_blank" class="text-xs text-indigo-600 hover:underline bg-indigo-50 px-2 py-1 rounded border border-indigo-100">${a.name}</a>`
+            ).join(' ');
+
+            // Determine Visual Content
+            let visualBlock = '';
+            if (data.vizType === 'chart') {
+                visualBlock = `<div class="chart-container mt-4 bg-slate-50 rounded border border-slate-200 p-2"><canvas id="detailChart"></canvas></div>`;
+            } else if (data.vizType === 'schematic') {
+                visualBlock = getSchematic(data.schematicType);
+            }
+
+            // HTML Template for Detail View
+            container.innerHTML = `
+                <div class="p-6 pb-2 border-b border-slate-100 bg-white sticky top-0 z-10">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-500 bg-indigo-50 px-2 py-1 rounded">${data.category}</span>
+                        <span class="text-slate-400 text-xs">ID: ${data.id}</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">${data.title}</h2>
+                </div>
+                
+                <div class="p-6 space-y-8">
+                    <!-- Explain -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <span>📖</span> Technique Overview
+                            </h4>
+                            <p class="text-slate-600 text-sm leading-relaxed">${data.explanation}</p>
+                            
+                            <div class="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-100">
+                                <h5 class="text-xs font-bold text-amber-800 uppercase mb-1">Real-World Scenario</h5>
+                                <p class="text-amber-900 text-sm italic">"${data.scenario}"</p>
+                            </div>
+
+                            <div class="mt-6">
+                                <h4 class="font-bold text-slate-800 mb-2 text-sm">Primary Tool</h4>
+                                <div class="flex items-center gap-3">
+                                    <div class="p-3 bg-slate-800 text-white rounded-lg font-mono text-sm font-bold shadow-sm flex-1 text-center">
+                                        ${data.tool}
+                                    </div>
+                                    <a href="${data.toolLink}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Visit Site &rarr;</a>
+                                </div>
+                                <div class="mt-2 text-xs text-slate-500">
+                                    Alternatives: ${alts}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Visual / Schematic -->
+                        <div class="flex flex-col">
+                            <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <span>👁️</span> Visual Concept
+                            </h4>
+                            <div class="flex-1 flex items-center justify-center bg-slate-50 rounded-lg border border-slate-200 p-4 min-h-[200px]">
+                                ${visualBlock || '<p class="text-slate-400 text-sm italic">See CLI output for details.</p>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CLI Simulator -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                                <span>💻</span> Command Line Simulator
+                            </h4>
+                            <button onclick="runSimulation(${data.id})" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-colors shadow-sm">
+                                ▶ Run Command
+                            </button>
+                        </div>
+                        <div class="bg-slate-900 rounded-lg shadow-inner overflow-hidden font-mono text-sm">
+                            <div class="bg-slate-800 px-4 py-2 flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-slate-400 text-xs ml-2">admin@kali-linux:~</span>
+                            </div>
+                            <div class="p-4 h-48 overflow-y-auto terminal-scroll text-slate-300">
+                                <div class="flex gap-2">
+                                    <span class="text-green-400">$</span>
+                                    <span id="cli-input-${data.id}" class="text-white"></span>
+                                </div>
+                                <div id="cli-output-${data.id}" class="mt-2 text-slate-400 whitespace-pre-wrap"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Init dynamic chart if needed
+            if (data.vizType === 'chart' && data.id === 1) { // Specifically for Port Scanning
+                initPortChart();
+            }
+        }
+
+        // --- SCHEMATIC BUILDER (HTML/CSS) ---
+        function getSchematic(type) {
+            if (type === 'pass-drop') {
+                return `
+                    <div class="flex flex-col items-center gap-4 w-full">
+                        <div class="flex items-center w-full justify-between px-2">
+                            <div class="packet-box border-indigo-200">You</div>
+                            <div class="text-slate-400 text-xs">TTL Exceeded?</div>
+                            <div class="packet-box border-slate-400 bg-slate-100">Target</div>
+                        </div>
+                        <div class="w-full bg-slate-200 h-1 relative">
+                            <div class="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-red-500 w-4 h-8 rounded-sm" title="Firewall"></div>
+                        </div>
+                        <div class="flex gap-4 text-xs text-slate-500">
+                            <span class="flex items-center gap-1"><div class="w-2 h-2 bg-green-500 rounded-full"></div> Allowed (Reach)</span>
+                            <span class="flex items-center gap-1"><div class="w-2 h-2 bg-red-500 rounded-full"></div> Dropped</span>
+                        </div>
+                    </div>
+                `;
+            }
+            if (type === 'fragment') {
+                return `
+                    <div class="flex flex-col items-center justify-center w-full gap-2">
+                        <div class="text-xs text-slate-500 mb-1">Original Packet</div>
+                        <div class="w-48 h-6 bg-slate-300 rounded border border-slate-400 flex items-center justify-center text-xs">HEADER + PAYLOAD</div>
+                        <div class="text-2xl text-slate-400">⬇</div>
+                        <div class="flex gap-1">
+                            <div class="w-16 h-6 bg-indigo-100 border border-indigo-300 rounded flex items-center justify-center text-[10px]">Head...</div>
+                            <div class="w-16 h-6 bg-indigo-100 border border-indigo-300 rounded flex items-center justify-center text-[10px]">...er...</div>
+                            <div class="w-16 h-6 bg-indigo-100 border border-indigo-300 rounded flex items-center justify-center text-[10px]">...Load</div>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">Fragments slip through</div>
+                    </div>
+                `;
+            }
+            if (type === 'encapsulation') {
+                return `
+                    <div class="flex flex-col items-center justify-center w-full h-full">
+                        <div class="relative w-32 h-32 flex items-center justify-center">
+                            <!-- Outer Packet -->
+                            <div class="absolute inset-0 border-2 border-slate-400 rounded-full flex items-start justify-center pt-2 bg-white">
+                                <span class="text-[10px] font-bold text-slate-500">ICMP/DNS</span>
+                            </div>
+                            <!-- Inner Packet -->
+                            <div class="w-20 h-20 bg-indigo-100 border border-indigo-500 rounded-full flex items-center justify-center">
+                                <span class="text-xs font-bold text-indigo-700">SSH Data</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2">Data hidden inside allowed protocol</p>
+                    </div>
+                `;
+            }
+            if (type === 'spoofing') {
+                return `
+                    <div class="flex items-center justify-between w-full text-xs">
+                        <div class="flex flex-col items-center">
+                            <div class="packet-box border-red-200 bg-red-50">Attacker</div>
+                            <span class="text-[10px] text-slate-400">Real IP: 10.x</span>
+                        </div>
+                        <div class="flex flex-col items-center flex-1 mx-2">
+                            <div class="border-b-2 border-dashed border-slate-300 w-full mb-1"></div>
+                            <span class="bg-yellow-100 px-2 py-0.5 rounded text-yellow-800">Src: 192.168.1.100</span>
+                            <span class="text-[10px] text-slate-400 mt-1">"I am trusted"</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="packet-box border-slate-400">Firewall</div>
+                            <span class="text-[10px] text-slate-400">Allows Trusted</span>
+                        </div>
+                    </div>
+                `;
+            }
+            if (type === 'proxy') {
+                return `
+                     <div class="flex items-center justify-between w-full text-xs gap-1">
+                        <div class="packet-box border-slate-300">User</div>
+                        <div class="text-slate-400">&rarr;</div>
+                        <div class="packet-box border-red-500 border-2" title="Firewall">FW</div>
+                        <div class="text-green-500">&rarr;</div>
+                        <div class="packet-box bg-green-50 border-green-200">Proxy</div>
+                        <div class="text-slate-400">&rarr;</div>
+                        <div class="packet-box bg-slate-100 text-slate-400 line-through">Target</div>
+                    </div>
+                `;
+            }
+            if (type === 'pivot') {
+                 return `
+                     <div class="flex flex-col w-full text-xs gap-2">
+                        <div class="flex justify-between items-center">
+                            <div class="packet-box border-red-200">Attacker</div>
+                            <div class="h-[1px] bg-red-300 w-8"></div>
+                            <div class="packet-box border-green-200 bg-green-50">DMZ (Piv)</div>
+                        </div>
+                        <div class="flex justify-end pr-2">
+                            <div class="w-[1px] h-6 bg-slate-300"></div>
+                        </div>
+                        <div class="flex justify-end">
+                             <div class="packet-box border-indigo-200 bg-indigo-50">Internal DB</div>
+                        </div>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        // --- SPECIFIC CHART: PORT SCANNING ---
+        function initPortChart() {
+            const ctx = document.getElementById('detailChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Port 22 (SSH)', 'Port 80 (HTTP)', 'Port 443 (HTTPS)'],
+                    datasets: [{
+                        label: 'Firewall Response',
+                        data: [0, 1, 1], // 0 for blocked/filtered visualization logic, 1 for open
+                        backgroundColor: [
+                            '#ef4444', // Red (Filtered)
+                            '#22c55e', // Green (Open)
+                            '#22c55e'  // Green (Open)
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 1,
+                            ticks: {
+                                callback: function(value) { return value === 0 ? 'Filtered' : 'Open'; }
+                            } 
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ctx.raw === 0 ? 'Blocked/Filtered by Rules' : 'Allowed/Open'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- INTERACTION: CLI TYPEWRITER ---
+        function runSimulation(id) {
+            const data = techniques.find(t => t.id === id);
+            const inputEl = document.getElementById(`cli-input-${id}`);
+            const outputEl = document.getElementById(`cli-output-${id}`);
+            
+            if(!inputEl) return;
+
+            // Reset
+            inputEl.innerText = '';
+            outputEl.innerText = '';
+            
+            let i = 0;
+            const command = data.cli;
+            
+            // Type command
+            const typeInterval = setInterval(() => {
+                inputEl.innerText += command.charAt(i);
+                i++;
+                if (i > command.length) {
+                    clearInterval(typeInterval);
+                    // Show Output after delay
+                    setTimeout(() => {
+                        outputEl.innerText = data.output;
+                    }, 500);
+                }
+            }, 30); // Typing speed
+        }
+
+        // --- INTERACTION: FILTERS ---
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // UI Toggle
+                document.querySelectorAll('.filter-btn').forEach(b => {
+                    b.classList.remove('bg-slate-800', 'text-white');
+                    b.classList.add('bg-slate-200', 'text-slate-700');
+                });
+                e.target.classList.remove('bg-slate-200', 'text-slate-700');
+                e.target.classList.add('bg-slate-800', 'text-white');
+
+                // Filter Logic
+                renderList(e.target.dataset.category);
+            });
+        });
+
+        // --- INTERACTION: QUIZ ---
+        function checkAnswer(isCorrect, feedback) {
+            const feedbackEl = document.getElementById('answerFeedback');
+            feedbackEl.innerText = feedback;
+            feedbackEl.classList.remove('hidden');
+            if(isCorrect) {
+                feedbackEl.classList.add('bg-green-900/50', 'text-green-200', 'border-green-400/30');
+                feedbackEl.classList.remove('bg-indigo-950/50', 'text-indigo-200', 'border-indigo-400/30');
+            } else {
+                 feedbackEl.classList.remove('bg-green-900/50', 'text-green-200', 'border-green-400/30');
+                 feedbackEl.classList.add('bg-indigo-950/50', 'text-indigo-200', 'border-indigo-400/30');
+            }
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({behavior: 'smooth'});
+        }
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initCategoryChart();
+            renderList();
+            // Select first by default
+            selectTechnique(1);
+        });
+
+    </script>
+</body>
+</html>

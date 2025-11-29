@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Defense: Interactive Learning Module</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chosen Palette: Slate & Blue (Light Theme) -->
+    <!-- Slate-50 background, Slate-800 text, Blue-600 accents, Red/Green for status/quiz -->
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #1e293b; /* Slate 800 */
+        }
+
+        /* Application Structure Plan: 
+           The app is designed as a "Security Operations Center" (SOC) training dashboard.
+           1. Sidebar Navigation: Allows non-linear exploration of the 4 main modules (Fundamentals, Protocols, Tech Controls, Simulation/Quiz).
+           2. Dynamic Main Content Area: Updates based on selection using vanilla JS.
+           3. Contextual Sidebars: On the right, providing "Real Life Admin Examples" relevant to the currently viewed content.
+           4. Interactive Visualizations: Charts help compare abstract concepts (e.g., Firewall types) to aid retention.
+           
+           Why this structure? The report is dense with definitions and examples. A dashboard approach breaks this into digestible "widgets" and "cards" 
+           rather than a long wall of text, encouraging the user to "investigate" each topic.
+        */
+
+        /* Chart Container Styling - MANDATORY per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .nav-item.active {
+            background-color: #eff6ff; /* Blue 50 */
+            border-left: 4px solid #2563eb; /* Blue 600 */
+            color: #1d4ed8;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+    
+    <!-- Visualization & Content Choices:
+         1. CIA Triad -> Radar Chart -> Interaction: None (Static ref) -> To show the multi-faceted nature of defense.
+         2. Protocol Layering -> Bar Chart -> Interaction: Filter list below -> To visualize where protocols sit in the stack.
+         3. Firewall Types -> Grouped Bar Chart -> Interaction: Compare Speed vs Security -> Helps distinguish between Packet Filtering and NGFW.
+         4. Text Content -> Interactive Cards -> Click to reveal "Real Life Examples" -> Keeps interface clean, reveals depth on demand.
+         
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+</head>
+<body class="h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center z-20">
+        <h1 class="font-bold text-slate-800 text-lg"><i class="fas fa-shield-alt text-blue-600 mr-2"></i>NetSec Ops</h1>
+        <button id="mobile-menu-btn" class="text-slate-600"><i class="fas fa-bars text-xl"></i></button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="bg-white w-full md:w-64 border-r border-slate-200 flex-shrink-0 flex flex-col h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 fixed md:relative z-10">
+        <div class="p-6 border-b border-slate-100 hidden md:block">
+            <h1 class="font-bold text-2xl text-slate-800 tracking-tight"><i class="fas fa-shield-alt text-blue-600 mr-2"></i>NetSec Ops</h1>
+            <p class="text-xs text-slate-500 mt-1 uppercase tracking-wider">Training Module</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li>
+                    <button onclick="router('dashboard')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors active" id="nav-dashboard">
+                        <i class="fas fa-chart-pie w-6"></i> Dashboard Overview
+                    </button>
+                </li>
+                <li class="px-6 pt-4 pb-2 text-xs font-semibold text-slate-400 uppercase">Core Concepts</li>
+                <li>
+                    <button onclick="router('fundamentals')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" id="nav-fundamentals">
+                        <i class="fas fa-cubes w-6"></i> CIA & Fundamentals
+                    </button>
+                </li>
+                <li>
+                    <button onclick="router('protocols')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" id="nav-protocols">
+                        <i class="fas fa-network-wired w-6"></i> Secure Protocols
+                    </button>
+                </li>
+                <li class="px-6 pt-4 pb-2 text-xs font-semibold text-slate-400 uppercase">Defense Mechanisms</li>
+                <li>
+                    <button onclick="router('technical')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" id="nav-technical">
+                        <i class="fas fa-server w-6"></i> Technical Controls
+                    </button>
+                </li>
+                <li>
+                    <button onclick="router('threats')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" id="nav-threats">
+                        <i class="fas fa-bug w-6"></i> Threats & Detection
+                    </button>
+                </li>
+                <li class="mt-4 border-t border-slate-100 pt-4">
+                    <button onclick="router('quiz')" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" id="nav-quiz">
+                        <i class="fas fa-clipboard-check w-6"></i> Ops Simulation (Quiz)
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="p-4 border-t border-slate-100 bg-slate-50">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">U</div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-slate-700">Trainee</p>
+                    <p class="text-xs text-slate-500">View Only Mode</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 h-full overflow-y-auto bg-slate-50 p-4 md:p-8" id="main-content">
+        <!-- Dynamic Content Injected Here -->
+    </main>
+
+    <!-- Context Modal (Hidden by default) -->
+    <div id="info-modal" class="fixed inset-0 bg-slate-900 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all scale-95 opacity-0" id="modal-content-box">
+            <div class="bg-blue-600 p-4 flex justify-between items-center">
+                <h3 class="text-white font-bold text-lg" id="modal-title">Real-Life Scenario</h3>
+                <button onclick="closeModal()" class="text-white hover:text-blue-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6">
+                <div class="flex items-start mb-4">
+                    <div class="bg-blue-100 p-2 rounded-lg mr-4 text-blue-600">
+                        <i class="fas fa-user-shield text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wide">The Admin's Task</h4>
+                        <p id="modal-task" class="text-slate-800 font-medium mb-2">...</p>
+                    </div>
+                </div>
+                <div class="flex items-start mb-4">
+                    <div class="bg-emerald-100 p-2 rounded-lg mr-4 text-emerald-600">
+                        <i class="fas fa-tools text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Tools Used</h4>
+                        <p id="modal-tools" class="text-slate-800 mb-2">...</p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-600 italic" id="modal-relation">
+                    ...
+                </div>
+                <button onclick="closeModal()" class="mt-6 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg transition-colors">
+                    Close Briefing
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data Store ---
+        const appData = {
+            currentSection: 'dashboard',
+            iaPrinciples: [
+                { id: 'confidentiality', title: 'Confidentiality', icon: 'fa-user-secret', desc: 'Ensures information is not disclosed to unauthorized parties.', task: 'Securing a Human Resources (HR) database containing employee salaries.', tools: 'File System Permissions (NTFS/Linux chmod), Encryption Tools (BitLocker).', relation: 'Access Control Lists (ACLs) ensure only the "HR Group" can read salary files. Sales Group is denied.' },
+                { id: 'integrity', title: 'Integrity', icon: 'fa-file-signature', desc: 'Ensures information is not modified or tampered with by unauthorized parties.', task: 'Verifying a software installer downloaded from the internet.', tools: 'Hash Calculators (md5sum, sha256sum).', relation: 'Admin calculates SHA-256 hash of the downloaded file and compares it to the vendor\'s hash to ensure no tampering.' },
+                { id: 'availability', title: 'Availability', icon: 'fa-server', desc: 'Ensures information and resources are accessible without disruption.', task: 'Ensuring the company website remains online during high traffic.', tools: 'Load Balancers (F5, HAProxy), Redundant Power Supplies.', relation: 'Load balancer distributes traffic across 3 servers. If Server A fails, traffic routes to B and C instantly.' },
+                { id: 'nonrepudiation', title: 'Non-repudiation', icon: 'fa-stamp', desc: 'Ensures a party cannot deny sending a message or performing an action.', task: 'Proving an employee sent a specific email approving a budget.', tools: 'Digital Signatures (S/MIME), Email Archives.', relation: 'Employee signs with private key. They cannot claim "I didn\'t send that" later.' },
+                { id: 'authentication', title: 'Authentication', icon: 'fa-id-card', desc: 'Verifies the identity of an individual (You are who you say you are).', task: 'Logging into a corporate server.', tools: 'Multi-Factor Authentication (MFA) apps (Google Authenticator, Duo).', relation: 'Admin inputs password (know) and token code (have). System verifies both.' }
+            ],
+            protocols: [
+                { name: 'RADIUS', type: 'AAA', port: 'UDP 1812/1813', tool: 'FreeRADIUS', desc: 'Centralized Authentication, Authorization, Accounting. Encrypts password only.', example: 'Authenticating Wi-Fi users via WAP.' },
+                { name: 'TACACS+', type: 'AAA', port: 'TCP 49', tool: 'Cisco ISE', desc: 'Separates AAA. Encrypts entire payload. Granular command authorization.', example: 'Managing router logins and command permissions.' },
+                { name: 'Kerberos', type: 'Auth', port: 'Ticket-Based', tool: 'MIT Kerberos / AD', desc: 'Ticket-based auth for Active Directory. Uses KDC and time-stamping.', example: 'Single Sign-On (SSO) for internal file shares.' },
+                { name: 'PGP', type: 'Encryption', port: 'App Layer', tool: 'GnuPG', desc: 'Signing/encrypting files/emails. Web of Trust model.', example: 'Sending a password list securely to a colleague.' },
+                { name: 'S/MIME', type: 'Encryption', port: 'App Layer', tool: 'Certificates (CA)', desc: 'Public-key encryption/signing for email using Centralized CA.', example: 'Ensuring email integrity for CEO communications.' },
+                { name: 'HTTPS/TLS', type: 'Transport', port: 'TCP 443', tool: 'OpenSSL', desc: 'Secures web communication. Layers HTTP over TLS.', example: 'Securing a company login portal.' },
+                { name: 'IPsec', type: 'Network', port: 'Layer 3', tool: 'FortiGate / StrongSwan', desc: 'Secures IP comms. Transport (payload) or Tunnel (packet) modes.', example: 'Connecting two branch offices via Site-to-Site VPN.' }
+            ],
+            quiz: [
+                { q: "Which protocol provides centralized Authentication, Authorization, and Accounting (AAA)?", options: ["HTTP", "RADIUS", "SMTP", "ICMP"], correct: 1 },
+                { q: "Which technology connects two branch offices securely over the internet?", options: ["VLAN", "Site-to-Site VPN", "Antivirus", "NAT"], correct: 1 },
+                { q: "Which firewall inspects the actual content payload (Layer 7)?", options: ["Packet Filtering", "Circuit-Level", "Application-Level Proxy", "Stateless"], correct: 2 },
+                { q: "What is the primary difference between IDS and IPS?", options: ["IDS blocks traffic", "IPS blocks traffic; IDS alerts", "IDS is hardware", "No difference"], correct: 1 },
+                { q: "User 'JSmith' logs in at 2AM and downloads 10GB. Which system detects this anomaly?", options: ["Antivirus", "Firewall", "UBA", "VPN"], correct: 2 }
+            ]
+        };
+
+        // --- Core Application Logic ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            router('dashboard');
+            
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('-translate-x-full');
+            });
+        });
+
+        function router(route) {
+            const main = document.getElementById('main-content');
+            
+            // Update Nav State
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const navEl = document.getElementById(`nav-${route}`);
+            if(navEl) navEl.classList.add('active');
+
+            // Fade out effect
+            main.style.opacity = 0;
+            
+            setTimeout(() => {
+                switch(route) {
+                    case 'dashboard': renderDashboard(main); break;
+                    case 'fundamentals': renderFundamentals(main); break;
+                    case 'protocols': renderProtocols(main); break;
+                    case 'technical': renderTechnical(main); break;
+                    case 'threats': renderThreats(main); break;
+                    case 'quiz': renderQuiz(main); break;
+                }
+                // Fade in
+                main.style.opacity = 1;
+                
+                // Close mobile menu on route change
+                if(window.innerWidth < 768) {
+                    document.getElementById('sidebar').classList.add('-translate-x-full');
+                }
+            }, 150);
+        }
+
+        // --- Render Functions ---
+
+        function renderDashboard(container) {
+            container.innerHTML = `
+                <div class="mb-8 animate-fade-in-up">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Security Operations Center</h2>
+                    <p class="text-slate-600">Welcome to the Network Defense Fundamentals module. Select a sector to begin your training.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Stat Cards -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Core Principles</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1">5 Pillars</h3>
+                            </div>
+                            <div class="bg-blue-100 p-2 rounded-lg text-blue-600"><i class="fas fa-balance-scale"></i></div>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">CIA Triad + Auth & Non-repudiation</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Defense Layers</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1">3 Types</h3>
+                            </div>
+                            <div class="bg-emerald-100 p-2 rounded-lg text-emerald-600"><i class="fas fa-layer-group"></i></div>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">Administrative, Physical, Technical</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Protocol Stack</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1">7 Key Protos</h3>
+                            </div>
+                            <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600"><i class="fas fa-file-contract"></i></div>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">From RADIUS to IPsec</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulation</p>
+                                <h3 class="text-2xl font-bold text-slate-800 mt-1">5 Scenarios</h3>
+                            </div>
+                            <div class="bg-rose-100 p-2 rounded-lg text-rose-600"><i class="fas fa-crosshairs"></i></div>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">Test your knowledge</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Chart: Defense Layers -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-4">Defense-in-Depth Composition</h3>
+                        <p class="text-sm text-slate-600 mb-4">Effective security requires layering different types of controls. This lecture covers the balance between them.</p>
+                        <div class="chart-container">
+                            <canvas id="defenseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Intro Text -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-4">Module Overview</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-slate-700">Part 1: Fundamentals</h4>
+                                    <p class="text-sm text-slate-600">Understand the goals of network defense: Confidentiality, Integrity, and Availability. Learn about preventive vs reactive approaches.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-slate-700">Part 2: Technical Controls</h4>
+                                    <p class="text-sm text-slate-600">Deep dive into specific implementations: Firewalls, IDS/IPS, VPNs, and Proxies. Learn how they work and how attackers bypass them.</p>
+                                </div>
+                            </div>
+                             <div class="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <p class="text-sm text-blue-800 italic">"We do not simply install a firewall and walk away. Comprehensive defense requires a defense-in-depth strategy."</p>
+                            </div>
+                        </div>
+                        <button onclick="router('fundamentals')" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors">
+                            Start Training <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Init Chart
+            setTimeout(() => {
+                const ctx = document.getElementById('defenseChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Administrative (Policies)', 'Physical (Locks/Guards)', 'Technical (Firewalls/Encryption)'],
+                        datasets: [{
+                            data: [25, 20, 55], // Conceptual weight based on lecture focus
+                            backgroundColor: ['#94a3b8', '#cbd5e1', '#2563eb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }, 50);
+        }
+
+        function renderFundamentals(container) {
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-4">Information Assurance Principles</h2>
+                    <p class="text-slate-600 mb-8 max-w-3xl">The foundation of all security policies. These 5 principles guide how we secure data and systems. Click any card to see a <strong>Real-Life Admin Scenario</strong>.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                        ${appData.iaPrinciples.map(p => `
+                            <div onclick="openModal('${p.id}')" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer card-hover transition-all group">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        <i class="fas ${p.icon} text-xl"></i>
+                                    </div>
+                                    <h3 class="ml-4 font-bold text-lg text-slate-800">${p.title}</h3>
+                                </div>
+                                <p class="text-sm text-slate-600">${p.desc}</p>
+                                <div class="mt-4 flex items-center text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    VIEW SCENARIO <i class="fas fa-arrow-right ml-2"></i>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-800 mb-6">Visualizing the Balance</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="chart-container">
+                                <canvas id="iaChart"></canvas>
+                            </div>
+                            <div class="space-y-4">
+                                <h4 class="font-bold text-slate-700">Approaches to Network Defense</h4>
+                                <div class="relative pl-8 border-l-2 border-slate-200 space-y-6">
+                                    <div class="relative">
+                                        <span class="absolute -left-[39px] w-5 h-5 rounded-full bg-blue-500 border-4 border-white"></span>
+                                        <h5 class="font-bold text-sm">Preventive</h5>
+                                        <p class="text-xs text-slate-500">ACLs blocking IPs. Stop it before it hits.</p>
+                                    </div>
+                                    <div class="relative">
+                                        <span class="absolute -left-[39px] w-5 h-5 rounded-full bg-amber-500 border-4 border-white"></span>
+                                        <h5 class="font-bold text-sm">Reactive</h5>
+                                        <p class="text-xs text-slate-500">IDS alerting on port scans. Detect it happening.</p>
+                                    </div>
+                                    <div class="relative">
+                                        <span class="absolute -left-[39px] w-5 h-5 rounded-full bg-purple-500 border-4 border-white"></span>
+                                        <h5 class="font-bold text-sm">Retrospective</h5>
+                                        <p class="text-xs text-slate-500">Forensics. Figure out the "how" after the fact.</p>
+                                    </div>
+                                    <div class="relative">
+                                        <span class="absolute -left-[39px] w-5 h-5 rounded-full bg-emerald-500 border-4 border-white"></span>
+                                        <h5 class="font-bold text-sm">Proactive</h5>
+                                        <p class="text-xs text-slate-500">Threat Hunting. Patch before exploitation.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setTimeout(() => {
+                const ctx = document.getElementById('iaChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: appData.iaPrinciples.map(p => p.title),
+                        datasets: [{
+                            label: 'Security Focus Area',
+                            data: [90, 85, 80, 70, 95], // Conceptual values
+                            fill: true,
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            pointBackgroundColor: 'rgb(37, 99, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(37, 99, 235)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { display: false },
+                                suggestedMin: 50,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
+                });
+            }, 50);
+        }
+
+        function renderProtocols(container) {
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-4">Secure Protocols Registry</h2>
+                    <p class="text-slate-600 mb-8">Protocols are the rules of communication. This section details the essential encrypted protocols for protecting data in transit (Module 01).</p>
+                    
+                    <div class="flex flex-col lg:flex-row gap-8">
+                        <!-- Left: Interactive List -->
+                        <div class="lg:w-2/3 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-700">Protocol Index</h3>
+                                <span class="text-xs text-slate-500 bg-white px-2 py-1 rounded border">7 Records</span>
+                            </div>
+                            <div class="divide-y divide-slate-100">
+                                ${appData.protocols.map((p, idx) => `
+                                    <div class="p-4 hover:bg-slate-50 transition-colors group">
+                                        <div class="flex justify-between items-start cursor-pointer" onclick="toggleProtoDetail(${idx})">
+                                            <div class="flex items-center">
+                                                <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mr-4 font-bold text-sm">
+                                                    ${p.name.substring(0,2)}
+                                                </div>
+                                                <div>
+                                                    <h4 class="font-bold text-slate-800">${p.name}</h4>
+                                                    <p class="text-xs text-slate-500">${p.type} • ${p.port}</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-slate-400 group-hover:text-indigo-600"><i class="fas fa-chevron-down"></i></button>
+                                        </div>
+                                        <div id="proto-detail-${idx}" class="hidden mt-4 pl-14 text-sm text-slate-600 space-y-2 border-l-2 border-indigo-100 ml-5">
+                                            <p><strong>Function:</strong> ${p.desc}</p>
+                                            <p><strong>Tool Spotlight:</strong> <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-800 font-mono text-xs">${p.tool}</span></p>
+                                            <div class="bg-blue-50 p-3 rounded text-blue-800 text-xs italic">
+                                                <i class="fas fa-info-circle mr-1"></i> Admin Example: ${p.example}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Right: Visualization -->
+                        <div class="lg:w-1/3">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-4">
+                                <h3 class="font-bold text-slate-800 mb-4">Protocol Distribution</h3>
+                                <div class="chart-container">
+                                    <canvas id="protoChart"></canvas>
+                                </div>
+                                <div class="mt-4 text-xs text-slate-500">
+                                    <p class="mb-2"><strong>AAA (RADIUS/TACACS+):</strong> Critical for user access control.</p>
+                                    <p class="mb-2"><strong>Encryption (PGP/SMIME):</strong> Essential for data confidentiality.</p>
+                                    <p><strong>Transport (HTTPS/IPsec):</strong> Secures the pipe itself.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setTimeout(() => {
+                const ctx = document.getElementById('protoChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['AAA', 'Encryption', 'Transport', 'Network'],
+                        datasets: [{
+                            label: 'Protocols Covered',
+                            data: [2, 2, 1, 1], // Count from data
+                            backgroundColor: ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                    }
+                });
+            }, 50);
+        }
+
+        function toggleProtoDetail(idx) {
+            const el = document.getElementById(`proto-detail-${idx}`);
+            if (el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+                el.classList.add('block', 'animate-fade-in');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        function renderTechnical(container) {
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Technical Controls Arsenal</h2>
+                    <p class="text-slate-600 mb-8">Hardware and software systems that filter traffic, detect intrusions, and isolate networks.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Feature 1: Firewalls -->
+                        <div class="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-xl text-slate-800"><i class="fas fa-fire text-red-500 mr-2"></i>Firewall Types</h3>
+                                <span class="text-xs bg-slate-100 px-2 py-1 rounded">Module 05</span>
+                            </div>
+                            <div class="chart-container h-64">
+                                <canvas id="firewallChart"></canvas>
+                            </div>
+                            <div class="mt-4 grid grid-cols-2 gap-4 text-xs">
+                                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                    <span class="font-bold block text-slate-700">Packet Filtering</span>
+                                    "Dumb" but fast. Checks IP/Port. Stateless.
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                    <span class="font-bold block text-slate-700">Stateful Inspection</span>
+                                    Tracks connection state (e.g., knows a packet is a reply).
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                    <span class="font-bold block text-slate-700">Proxy (App Level)</span>
+                                    Inspects payload (Layer 7). Slower, more secure.
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded border border-slate-100">
+                                    <span class="font-bold block text-slate-700">NGFW</span>
+                                    Combines all + IPS + Identity.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Feature 2: Segmentation -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4"><i class="fas fa-network-wired text-blue-500 mr-2"></i>Segmentation</h3>
+                            <p class="text-sm text-slate-600 mb-4">Splitting network to minimize attack surface.</p>
+                            
+                            <div class="space-y-3">
+                                <div class="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                                    <h4 class="font-bold text-sm text-blue-900">VLANs (Logical)</h4>
+                                    <p class="text-xs text-blue-800 mt-1">Virtual separation on switch. e.g., VLAN 10 (Finance) vs VLAN 20 (Guest).</p>
+                                </div>
+                                <div class="bg-orange-50 p-3 rounded-lg border-l-4 border-orange-500">
+                                    <h4 class="font-bold text-sm text-orange-900">DMZ</h4>
+                                    <p class="text-xs text-orange-800 mt-1">Buffer zone for public services (Web Servers). Isolated from internal DB.</p>
+                                </div>
+                            </div>
+                            
+                            <h4 class="font-bold text-slate-800 mt-6 mb-2 text-sm">Common Bypasses</h4>
+                            <ul class="text-xs text-slate-500 space-y-1 list-disc pl-4">
+                                <li><strong>Port Scanning:</strong> Finding open doors (Nmap).</li>
+                                <li><strong>IP Spoofing:</strong> Faking trusted source IP.</li>
+                                <li><strong>Tunneling:</strong> Hiding SSH inside DNS/ICMP.</li>
+                                <li><strong>Fragmenting:</strong> Splitting packets to evade sigs.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Additional Controls -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-700"><i class="fas fa-search text-purple-500 mr-2"></i>IDS vs IPS</h4>
+                            <p class="text-xs text-slate-500 mt-2"><strong>IDS:</strong> Passive camera. Alerts only.</p>
+                            <p class="text-xs text-slate-500 mt-1"><strong>IPS:</strong> Active guard. Blocks traffic.</p>
+                            <p class="text-xs font-mono bg-slate-100 p-1 mt-2 rounded">Tool: Snort</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-700"><i class="fas fa-carrot text-orange-500 mr-2"></i>Honeypots</h4>
+                            <p class="text-xs text-slate-500 mt-2">Decoy systems to lure attackers. No real value, so any traffic is suspicious.</p>
+                            <p class="text-xs font-mono bg-slate-100 p-1 mt-2 rounded">Tool: KFSensor</p>
+                        </div>
+                         <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-700"><i class="fas fa-random text-indigo-500 mr-2"></i>Proxies</h4>
+                            <p class="text-xs text-slate-500 mt-2"><strong>Forward:</strong> Protects clients (Content Filter).</p>
+                            <p class="text-xs text-slate-500 mt-1"><strong>Reverse:</strong> Protects servers (Load Balance).</p>
+                            <p class="text-xs font-mono bg-slate-100 p-1 mt-2 rounded">Tool: Squid</p>
+                        </div>
+                         <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-700"><i class="fas fa-globe text-emerald-500 mr-2"></i>VPNs</h4>
+                            <p class="text-xs text-slate-500 mt-2">Secure tunnel over insecure net. Remote Access or Site-to-Site.</p>
+                            <p class="text-xs font-mono bg-slate-100 p-1 mt-2 rounded">Tool: OpenVPN</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setTimeout(() => {
+                const ctx = document.getElementById('firewallChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Packet Filtering', 'Stateful', 'App Proxy', 'NGFW'],
+                        datasets: [
+                            {
+                                label: 'Processing Speed',
+                                data: [95, 80, 40, 60],
+                                backgroundColor: '#10b981',
+                            },
+                            {
+                                label: 'Security Context',
+                                data: [20, 50, 90, 95],
+                                backgroundColor: '#3b82f6',
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, max: 100, title: {display: true, text: 'Relative Score %'} }
+                        }
+                    }
+                });
+            }, 50);
+        }
+
+        function renderThreats(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto text-center">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-8">Detection & Analytics</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <div class="flex items-center mb-4">
+                                <div class="bg-purple-100 p-3 rounded-full text-purple-600 mr-4"><i class="fas fa-chart-line text-xl"></i></div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800">SIEM</h3>
+                                    <p class="text-xs text-slate-500 uppercase">Security Incident & Event Management</p>
+                                </div>
+                            </div>
+                            <p class="text-sm text-slate-600 mb-4">Collects logs, normalizes them, correlates them, and alerts. Links "Login Failure" on server to "Bad IP" on firewall.</p>
+                            <div class="bg-slate-900 text-green-400 p-3 rounded font-mono text-xs mb-2">
+                                > index=security event_id=4625 | stats count by src_ip
+                            </div>
+                            <p class="text-xs text-slate-500"><strong>Tool:</strong> Splunk, ELK Stack</p>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                             <div class="flex items-center mb-4">
+                                <div class="bg-rose-100 p-3 rounded-full text-rose-600 mr-4"><i class="fas fa-user-clock text-xl"></i></div>
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800">UBA</h3>
+                                    <p class="text-xs text-slate-500 uppercase">User Behavior Analytics</p>
+                                </div>
+                            </div>
+                            <p class="text-sm text-slate-600 mb-4">Analyzes behavior to create a baseline. Flags deviations even if credentials are valid.</p>
+                            <div class="bg-rose-50 border border-rose-100 p-3 rounded text-rose-800 text-xs italic mb-2">
+                                <i class="fas fa-exclamation-triangle"></i> ALERT: User "Bob" logged in at 3AM and downloaded 5GB. Baseline: 9AM-5PM, <50MB.
+                            </div>
+                            <p class="text-xs text-slate-500"><strong>Tool:</strong> Exabeam, Splunk UBA</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-left">
+                        <h3 class="font-bold text-slate-800 mb-4">Endpoint Defense (Antivirus/EDR)</h3>
+                        <p class="text-sm text-slate-600">The final line of defense. Modern AV uses signatures, heuristics, and behavioral analysis.</p>
+                        <ul class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <li class="flex items-center text-sm text-slate-600"><i class="fas fa-check text-green-500 mr-2"></i> <strong>ClamAV:</strong> Open source standard for Mail Servers.</li>
+                            <li class="flex items-center text-sm text-slate-600"><i class="fas fa-check text-green-500 mr-2"></i> <strong>CrowdStrike:</strong> Enterprise standard for EDR.</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderQuiz(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-slate-800">Ops Simulation</h2>
+                        <p class="text-slate-600">Test your readiness. Select the correct protocol or control for each scenario.</p>
+                    </div>
+
+                    <div id="quiz-container" class="space-y-6">
+                        ${appData.quiz.map((q, idx) => `
+                            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 transition-colors" id="q-card-${idx}">
+                                <h3 class="font-bold text-lg text-slate-800 mb-4"><span class="text-blue-600 mr-2">Q${idx+1}.</span> ${q.q}</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${q.options.map((opt, optIdx) => `
+                                        <button onclick="checkAnswer(${idx}, ${optIdx}, ${q.correct})" class="q-btn-${idx} w-full text-left px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all text-sm font-medium text-slate-700">
+                                            ${opt}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                                <div id="feedback-${idx}" class="hidden mt-4 p-3 rounded-lg text-sm font-bold"></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Interaction Logic ---
+
+        function openModal(id) {
+            const data = appData.iaPrinciples.find(p => p.id === id);
+            if(!data) return;
+
+            document.getElementById('modal-title').innerText = data.title;
+            document.getElementById('modal-task').innerText = data.task;
+            document.getElementById('modal-tools').innerText = data.tools;
+            document.getElementById('modal-relation').innerHTML = `<strong class="block mb-1 text-slate-700">Relation to Lecture:</strong> ${data.relation}`;
+
+            const modal = document.getElementById('info-modal');
+            const box = document.getElementById('modal-content-box');
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Animation
+            setTimeout(() => {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('info-modal');
+            const box = document.getElementById('modal-content-box');
+
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function checkAnswer(qIdx, selectedOpt, correctOpt) {
+            const btns = document.querySelectorAll(`.q-btn-${qIdx}`);
+            const feedback = document.getElementById(`feedback-${qIdx}`);
+            const card = document.getElementById(`q-card-${qIdx}`);
+
+            btns.forEach(btn => btn.disabled = true); // Disable buttons
+
+            if (selectedOpt === correctOpt) {
+                btns[selectedOpt].classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                feedback.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Correct! System Secure.';
+                feedback.classList.add('bg-green-100', 'text-green-800', 'block');
+                feedback.classList.remove('hidden');
+            } else {
+                btns[selectedOpt].classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                btns[correctOpt].classList.add('bg-green-50', 'border-green-300', 'text-green-700'); // Show correct answer
+                feedback.innerHTML = '<i class="fas fa-times-circle mr-2"></i> Breach Detected. Incorrect.';
+                feedback.classList.add('bg-red-100', 'text-red-800', 'block');
+                feedback.classList.remove('hidden');
+            }
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('info-modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+    
+    <style>
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</body>
+</html>
+
+
