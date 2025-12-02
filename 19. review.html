@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Defense Mid-Term Review Suite</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+    <style>
+        /* Custom Chart Container Styles per Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Scrollbar styling for questions list */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <!-- Chosen Palette: Warm Neutrals & Subtle Blue -->
+    <!-- Application Structure Plan: 
+         The application is designed as a "Cyber Defense Academy" dashboard. 
+         Structure:
+         1. Dashboard: High-level overview of the material using charts to categorize questions by topic (Fundamentals, Firewalls, Attacks, etc.). This gives the user a mental map of the curriculum.
+         2. Interactive Review (The Core): A filtered list of questions. Users can filter by type (MCQ, MSQ, Essay) or Topic. This promotes active recall.
+         3. Essay/Flashcards: Separated specifically because they require self-reflection rather than auto-grading.
+         4. Flow: Users select a module -> Answer questions -> Get immediate feedback/Explanation -> Stats update dynamically.
+         Why: This structure breaks the massive list of 85 questions into manageable chunks, preventing cognitive overload and gamifying the review process.
+    -->
+    
+    <!-- Visualization & Content Choices:
+         1. Topic Distribution (Sunburst - Plotly): Goal: Organize. Shows the weight of different topics (Firewalls vs Fundamentals) in the exam. Interaction: Click to filter the question list.
+         2. Performance Tracker (Bar Chart - Chart.js): Goal: Inform. Tracks correct vs incorrect answers per category. Interaction: Updates real-time as users answer.
+         3. Progress Donut (Doughnut - Chart.js): Goal: Inform. visualizes completion rate.
+         4. Question Cards (HTML/JS): Goal: Change/Interact. Replaces static text with interactive forms (Radio/Checkbox) that validate answers and reveal explanations on demand.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- App Container -->
+    <div id="app" class="flex flex-col min-h-screen">
+
+        <!-- Header -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg font-bold text-lg">CD</div>
+                        <div>
+                            <h1 class="text-xl font-bold text-slate-900">Cyber Defense Review</h1>
+                            <p class="text-xs text-slate-500 hidden sm:block">Mid-Term Preparation Suite</p>
+                        </div>
+                    </div>
+                    <nav class="flex gap-4">
+                        <button onclick="app.setView('dashboard')" class="text-sm font-medium hover:text-blue-600 transition-colors">Dashboard</button>
+                        <button onclick="app.setView('practice')" class="text-sm font-medium hover:text-blue-600 transition-colors">Practice Quiz</button>
+                        <button onclick="app.setView('essays')" class="text-sm font-medium hover:text-blue-600 transition-colors">Essay Flashcards</button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="space-y-8 fade-in">
+                <!-- Intro Section -->
+                <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                    <h2 class="text-2xl font-bold mb-2">Welcome, Learners.</h2>
+                    <p class="text-slate-600 leading-relaxed max-w-3xl">
+                        This interactive review environment helps you master the Network Security Fundamentals, Linux Firewalls (iptables, UFW), Router Configuration, and MAC systems. 
+                        Use the visualizations below to identify key study areas, or jump straight into the <strong>Practice Quiz</strong> to test your knowledge against 85 unique questions.
+                    </p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Chart 1: Topic Distribution -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4 border-b pb-2">Topic Weighting</h3>
+                        <div class="flex-grow flex items-center justify-center">
+                            <div id="topicChart" class="w-full h-[300px]"></div> <!-- Plotly Container -->
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Click segments to filter practice questions.</p>
+                    </div>
+
+                    <!-- Chart 2: Completion Progress -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4 border-b pb-2">Your Progress</h3>
+                        <div class="chart-container">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                        <div class="text-center mt-2">
+                            <span id="progress-text" class="text-2xl font-bold text-blue-600">0%</span>
+                            <span class="text-sm text-slate-500">Complete</span>
+                        </div>
+                    </div>
+
+                    <!-- Chart 3: Performance -->
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                        <h3 class="font-semibold text-slate-700 mb-4 border-b pb-2">Performance by Type</h3>
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="app.startPractice('MCQ')" class="p-6 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-all text-left group">
+                        <h4 class="font-bold text-indigo-900 group-hover:translate-x-1 transition-transform">Start MCQs &rarr;</h4>
+                        <p class="text-sm text-indigo-700 mt-1">40 multiple choice questions focusing on core definitions.</p>
+                    </button>
+                    <button onclick="app.startPractice('MSQ')" class="p-6 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-100 transition-all text-left group">
+                        <h4 class="font-bold text-emerald-900 group-hover:translate-x-1 transition-transform">Start MSQs &rarr;</h4>
+                        <p class="text-sm text-emerald-700 mt-1">30 complex scenarios requiring multiple correct selections.</p>
+                    </button>
+                    <button onclick="app.setView('essays')" class="p-6 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-100 transition-all text-left group">
+                        <h4 class="font-bold text-amber-900 group-hover:translate-x-1 transition-transform">Review Essays &rarr;</h4>
+                        <p class="text-sm text-amber-700 mt-1">15 conceptual questions with deep explanations.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW: PRACTICE QUIZ -->
+            <div id="view-practice" class="hidden space-y-6 fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Practice Mode</h2>
+                        <p class="text-sm text-slate-500">Select answers to reveal explanations. Focus on "Why".</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="categoryFilter" onchange="app.filterQuestions()" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                            <option value="all">All Topics</option>
+                            <option value="Fundamentals">Fundamentals (CIA, OSI)</option>
+                            <option value="Firewalls">Firewalls (iptables, UFW)</option>
+                            <option value="Attack_Defense">Attacks & Recon</option>
+                            <option value="Systems">System & MAC (SELinux/AppArmor)</option>
+                        </select>
+                        <select id="typeFilter" onchange="app.filterQuestions()" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5">
+                            <option value="all">All Types</option>
+                            <option value="MCQ">MCQ (Single)</option>
+                            <option value="MSQ">MSQ (Multiple)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="quiz-container" class="space-y-6">
+                    <!-- Questions injected here via JS -->
+                </div>
+            </div>
+
+            <!-- VIEW: ESSAY FLASHCARDS -->
+            <div id="view-essays" class="hidden space-y-6 fade-in">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 mb-6">
+                    <h2 class="text-xl font-bold text-slate-800">Conceptual Review</h2>
+                    <p class="text-slate-600">These short essay questions require synthesis. Read the question, formulate your answer mentally, then click "Reveal" to check your understanding against the model answer.</p>
+                </div>
+                
+                <div id="essay-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Essays injected here via JS -->
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="bg-white border-t border-slate-200 mt-12 py-8">
+            <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+                <p>Cyber Defense Mid-Term Review Tool</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- 1. DATA REPOSITORY ---
+        // Storing the 85 questions parsed from the source document.
+        const DB = [
+            // PART 1: MCQs
+            { id: 1, type: "MCQ", cat: "Fundamentals", q: "In the context of Information Assurance, what does the principle of \"Non-Repudiation\" guarantee?", opts: ["That data is encrypted at rest.", "That a sender cannot deny having sent a specific message.", "That the system remains available 99.9% of the time.", "That only authorized users can modify data."], ans: 1, exp: "Non-repudiation ensures that a party in a communication cannot deny the authenticity of their signature on a document or the sending of a message." },
+            { id: 2, type: "MCQ", cat: "Firewalls", q: "Which Linux firewall tool is described as a \"frontend\" designed to make iptables easier for beginners, particularly on Debian-based systems?", opts: ["Firewalld", "nftables", "UFW (Uncomplicated Firewall)", "pfSense"], ans: 2, exp: "UFW is designed as an easy-to-use frontend for iptables, standard on Ubuntu and Debian systems." },
+            { id: 3, type: "MCQ", cat: "Firewalls", q: "In an iptables command, which flag is used to specify the \"Table\" (e.g., nat, filter)?", opts: ["-p", "-t", "-j", "--table-set"], ans: 1, exp: "The -t flag specifies the table (e.g., iptables -t nat ...). If omitted, it defaults to the filter table." },
+            { id: 4, type: "MCQ", cat: "Systems", q: "When configuring Xubuntu as a router, what specific iptables target is used in the POSTROUTING chain to allow LAN traffic to access the WAN using the router's IP?", opts: ["ACCEPT", "SNAT", "MASQUERADE", "FORWARD"], ans: 2, exp: "The MASQUERADE target is used in the NAT table's POSTROUTING chain to mask the source IP of internal traffic with the router's dynamic public IP." },
+            { id: 5, type: "MCQ", cat: "Firewalls", q: "Which of the following best describes the difference between a \"Packet Filtering Firewall\" and an \"Application-Level Gateway (Proxy)\"?", opts: ["Packet filters are slower than proxies.", "Proxies inspect the actual content/payload (Layer 7), while packet filters look at headers (IP/Port).", "Packet filters cannot block ICMP, but proxies can.", "Proxies are hardware-only, while packet filters are software-only."], ans: 1, exp: "Packet filters make decisions based on source/dest IP and ports. Proxies act as intermediaries that can inspect the actual data payload (application layer)." },
+            { id: 6, type: "MCQ", cat: "Systems", q: "In the context of Mandatory Access Control (MAC), which analogy best describes the function of AppArmor or SELinux compared to a traditional firewall?", opts: ["The security guard at the front gate.", "The keycard readers on internal office doors.", "The CCTV cameras outside the building.", "The perimeter fence."], ans: 1, exp: "Firewalls are the 'Front Desk/Perimeter' and MAC (AppArmor/SELinux) are the internal 'Keycard Readers' that control what a user/program can do after they are inside." },
+            { id: 7, type: "MCQ", cat: "Firewalls", q: "What is the default firewall management tool for Red Hat Enterprise Linux (RHEL) and CentOS?", opts: ["UFW", "pfSense", "Firewalld", "CheckPoint"], ans: 2, exp: "Debian uses UFW, while RHEL and its derivatives use firewalld as the default." },
+            { id: 8, type: "MCQ", cat: "Attack_Defense", q: "Which attack technique involves identifying open ports on a target system?", opts: ["Phishing", "Port Scanning", "SQL Injection", "Buffer Overflow"], ans: 1, exp: "Port scanning (e.g., using Nmap) probes a server to determine which ports are open, closed, or filtered." },
+            { id: 9, type: "MCQ", cat: "Firewalls", q: "Which iptables chain is responsible for processing packets destined for the local system itself?", opts: ["FORWARD", "OUTPUT", "INPUT", "PREROUTING"], ans: 2, exp: "The INPUT chain handles packets addressed to the localhost. FORWARD is for routing, OUTPUT is for originating traffic." },
+            { id: 10, type: "MCQ", cat: "Systems", q: "What is the primary operating system underlying the pfSense firewall software?", opts: ["Debian Linux", "FreeBSD", "Windows Server", "CentOS"], ans: 1, exp: "pfSense is an open-source firewall distribution based on the FreeBSD operating system, not Linux." },
+            { id: 11, type: "MCQ", cat: "Attack_Defense", q: "Which tool allows you to \"tunnel\" traffic through an encrypted SSH connection to bypass firewall content filters?", opts: ["SSH (with Dynamic Port Forwarding)", "Telnet", "FTP", "Nmap"], ans: 0, exp: "SSH tunneling (specifically dynamic port forwarding via -D) allows users to route browser traffic through an encrypted SSH connection." },
+            { id: 12, type: "MCQ", cat: "Firewalls", q: "In UFW, what command would you use to allow traffic on TCP port 80?", opts: ["sudo ufw open 80", "sudo ufw allow 80/tcp", "sudo ufw permit http", "iptables -A INPUT -p tcp --dport 80 -j ACCEPT"], ans: 1, exp: "The correct UFW syntax is sudo ufw allow [port]/[protocol]." },
+            { id: 13, type: "MCQ", cat: "Attack_Defense", q: "What is the function of \"Banner Grabbing\"?", opts: ["Stealing physical banners.", "Connecting to a service to read its welcome message and identify software versions.", "Capturing the handshake of a WPA2 Wi-Fi network.", "Blocking ads on a website."], ans: 1, exp: "Banner grabbing involves connecting to an open port and reading the service's response to identify the specific software and version." },
+            { id: 14, type: "MCQ", cat: "Systems", q: "Which Mandatory Access Control system uses \"Path-Based\" profiles (attaching rules to file paths)?", opts: ["SELinux", "AppArmor", "Smack", "TOMOYO"], ans: 1, exp: "AppArmor is path-based (profiles attach to binary paths). SELinux is label/inode-based." },
+            { id: 15, type: "MCQ", cat: "Fundamentals", q: "What is the \"Defense in Depth\" strategy?", opts: ["Using the most expensive firewall.", "Layering multiple security controls (physical, network, host, application) to protect data.", "Relying solely on antivirus.", "Hiding the Wi-Fi SSID."], ans: 1, exp: "Defense in Depth is using multiple, redundant defensive measures so that if one fails, another stops the attack." },
+            { id: 16, type: "MCQ", cat: "Firewalls", q: "Which web-based management interface is described as offering a \"cPanel-like\" experience and is agnostic (works with both UFW and Firewalld)?", opts: ["Cockpit", "GUFW", "Webmin", "SSH"], ans: 2, exp: "Webmin is a third-party web interface that provides modules for both UFW and Firewalld." },
+            { id: 17, type: "MCQ", cat: "Firewalls", q: "What command displays the current status and rules of UFW with extra detail?", opts: ["sudo ufw status verbose", "sudo ufw show", "sudo ufw list", "sudo ufw inspect"], ans: 0, exp: "sudo ufw status shows basic status; adding verbose shows default policies and logging status." },
+            { id: 18, type: "MCQ", cat: "Firewalls", q: "In an iptables rule, what does -j DROP do?", opts: ["Sends an error message.", "Accepts the packet but logs it.", "Silently discards the packet without notifying the sender.", "Forwards the packet."], ans: 2, exp: "DROP silently discards the packet. The sender receives no notification (unlike REJECT)." },
+            { id: 19, type: "MCQ", cat: "Attack_Defense", q: "Which firewall bypassing technique involves fragmenting packets to hide the TCP header information from the firewall?", opts: ["IP Fragmentation", "MAC Spoofing", "DNS Tunneling", "XSS"], ans: 0, exp: "IP Fragmentation splits packets. If the firewall doesn't reassemble, it misses the header info." },
+            { id: 20, type: "MCQ", cat: "Systems", q: "What is the role of enp0s3 in the provided VirtualBox Router Lab setup?", opts: ["LAN interface", "WAN interface (Bridged Adapter)", "Loopback interface", "Virtual switch"], ans: 1, exp: "enp0s3 is identified as the WAN interface configured as a Bridged Adapter." },
+            { id: 21, type: "MCQ", cat: "Firewalls", q: "Why is \"Stateful Inspection\" considered superior to simple packet filtering?", opts: ["Cheaper to implement.", "Tracks the context of active connections (e.g., remembering a packet is a response).", "Does not require a CPU.", "Only filters UDP."], ans: 1, exp: "Stateful inspection monitors connection states to allow return traffic automatically." },
+            { id: 22, type: "MCQ", cat: "Attack_Defense", q: "Which tool is primarily used for \"Firewalking\"?", opts: ["Firewalk (or traceroute tools)", "Wireshark", "John the Ripper", "Snort"], ans: 0, exp: "Firewalk analyzes IP packet responses to determine allowed Layer 4 protocols." },
+            { id: 23, type: "MCQ", cat: "Systems", q: "What is the purpose of auditd in Linux?", opts: ["Block network traffic.", "Manage passwords.", "Monitor and record specific system events and file access.", "Update kernel."], ans: 2, exp: "auditd is the userspace component to the Linux Auditing System." },
+            { id: 24, type: "MCQ", cat: "Firewalls", q: "In the context of firewalls, what is a \"DMZ\"?", opts: ["No security rules.", "Demilitarized Zone: A sub-network for external-facing services isolating the internal LAN.", "Database zone.", "Admin interface."], ans: 1, exp: "A DMZ allows public access to specific services without granting access to the internal network." },
+            { id: 25, type: "MCQ", cat: "Firewalls", q: "Which iptables table is used for Network Address Translation?", opts: ["filter", "mangle", "nat", "raw"], ans: 2, exp: "The nat table is specifically reserved for Network Address Translation rules." },
+            { id: 26, type: "MCQ", cat: "Firewalls", q: "If you want to block a specific IP address 192.168.1.50 using UFW, what is the command?", opts: ["sudo ufw deny from 192.168.1.50", "sudo ufw block 192.168.1.50", "sudo ufw stop 192.168.1.50", "sudo ufw reject all 192.168.1.50"], ans: 0, exp: "The syntax for blocking a source IP in UFW is deny from [IP]." },
+            { id: 27, type: "MCQ", cat: "Fundamentals", q: "What is the primary benefit of using sudo instead of logging in as root?", opts: ["Makes computer faster.", "Promotes accountability and prevents accidental damage.", "Bypasses permissions.", "Required for GUI."], ans: 1, exp: "sudo allows elevated privileges while maintaining an audit trail and reducing risk." },
+            { id: 28, type: "MCQ", cat: "Firewalls", q: "Which command is used to save iptables rules specifically on Ubuntu/Debian so they persist after reboot?", opts: ["service iptables save", "iptables-save > /etc/iptables/rules.v4", "iptables --persist", "Write-Host iptables"], ans: 1, exp: "iptables rules are ephemeral. They must be saved to a file via iptables-save." },
+            { id: 29, type: "MCQ", cat: "Fundamentals", q: "What does the acronym \"CIA\" stand for in network security?", opts: ["Central Intelligence Agency", "Confidentiality, Integrity, Availability", "Control, Inspection, Authentication", "Computer, Internet, Access"], ans: 1, exp: "The CIA Triad is the core model for information security." },
+            { id: 30, type: "MCQ", cat: "Attack_Defense", q: "Which technique allows an attacker to bypass MAC address filtering on a wireless network?", opts: ["MAC Spoofing", "IP Masquerading", "Port Forwarding", "DNS Poisoning"], ans: 0, exp: "MAC Spoofing involves changing the factory-assigned MAC address." },
+            { id: 31, type: "MCQ", cat: "Firewalls", q: "In pfSense, what is the purpose of \"Packages\"?", opts: ["Deliver physical goods.", "Extend functionality (e.g., adding Snort, Squid).", "Group users.", "Update BIOS."], ans: 1, exp: "pfSense has a package manager to install add-ons like IDS/IPS and Proxies." },
+            { id: 32, type: "MCQ", cat: "Systems", q: "Which Linux command indicates the current kernel version?", opts: ["ls -la", "uname -r", "cat /etc/issue", "ps aux"], ans: 1, exp: "uname -r prints system information, specifically the kernel release." },
+            { id: 33, type: "MCQ", cat: "Fundamentals", q: "Ideally, in a secure network, what should the default policy for incoming traffic be?", opts: ["ACCEPT", "DROP or DENY", "LOG", "FORWARD"], ans: 1, exp: "The principle of least privilege dictates blocking everything by default." },
+            { id: 34, type: "MCQ", cat: "Attack_Defense", q: "Which attack utilizes a \"Zombie\" network (Botnet) to overwhelm a target server?", opts: ["DDoS", "MITM", "Phishing", "SQL Injection"], ans: 0, exp: "A DDoS attack uses multiple compromised systems to flood a target." },
+            { id: 35, type: "MCQ", cat: "Systems", q: "What is the main disadvantage of SELinux compared to AppArmor?", opts: ["Less secure.", "Steeper learning curve and harder to debug.", "Not open source.", "Only works on Windows."], ans: 1, exp: "SELinux provides granular control but is notoriously complex compared to AppArmor." },
+            { id: 36, type: "MCQ", cat: "Fundamentals", q: "Which network device operates primarily at Layer 2 of the OSI model?", opts: ["Router", "Switch", "Hub", "Proxy"], ans: 1, exp: "Switches operate at the Data Link Layer (Layer 2) using MAC addresses." },
+            { id: 37, type: "MCQ", cat: "Attack_Defense", q: "When using SSH tunneling, which local port is commonly used for the SOCKS proxy in the command ssh -D 8080?", opts: ["22", "80", "443", "8080"], ans: 3, exp: "The -D 8080 flag specifies that the local machine listens on port 8080." },
+            { id: 38, type: "MCQ", cat: "Attack_Defense", q: "Which Open Source tool is often used for \"passive\" analysis of network traffic?", opts: ["Wireshark", "Nmap", "Metasploit", "Hydra"], ans: 0, exp: "Wireshark captures and analyzes packets passively." },
+            { id: 39, type: "MCQ", cat: "Systems", q: "In Linux permissions, what does chmod 777 do?", opts: ["Grants Read/Write/Execute to Everyone.", "Deletes file.", "Hides file.", "Root only."], ans: 0, exp: "7 (rwx) for Owner, Group, and Others. Generally insecure." },
+            { id: 40, type: "MCQ", cat: "Attack_Defense", q: "What is a \"Zero-Day\" exploit?", opts: ["Takes zero seconds.", "Targeting vulnerability unknown to vendor (no patch).", "Occurs at midnight.", "Virus deletes itself."], ans: 1, exp: "A vulnerability that developers are unaware of (Zero days to fix)." },
+
+            // PART 2: MSQs (Indices in answers array are 0-based)
+            { id: 41, type: "MSQ", cat: "Firewalls", q: "Which of the following are standard Tables in iptables?", opts: ["Filter", "Nat", "Mangle", "Route", "Switch", "Raw"], ans: [0, 1, 2, 5], exp: "Standard tables: Filter, Nat, Mangle, Raw." },
+            { id: 42, type: "MSQ", cat: "Firewalls", q: "Which of the following are valid iptables Chains?", opts: ["INPUT", "OUTPUT", "FORWARD", "BACKWARD", "SIDEWAYS", "PREROUTING"], ans: [0, 1, 2, 5], exp: "Valid chains: INPUT, OUTPUT, FORWARD, PREROUTING." },
+            { id: 43, type: "MSQ", cat: "Fundamentals", q: "Which of the following are core goals of the CIA Triad?", opts: ["Confidentiality", "Inspection", "Integrity", "Authorization", "Availability", "Accounting"], ans: [0, 2, 4], exp: "CIA: Confidentiality, Integrity, Availability." },
+            { id: 44, type: "MSQ", cat: "Firewalls", q: "Which commands are valid for managing UFW?", opts: ["ufw enable", "ufw allow ssh", "ufw start-service", "ufw status", "ufw delete allow 80", "ufw compile"], ans: [0, 1, 3, 4], exp: "Valid: enable, allow, status, delete." },
+            { id: 45, type: "MSQ", cat: "Fundamentals", q: "Which of the following are considered \"Technical Controls\"?", opts: ["Firewalls", "Security Policies", "IDS", "Employee Training", "Antivirus", "Background Checks"], ans: [0, 2, 4], exp: "Technical controls are hardware/software (Firewalls, IDS, AV)." },
+            { id: 46, type: "MSQ", cat: "Firewalls", q: "Which of the following are valid Linux GUI Firewall management tools?", opts: ["GUFW", "Cockpit", "Webmin", "Adobe Firewall", "MS Paint", "firewall-config"], ans: [0, 1, 2, 5], exp: "Valid: GUFW, Cockpit, Webmin, firewall-config." },
+            { id: 47, type: "MSQ", cat: "Fundamentals", q: "Select the private IP address ranges (RFC 1918).", opts: ["192.168.0.0/16", "10.0.0.0/8", "8.8.8.8", "172.16.0.0/12", "1.1.1.1", "255.255.255.255"], ans: [0, 1, 3], exp: "Private ranges: 192.168.x, 10.x, 172.16-31.x." },
+            { id: 48, type: "MSQ", cat: "Firewalls", q: "Which of the following are valid states tracked by a Stateful Firewall?", opts: ["NEW", "ESTABLISHED", "RELATED", "BROKEN", "CONFUSED", "INVALID"], ans: [0, 1, 2, 5], exp: "States: NEW, ESTABLISHED, RELATED, INVALID." },
+            { id: 49, type: "MSQ", cat: "Attack_Defense", q: "Which of the following are techniques used to bypass firewalls?", opts: ["IP Fragmentation", "SSH Tunneling", "Turning computer off", "Firewalking", "Asking nicely", "Banner Grabbing"], ans: [0, 1, 3, 5], exp: "Technical methods: Fragmentation, Tunneling, Firewalking, Banner Grabbing (recon)." },
+            { id: 50, type: "MSQ", cat: "Firewalls", q: "Which features are usually found in pfSense?", opts: ["Web-based GUI", "Package Manager", "Cortana", "VPN support", "Captive Portal", "Windows Kernel"], ans: [0, 1, 3, 4], exp: "pfSense: GUI, Packages, VPN, Captive Portal." },
+            { id: 51, type: "MSQ", cat: "Systems", q: "Which Linux distributions were used in the course labs/context?", opts: ["Xubuntu", "Windows 11", "macOS", "Kali Linux", "iOS", "Ubuntu Server"], ans: [0, 3, 5], exp: "Xubuntu, Ubuntu, Kali." },
+            { id: 52, type: "MSQ", cat: "Fundamentals", q: "Select components of the \"AAA\" framework.", opts: ["Assessment", "Authentication", "Application", "Authorization", "Administration", "Accounting"], ans: [1, 3, 5], exp: "AAA: Authentication, Authorization, Accounting." },
+            { id: 53, type: "MSQ", cat: "Attack_Defense", q: "Which tools are used for Network Scanning and Reconnaissance?", opts: ["Nmap", "Masscan", "Word", "ZMap", "Excel", "Hping3"], ans: [0, 1, 3, 5], exp: "Scanners: Nmap, Masscan, ZMap, Hping3." },
+            { id: 54, type: "MSQ", cat: "Firewalls", q: "Which represent valid actions (targets) for an iptables rule?", opts: ["ACCEPT", "PAUSE", "DROP", "REJECT", "LOG", "REWIND"], ans: [0, 2, 3, 4], exp: "Valid: ACCEPT, DROP, REJECT, LOG." },
+            { id: 55, type: "MSQ", cat: "Systems", q: "Characteristics of AppArmor?", opts: ["Path-based profiles", "Inode-based labeling", "Default in Ubuntu/Debian", "Created by NSA", "Human-readable profiles", "Uses aa-status"], ans: [0, 2, 4, 5], exp: "AppArmor: Path-based, Ubuntu default, readable, aa-status." },
+            { id: 56, type: "MSQ", cat: "Systems", q: "Characteristics of SELinux?", opts: ["Label/Inode-based", "Default in RHEL/CentOS", "Uses Contexts", "Path-based", "Easier than AppArmor", "Created by NSA"], ans: [0, 1, 2, 5], exp: "SELinux: Label-based, RHEL default, Contexts, NSA." },
+            { id: 57, type: "MSQ", cat: "Attack_Defense", q: "Which protocols are commonly used for VPNs?", opts: ["IPsec", "WireGuard", "FTP", "OpenVPN", "HTTP", "Telnet"], ans: [0, 1, 3], exp: "VPNs: IPsec, WireGuard, OpenVPN." },
+            { id: 58, type: "MSQ", cat: "Attack_Defense", q: "Which are \"Private\" or \"Internal\" security threats?", opts: ["Disgruntled Employees", "Accidental deletion", "Nation-State Hackers", "Malware via USB", "Script Kiddies", "Botnets"], ans: [0, 1, 3], exp: "Insider: Employees, Accidents, Local infection." },
+            { id: 59, type: "MSQ", cat: "Fundamentals", q: "Which of the following are layers of the OSI Model?", opts: ["Physical", "Internet", "Data Link", "Network", "Transport", "Application"], ans: [0, 2, 3, 4, 5], exp: "OSI: Physical, Data Link, Network, Transport, Application. (Internet is TCP/IP)." },
+            { id: 60, type: "MSQ", cat: "Systems", q: "Tools to view logs or audit system activity on Linux?", opts: ["ausearch", "aureport", "tail /var/log/syslog", "iptables -L", "journalctl", "mkdir"], ans: [0, 1, 2, 4], exp: "Logging: ausearch, aureport, tail, journalctl." },
+            { id: 61, type: "MSQ", cat: "Firewalls", q: "Limitations of a standard packet-filtering firewall (stateless)?", opts: ["Cannot see payload", "Too expensive", "No context (request vs reply)", "Too much RAM", "Susceptible to IP spoofing", "No logging"], ans: [0, 2, 4], exp: "Stateless: No payload inspection, no context, spoofing risk." },
+            { id: 62, type: "MSQ", cat: "Systems", q: "True regarding sudo?", opts: ["SuperUser DO", "Requires root password", "Logs command", "Elevates for single command", "Less secure than root login", "Configured in /etc/sudoers"], ans: [0, 2, 3, 5], exp: "Sudo: SuperUser DO, logs, single command, /etc/sudoers." },
+            { id: 63, type: "MSQ", cat: "Systems", q: "Valid interface names often seen in Linux?", opts: ["eth0", "enp0s3", "wlan0", "internet1", "enp0s8", "net2"], ans: [0, 1, 2, 4], exp: "Valid: eth0, enp0s3, wlan0, enp0s8." },
+            { id: 64, type: "MSQ", cat: "Attack_Defense", q: "Types of VPN architectures?", opts: ["Site-to-Site", "Remote Access", "Peer-to-Peer", "Keyboard-to-Screen", "Host-to-Host", "Mouse-to-Pad"], ans: [0, 1, 4], exp: "VPN: Site-to-Site, Remote Access, Host-to-Host." },
+            { id: 65, type: "MSQ", cat: "Firewalls", q: "True about Network Address Translation (NAT)?", opts: ["Conserves IPv4", "Allows private IPs on internet", "Increases speed", "Hides internal topology", "Required for IPv6", "Operates at Layer 3"], ans: [0, 1, 3, 5], exp: "NAT: Conserves IP, Private access, Hides topology, Layer 3." },
+            { id: 66, type: "MSQ", cat: "Attack_Defense", q: "Open source alternatives for bypassing/security?", opts: ["Bettercap", "Ettercap", "Photoshop", "Wireshark", "Word", "OpenStego"], ans: [0, 1, 3, 5], exp: "Open Source: Bettercap, Ettercap, Wireshark, OpenStego." },
+            { id: 67, type: "MSQ", cat: "Fundamentals", q: "Which ports are considered \"Well-Known\" (0-1023)?", opts: ["80", "22", "443", "23", "65535", "50000"], ans: [0, 1, 2, 3], exp: "Well-known: 80, 22, 443, 23." },
+            { id: 68, type: "MSQ", cat: "Systems", q: "Necessary to configure a Linux VM as a Router?", opts: ["Two interfaces", "IP Forwarding", "Heavy GUI", "NAT (Masquerading)", "Sound card", "Static IP on LAN"], ans: [0, 1, 3, 5], exp: "Router needs: 2 NICs, IP Forwarding, NAT, Static LAN IP." },
+            { id: 69, type: "MSQ", cat: "Systems", q: "Function of clamscan (ClamAV)?", opts: ["Firewall", "Antivirus CLI", "Scans for signatures", "Routes packets", "Remove/Quarantine", "Encrypts drive"], ans: [1, 2, 4], exp: "ClamAV: AV CLI, Scans signatures, Quarantines." },
+            { id: 70, type: "MSQ", cat: "Firewalls", q: "Distinct features of Next-Generation Firewalls (NGFW)?", opts: ["DPI", "Application Awareness", "Integrated IPS", "Port/IP filtering only", "Identity Awareness", "Coal power"], ans: [0, 1, 2, 4], exp: "NGFW: DPI, App Awareness, IPS, User Identity." },
+
+            // PART 3: Essays (Q&A style)
+            { id: 71, type: "Essay", cat: "Systems", q: "Explain the \"High-Security Office\" analogy used to describe the difference between Firewalls and Mandatory Access Control (MAC).", ans: "Firewall = Security Guard at front door (checks IDs, stops strangers). MAC = Keycard readers on internal doors (limits access to specific rooms even if you are inside). Just because you pass the firewall doesn't mean you get root access." },
+            { id: 72, type: "Essay", cat: "Firewalls", q: "Difference between DROP and REJECT targets in iptables?", ans: "DROP discards silently (stealthy). REJECT discards but sends an error (ICMP Port Unreachable) to the sender (polite/debugging)." },
+            { id: 73, type: "Essay", cat: "Systems", q: "Why is it critical to enable \"IP Forwarding\" when configuring a Linux machine as a router?", ans: "By default, Linux drops packets not destined for itself. IP Forwarding allows the kernel to pass packets from one interface to another." },
+            { id: 74, type: "Essay", cat: "Fundamentals", q: "Describe \"Defense in Depth\" and give three examples.", ans: "Layering multiple defenses so if one fails, others exist. Examples: Physical (locks), Perimeter (firewall), Host (Antivirus/MAC)." },
+            { id: 75, type: "Essay", cat: "Firewalls", q: "Purpose of MASQUERADE target in iptables nat table?", ans: "Source NAT for dynamic IPs. It replaces the source IP of outgoing LAN packets with the router's current public IP." },
+            { id: 76, type: "Essay", cat: "Attack_Defense", q: "What is \"Banner Grabbing\" and why disable default banners?", ans: "Connecting to a port to read the service version (e.g., Apache 2.4). Admins disable it to prevent information leakage that helps attackers find specific exploits." },
+            { id: 77, type: "Essay", cat: "Attack_Defense", q: "How does \"SSH Tunneling\" bypass a firewall?", ans: "User connects to external SSH server using dynamic port forwarding. Browser traffic is wrapped inside the encrypted SSH connection, hiding the content from the firewall." },
+            { id: 78, type: "Essay", cat: "Firewalls", q: "Difference between IDS and IPS?", ans: "IDS (Detection) monitors and alerts but doesn't stop. IPS (Prevention) sits in-line and actively blocks malicious traffic." },
+            { id: 79, type: "Essay", cat: "Fundamentals", q: "Explain \"Least Privilege\" in context of sudo.", ans: "Giving users only min permissions needed. Sudo allows running as user normally, elevating only for specific tasks to reduce risk." },
+            { id: 80, type: "Essay", cat: "Systems", q: "Function of Loopback interface (lo)?", ans: "Allows system to talk to itself (localhost). Blocking it causes system instability as internal services rely on it." },
+            { id: 81, type: "Essay", cat: "Firewalls", q: "Significance of UFW \"Application Profiles\"?", ans: "Allows opening ports by service name (e.g., 'Apache Full') instead of memorizing port numbers." },
+            { id: 82, type: "Essay", cat: "Firewalls", q: "Why is Stateful firewall more secure than Stateless?", ans: "Stateful tracks connection context (requests vs replies). It allows return traffic automatically but blocks unsolicited packets." },
+            { id: 83, type: "Essay", cat: "Attack_Defense", q: "Briefly explain \"Firewalking\".", ans: "Using traceroute techniques to analyze responses from a gateway to map out which ports are allowed through." },
+            { id: 84, type: "Essay", cat: "Firewalls", q: "Difference between INPUT and FORWARD chains?", ans: "INPUT is for packets destined for the firewall itself. FORWARD is for packets passing through the firewall to another device." },
+            { id: 85, type: "Essay", cat: "Firewalls", q: "Why does pfSense use FreeBSD instead of Linux?", ans: "Based on m0n0wall/FreeBSD. Renowned for stable networking stack and the 'pf' (Packet Filter) subsystem." }
+        ];
+
+        // --- 2. STATE MANAGEMENT ---
+        const state = {
+            view: 'dashboard', // dashboard, practice, essays
+            answers: {}, // Map of questionId -> UserAnswer
+            filter: { cat: 'all', type: 'all' }
+        };
+
+        // --- 3. APP LOGIC ---
+
+        const app = {
+            init: () => {
+                app.renderDashboardCharts();
+                app.renderEssays();
+                app.renderPractice();
+            },
+
+            setView: (viewName) => {
+                state.view = viewName;
+                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`view-${viewName}`).classList.remove('hidden');
+                
+                // Force chart resize if entering dashboard
+                if (viewName === 'dashboard') {
+                    window.dispatchEvent(new Event('resize'));
+                }
+            },
+
+            startPractice: (type) => {
+                document.getElementById('typeFilter').value = type;
+                app.filterQuestions();
+                app.setView('practice');
+            },
+
+            getStats: () => {
+                const total = 70; // Only MCQs and MSQs are graded
+                const answered = Object.keys(state.answers).length;
+                let correct = 0;
+                let incorrect = 0;
+
+                Object.keys(state.answers).forEach(qid => {
+                    if (state.answers[qid] === true) correct++;
+                    else incorrect++;
+                });
+
+                return { total, answered, correct, incorrect, remaining: total - answered };
+            },
+
+            renderDashboardCharts: () => {
+                // Data Prep
+                const categories = {};
+                DB.forEach(q => {
+                    categories[q.cat] = (categories[q.cat] || 0) + 1;
+                });
+
+                // 1. Plotly Sunburst (Topic Distribution)
+                const data = [{
+                    type: "sunburst",
+                    labels: ["Curriculum", "Fundamentals", "Firewalls", "Systems", "Attacks"],
+                    parents: ["", "Curriculum", "Curriculum", "Curriculum", "Curriculum"],
+                    values: [85, categories.Fundamentals, categories.Firewalls, categories.Systems, categories.Attack_Defense],
+                    outsidetextfont: {size: 14, color: "#377eb8"},
+                    leaf: {opacity: 0.4},
+                    marker: {line: {width: 2}},
+                }];
+                const layout = { margin: {l:0, r:0, b:0, t:0}, sunburstcolorway:["#636efa","#EF553B","#00cc96","#ab63fa"] };
+                Plotly.newPlot('topicChart', data, layout, {responsive: true});
+
+                // 2. Progress Chart (Doughnut)
+                const ctxProgress = document.getElementById('progressChart').getContext('2d');
+                window.progressChartObj = new Chart(ctxProgress, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Complete', 'Remaining'],
+                        datasets: [{
+                            data: [0, 70],
+                            backgroundColor: ['#3b82f6', '#e2e8f0'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                // 3. Performance Chart (Bar)
+                const ctxPerf = document.getElementById('performanceChart').getContext('2d');
+                window.perfChartObj = new Chart(ctxPerf, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Fund.', 'F.Wall', 'Sys', 'Attck'],
+                        datasets: [
+                            { label: 'Correct', data: [0,0,0,0], backgroundColor: '#22c55e' },
+                            { label: 'Wrong', data: [0,0,0,0], backgroundColor: '#ef4444' }
+                        ]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } }
+                    }
+                });
+            },
+
+            updateCharts: () => {
+                const stats = app.getStats();
+                
+                // Update Progress Text
+                document.getElementById('progress-text').innerText = Math.round((stats.answered / stats.total) * 100) + '%';
+                
+                // Update Donut
+                window.progressChartObj.data.datasets[0].data = [stats.answered, stats.remaining];
+                window.progressChartObj.update();
+
+                // Update Bar Chart
+                const cats = ['Fundamentals', 'Firewalls', 'Systems', 'Attack_Defense'];
+                const correctData = [0,0,0,0];
+                const wrongData = [0,0,0,0];
+
+                Object.keys(state.answers).forEach(qidStr => {
+                    const qid = parseInt(qidStr);
+                    const q = DB.find(x => x.id === qid);
+                    const isCorrect = state.answers[qid];
+                    const catIdx = cats.indexOf(q.cat);
+                    if (catIdx > -1) {
+                        if (isCorrect) correctData[catIdx]++;
+                        else wrongData[catIdx]++;
+                    }
+                });
+
+                window.perfChartObj.data.datasets[0].data = correctData;
+                window.perfChartObj.data.datasets[1].data = wrongData;
+                window.perfChartObj.update();
+            },
+
+            filterQuestions: () => {
+                state.filter.cat = document.getElementById('categoryFilter').value;
+                state.filter.type = document.getElementById('typeFilter').value;
+                app.renderPractice();
+            },
+
+            renderPractice: () => {
+                const container = document.getElementById('quiz-container');
+                container.innerHTML = '';
+                
+                const filtered = DB.filter(q => {
+                    const catMatch = state.filter.cat === 'all' || q.cat === state.filter.cat;
+                    const typeMatch = state.filter.type === 'all' || q.type === state.filter.type;
+                    return catMatch && typeMatch && q.type !== 'Essay';
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="text-center text-slate-400 p-8">No questions match your filter.</div>`;
+                    return;
+                }
+
+                filtered.forEach(q => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md";
+                    
+                    let inputHTML = '';
+                    const isAnswered = state.answers.hasOwnProperty(q.id);
+                    const statusClass = isAnswered 
+                        ? (state.answers[q.id] ? "border-l-4 border-green-500 bg-green-50/30" : "border-l-4 border-red-500 bg-red-50/30")
+                        : "border-l-4 border-blue-500";
+                    
+                    card.classList.add(...statusClass.split(' '));
+
+                    if (q.type === 'MCQ') {
+                        inputHTML = `<div class="space-y-2 mt-4">
+                            ${q.opts.map((opt, idx) => `
+                                <label class="flex items-start gap-3 p-3 rounded-lg border ${isAnswered ? (idx === q.ans ? 'bg-green-100 border-green-300 font-bold' : 'border-slate-100 opacity-60') : 'border-slate-200 hover:bg-blue-50 cursor-pointer'}">
+                                    <input type="radio" name="q-${q.id}" value="${idx}" class="mt-1" ${isAnswered ? 'disabled' : ''} onchange="app.checkMCQ(${q.id}, ${idx})">
+                                    <span class="text-sm">${opt}</span>
+                                </label>
+                            `).join('')}
+                        </div>`;
+                    } else if (q.type === 'MSQ') {
+                        inputHTML = `<div class="space-y-2 mt-4">
+                            ${q.opts.map((opt, idx) => `
+                                <label class="flex items-start gap-3 p-3 rounded-lg border ${isAnswered ? (q.ans.includes(idx) ? 'bg-green-100 border-green-300 font-bold' : 'border-slate-100 opacity-60') : 'border-slate-200 hover:bg-blue-50 cursor-pointer'}">
+                                    <input type="checkbox" name="q-${q.id}" value="${idx}" class="mt-1" ${isAnswered ? 'disabled' : ''}>
+                                    <span class="text-sm">${opt}</span>
+                                </label>
+                            `).join('')}
+                            ${!isAnswered ? `<button onclick="app.checkMSQ(${q.id})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">Submit Answer</button>` : ''}
+                        </div>`;
+                    }
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded uppercase tracking-wide">${q.cat}</span>
+                            <span class="text-xs text-slate-400">#${q.id} ${q.type}</span>
+                        </div>
+                        <h3 class="font-medium text-slate-800 text-lg">${q.q}</h3>
+                        ${inputHTML}
+                        ${isAnswered ? `
+                            <div class="mt-4 p-4 bg-slate-50 rounded-lg text-sm text-slate-700 border border-slate-200 fade-in">
+                                <span class="font-bold block mb-1">Explanation:</span>
+                                ${q.exp}
+                            </div>
+                        ` : ''}
+                    `;
+                    container.appendChild(card);
+                });
+            },
+
+            renderEssays: () => {
+                const container = document.getElementById('essay-grid');
+                const essays = DB.filter(q => q.type === 'Essay');
+
+                essays.forEach(q => {
+                    const el = document.createElement('div');
+                    el.className = "bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between";
+                    el.innerHTML = `
+                        <div>
+                            <span class="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded uppercase tracking-wide mb-3 inline-block">${q.cat}</span>
+                            <h3 class="font-semibold text-slate-800 mb-4">${q.q}</h3>
+                        </div>
+                        <div>
+                            <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.textContent = this.textContent === 'Show Answer' ? 'Hide Answer' : 'Show Answer'" class="text-sm text-blue-600 font-medium hover:underline mb-2">Show Answer</button>
+                            <div class="hidden bg-slate-100 p-4 rounded-lg text-sm text-slate-700 border-l-4 border-amber-400">
+                                ${q.ans}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                });
+            },
+
+            checkMCQ: (id, selectedIdx) => {
+                const q = DB.find(x => x.id === id);
+                const isCorrect = q.ans === selectedIdx;
+                state.answers[id] = isCorrect;
+                app.updateCharts();
+                app.renderPractice(); // Re-render to show explanation and freeze inputs
+            },
+
+            checkMSQ: (id) => {
+                const q = DB.find(x => x.id === id);
+                const checkboxes = document.querySelectorAll(`input[name="q-${id}"]:checked`);
+                const selected = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                
+                // Compare arrays (assuming simple sort compare)
+                const sortedSel = selected.sort().toString();
+                const sortedAns = q.ans.sort().toString();
+                
+                const isCorrect = sortedSel === sortedAns;
+                state.answers[id] = isCorrect;
+                app.updateCharts();
+                app.renderPractice();
+            }
+        };
+
+        // Initialize App
+        window.onload = app.init;
+
+    </script>
+</body>
+</html>
+
+

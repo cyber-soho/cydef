@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 04: Reconnaissance & Firewall Evasion Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Warm neutral light gray */
+            color: #1f2937;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Chart Container Strict Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Max width constraint */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Terminal Window Styling */
+        .terminal-window {
+            background-color: #1e293b;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+        .terminal-header {
+            background-color: #334155;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .terminal-dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 9999px;
+        }
+        .terminal-body {
+            padding: 1rem;
+            color: #10b981; /* Terminal Green */
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Navigation Active State */
+        .nav-btn.active {
+            background-color: #3b82f6; /* Blue-500 */
+            color: white;
+            border-bottom: 2px solid #1d4ed8;
+        }
+    </style>
+    <!-- Chosen Palette: Slate/Blue/Green (Professional Cyber/Tech) -->
+    <!-- Application Structure Plan: Dashboard Layout. 
+         Sidebar/Top Nav controls the main view ("Phases").
+         1. Overview: Static topology visualization.
+         2. Prep: Interactive checklist.
+         3. Recon: Terminal simulator for Nmap/Netcat.
+         4. Evasion: Step-by-step visual explainer of SSH tunneling.
+         5. Defense: Chart.js visualization of logs + Snort rule breakdown.
+         Why: Breaks complex linear lab into task-oriented modules. Facilitates non-linear reference. -->
+    <!-- Visualization & Content Choices: 
+         - Topology: HTML/CSS Grid (No SVG) for clarity of zones.
+         - Terminal: CSS styled div to simulate Kali environment (Immersive).
+         - Traffic Chart: Chart.js Line chart to visualize 'Normal' vs 'Attack' traffic patterns (Data Analysis).
+         - Snort Rule: Interactive breakdown to explain syntax (Educational). 
+         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🛡️</span>
+                    <h1 class="text-xl font-bold text-gray-900 tracking-tight">CyberDefense Lab: <span class="text-blue-600">Recon & Evasion</span></h1>
+                </div>
+                <div class="hidden md:block text-sm text-gray-500">
+                    Lab 04 Interactive Guide
+                </div>
+            </div>
+            <!-- Navigation -->
+            <nav class="flex space-x-4 overflow-x-auto pb-2 md:pb-0" id="main-nav">
+                <button onclick="switchTab('overview')" class="nav-btn active px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-100">1. Mission Overview</button>
+                <button onclick="switchTab('prep')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">2. Prep & Firewall</button>
+                <button onclick="switchTab('recon')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">3. Phase A/B: Recon</button>
+                <button onclick="switchTab('evasion')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">4. Phase C: Evasion</button>
+                <button onclick="switchTab('defense')" class="nav-btn px-3 py-2 rounded-md text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">5. Phase D: Defense</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- SECTION 1: OVERVIEW & TOPOLOGY -->
+        <section id="overview" class="tab-content block animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Introduction -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-4">Lab Scenario</h2>
+                        <p class="text-gray-700 leading-relaxed mb-4">
+                            Welcome to the <strong>Reconnaissance & Evasion</strong> phase of the Cyber Defense curriculum. 
+                            In this lab, you assume the role of an external attacker situated in the WAN zone.
+                            Your organization has tightened security, blocking all direct access to the internal LAN.
+                        </p>
+                        <p class="text-gray-700 leading-relaxed mb-4">
+                            <strong>Your Mission:</strong> Map the perimeter to find a weak point in the DMZ, then utilize 
+                            <strong>SSH Tunneling</strong> to pivot through that host and access critical infrastructure (IAM Server) 
+                            hidden deep within the LAN. Finally, switch to the <strong>Blue Team</strong> to detect these specific attacks.
+                        </p>
+                        <div class="flex flex-wrap gap-4 mt-6">
+                            <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold">🕒 Duration: 3-4 Hours</div>
+                            <div class="bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">💻 Hypervisor: VirtualBox</div>
+                            <div class="bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-semibold">🔧 Tool: Nmap, SSH, Snort</div>
+                        </div>
+                    </div>
+
+                    <!-- Objectives List -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-5 rounded-lg border-l-4 border-yellow-500 shadow-sm">
+                            <h3 class="font-bold text-lg mb-2">🔴 Red Team Objectives</h3>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                <li>Scan DMZ for open ports (Nmap)</li>
+                                <li>Identify service versions (Banner Grabbing)</li>
+                                <li>Establish SSH Tunnel (Port Forwarding)</li>
+                                <li>Access LAN via Pivot (RDP)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-5 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                            <h3 class="font-bold text-lg mb-2">🔵 Blue Team Objectives</h3>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                <li>Analyze Firewall Logs for noise</li>
+                                <li>Configure Snort IDS on IAM Server</li>
+                                <li>Write Custom Snort Rules</li>
+                                <li>Detect Tunneling Activity</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Topology Visualization (CSS/HTML) -->
+                <div class="lg:col-span-1">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-full">
+                        <h3 class="font-bold text-gray-900 mb-4 border-b pb-2">Network Topology</h3>
+                        
+                        <div class="space-y-6 relative">
+                            <!-- WAN Node -->
+                            <div class="relative z-10 bg-red-50 border border-red-200 p-3 rounded-lg text-center transform transition hover:scale-105">
+                                <div class="text-3xl mb-1">💻</div>
+                                <div class="font-bold text-red-900">Attacker (WAN)</div>
+                                <div class="text-xs text-red-600 font-mono">Kali Linux</div>
+                                <div class="text-xs text-gray-500">Bridge / Home IP</div>
+                            </div>
+
+                            <!-- Connection Line -->
+                            <div class="h-8 w-0.5 bg-gray-300 mx-auto"></div>
+
+                            <!-- Firewall Node -->
+                            <div class="relative z-10 bg-gray-800 text-white p-3 rounded-lg text-center shadow-lg">
+                                <div class="text-3xl mb-1">🔥</div>
+                                <div class="font-bold">Open-Source Firewall</div>
+                                <div class="text-xs text-gray-400">Rules Engine</div>
+                                <div class="text-xs text-yellow-400 mt-1">Allows: 80, 22 -> DMZ</div>
+                            </div>
+
+                            <!-- Connection Line Split -->
+                            <div class="h-6 w-full flex justify-center">
+                                <div class="h-full w-0.5 bg-gray-300"></div>
+                            </div>
+                            <div class="border-t-2 border-gray-300 w-full"></div>
+                            <div class="flex justify-between w-full">
+                                <div class="h-6 w-0.5 bg-gray-300 ml-12"></div>
+                                <div class="h-6 w-0.5 bg-gray-300 mr-12"></div>
+                            </div>
+
+                            <!-- Zones -->
+                            <div class="flex justify-between gap-2">
+                                <!-- DMZ -->
+                                <div class="bg-yellow-50 border border-yellow-200 p-2 rounded-lg text-center w-1/2">
+                                    <div class="text-2xl mb-1">🌐</div>
+                                    <div class="font-bold text-yellow-900 text-sm">DMZ Zone</div>
+                                    <div class="text-xs font-mono text-gray-600">192.168.2.x</div>
+                                    <div class="text-xs font-bold text-blue-600 mt-1">Target: Web Svr</div>
+                                </div>
+                                
+                                <!-- LAN -->
+                                <div class="bg-green-50 border border-green-200 p-2 rounded-lg text-center w-1/2 opacity-70 border-dashed relative">
+                                    <div class="absolute -top-3 -right-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full shadow">Blocked</div>
+                                    <div class="text-2xl mb-1">🏢</div>
+                                    <div class="font-bold text-green-900 text-sm">LAN Zone</div>
+                                    <div class="text-xs font-mono text-gray-600">192.168.1.10</div>
+                                    <div class="text-xs font-bold text-blue-600 mt-1">Target: IAM Svr</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: PREPARATION -->
+        <section id="prep" class="tab-content hidden animate-fade-in">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Preparation: Firewall Rules</h2>
+                <p class="text-gray-600 mb-6">
+                    Before simulating the attack, we must configure the environment to match the scenario. 
+                    The firewall must strictly segment the LAN from the WAN, while allowing limited public access to the DMZ.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Steps -->
+                    <div>
+                        <h3 class="font-bold text-lg mb-4 text-gray-800">Configuration Checklist</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <input type="checkbox" id="check1" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300">
+                                <label for="check1" class="ml-3 block text-sm text-gray-700">
+                                    <span class="font-bold">Allow Web (HTTP):</span> Create Rule on WAN Interface.<br>
+                                    Src: Any | Dest: DMZ Net | Port: 80
+                                </label>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" id="check2" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300">
+                                <label for="check2" class="ml-3 block text-sm text-gray-700">
+                                    <span class="font-bold">Allow SSH:</span> Create Rule on WAN Interface.<br>
+                                    Src: Any | Dest: DMZ Net | Port: 22
+                                </label>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" id="check3" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300">
+                                <label for="check3" class="ml-3 block text-sm text-gray-700">
+                                    <span class="font-bold">Block All Else:</span> Ensure default deny rule is active.
+                                </label>
+                            </div>
+                            <div class="flex items-start">
+                                <input type="checkbox" id="check4" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300">
+                                <label for="check4" class="ml-3 block text-sm text-gray-700">
+                                    <span class="font-bold">Verify LAN Block:</span> Ensure NO rules allow WAN -> LAN.
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mt-6 p-4 bg-red-50 border-l-4 border-red-500 rounded">
+                            <h4 class="text-sm font-bold text-red-800">Verification Step</h4>
+                            <p class="text-sm text-red-700 mt-1">
+                                Attempt to ping <code>192.168.1.10</code> from Kali. It MUST fail. This confirms the firewall is protecting the internal network.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Visual Rules Table -->
+                    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-gray-700 mb-3">Expected Firewall Table (WAN Tab)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left">
+                                <thead class="bg-gray-200 text-gray-700 uppercase font-bold">
+                                    <tr>
+                                        <th class="px-4 py-2">Action</th>
+                                        <th class="px-4 py-2">Proto</th>
+                                        <th class="px-4 py-2">Source</th>
+                                        <th class="px-4 py-2">Dest</th>
+                                        <th class="px-4 py-2">Port</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-100">
+                                    <tr class="hover:bg-green-50">
+                                        <td class="px-4 py-2 text-green-600 font-bold">✔ Pass</td>
+                                        <td class="px-4 py-2">TCP</td>
+                                        <td class="px-4 py-2">*</td>
+                                        <td class="px-4 py-2">DMZ Net</td>
+                                        <td class="px-4 py-2">80 (HTTP)</td>
+                                    </tr>
+                                    <tr class="hover:bg-green-50">
+                                        <td class="px-4 py-2 text-green-600 font-bold">✔ Pass</td>
+                                        <td class="px-4 py-2">TCP</td>
+                                        <td class="px-4 py-2">*</td>
+                                        <td class="px-4 py-2">DMZ Net</td>
+                                        <td class="px-4 py-2">22 (SSH)</td>
+                                    </tr>
+                                    <tr class="hover:bg-red-50">
+                                        <td class="px-4 py-2 text-red-600 font-bold">✖ Block</td>
+                                        <td class="px-4 py-2">*</td>
+                                        <td class="px-4 py-2">*</td>
+                                        <td class="px-4 py-2">*</td>
+                                        <td class="px-4 py-2">*</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: RECONNAISSANCE -->
+        <section id="recon" class="tab-content hidden animate-fade-in">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Phase A & B: Reconnaissance</h2>
+                <p class="text-gray-600 mt-2">
+                    Use the interactive terminal below to simulate the discovery process. 
+                    Click the buttons on the right to execute commands from the lab guide.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Terminal UI -->
+                <div class="lg:col-span-2 terminal-window flex flex-col h-96">
+                    <div class="terminal-header">
+                        <div class="terminal-dot bg-red-500"></div>
+                        <div class="terminal-dot bg-yellow-500"></div>
+                        <div class="terminal-dot bg-green-500"></div>
+                        <span class="ml-2 text-gray-300 text-xs font-mono">root@kali:~/lab04</span>
+                    </div>
+                    <div class="terminal-body" id="terminal-content">
+                        <span class="text-gray-400"># Waiting for input... Select a command from the control panel.</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="space-y-4">
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-2">1. Port Discovery</h3>
+                        <p class="text-sm text-gray-600 mb-3">SYN Stealth Scan to map open ports without completing handshake.</p>
+                        <button onclick="runCommand('scan')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-mono text-sm py-2 px-4 rounded text-left flex justify-between items-center transition">
+                            <span>nmap -sS -Pn 192.168.2.x</span>
+                            <span>▶</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-2">2. Service Fingerprinting</h3>
+                        <p class="text-sm text-gray-600 mb-3">Identify versions on specific open ports.</p>
+                        <button onclick="runCommand('version')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-mono text-sm py-2 px-4 rounded text-left flex justify-between items-center transition">
+                            <span>nmap -sV -p 22,80 192.168.2.x</span>
+                            <span>▶</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-2">3. Banner Grabbing</h3>
+                        <p class="text-sm text-gray-600 mb-3">Connect directly to SSH port to read the banner string.</p>
+                        <button onclick="runCommand('banner')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-mono text-sm py-2 px-4 rounded text-left flex justify-between items-center transition">
+                            <span>nc -v 192.168.2.x 22</span>
+                            <span>▶</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Box -->
+            <div id="analysis-box" class="mt-6 bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500 hidden">
+                <h4 class="font-bold text-blue-900">🔍 Recon Analysis</h4>
+                <p class="text-blue-800 mt-1" id="analysis-text">
+                    Execute a command to see the analysis here.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION 4: EVASION -->
+        <section id="evasion" class="tab-content hidden animate-fade-in">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Phase C: SSH Tunneling (The Pivot)</h2>
+            <p class="text-gray-600 mb-8 max-w-3xl">
+                We found <strong>SSH (Port 22)</strong> open on the DMZ. Direct access to LAN is blocked. 
+                We will use SSH Local Port Forwarding to create a secure tunnel through the DMZ host to reach the RDP service on the IAM Server.
+            </p>
+
+            <!-- Interactive Diagram -->
+            <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200 mb-8">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-center relative">
+                    
+                    <!-- Step 1: Kali -->
+                    <div class="flex-1">
+                        <div class="bg-gray-800 text-white p-4 rounded-lg shadow-md z-10 relative">
+                            <div class="font-bold">Attacker (Kali)</div>
+                            <div class="text-xs text-gray-400">Local Port: 3333</div>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-600 font-bold">Step 1: Initiation</div>
+                        <div class="text-xs text-gray-500 mt-1 code-font bg-gray-100 p-2 rounded">ssh -L 3333:192.168.1.10:3389 msfadmin@DMZ_IP</div>
+                    </div>
+
+                    <!-- Arrow 1 -->
+                    <div class="hidden md:flex flex-col items-center w-24">
+                        <div class="text-xs text-green-600 font-bold mb-1">SSH Tunnel</div>
+                        <div class="h-1 w-full bg-green-500 rounded"></div>
+                        <div class="text-xs text-gray-400 mt-1">Port 22 Allowed</div>
+                    </div>
+
+                    <!-- Step 2: DMZ -->
+                    <div class="flex-1">
+                        <div class="bg-yellow-100 border-2 border-yellow-400 p-4 rounded-lg shadow-md z-10 relative">
+                            <div class="font-bold text-yellow-900">DMZ (Pivot)</div>
+                            <div class="text-xs text-gray-600">Decryption & Forwarding</div>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-600 font-bold">Step 2: Pivot</div>
+                        <div class="text-xs text-gray-500 mt-1">Traffix exits SSH tunnel, becomes raw RDP</div>
+                    </div>
+
+                    <!-- Arrow 2 -->
+                    <div class="hidden md:flex flex-col items-center w-24">
+                        <div class="text-xs text-red-600 font-bold mb-1">RDP Traffic</div>
+                        <div class="h-1 w-full bg-red-500 rounded animate-pulse"></div>
+                        <div class="text-xs text-gray-400 mt-1">Internal LAN</div>
+                    </div>
+
+                    <!-- Step 3: LAN -->
+                    <div class="flex-1">
+                        <div class="bg-blue-100 border-2 border-blue-400 p-4 rounded-lg shadow-md z-10 relative">
+                            <div class="font-bold text-blue-900">IAM Server</div>
+                            <div class="text-xs text-gray-600">Target Port: 3389</div>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-600 font-bold">Step 3: Access</div>
+                        <div class="text-xs text-gray-500 mt-1 code-font bg-gray-100 p-2 rounded">xfreerdp /v:127.0.0.1:3333</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Steps -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg border border-gray-200">
+                    <h3 class="font-bold text-lg mb-4">Execution Protocol</h3>
+                    <ol class="list-decimal list-inside space-y-4 text-sm text-gray-700">
+                        <li class="pl-2">
+                            <strong>Establish Tunnel:</strong><br>
+                            Run the SSH command with the <code>-L</code> flag. Keep this terminal <em>open</em>.
+                        </li>
+                        <li class="pl-2">
+                            <strong>Verify Listener:</strong><br>
+                            Open a new tab and run <code>netstat -antp | grep 3333</code>. Ensure Kali is listening.
+                        </li>
+                        <li class="pl-2">
+                            <strong>Launch Attack:</strong><br>
+                            Connect your RDP client to <code>127.0.0.1:3333</code>. The tunnel will carry you to the IAM server.
+                        </li>
+                    </ol>
+                </div>
+                <div class="bg-gray-900 p-6 rounded-lg text-green-400 font-mono text-sm overflow-x-auto shadow-inner">
+                    <div class="mb-2 text-gray-500"># Terminal Output Simulation</div>
+                    <div class="mb-4">
+                        <span class="text-white">root@kali:~#</span> ssh -L 3333:192.168.1.10:3389 msfadmin@192.168.2.5<br>
+                        Password: <span class="text-gray-500">********</span><br>
+                        Last login: Mon Oct 23 10:11:12 2023 from 192.168.1.5<br>
+                        <span class="text-blue-300">msfadmin@metasploitable:~$</span> <span class="animate-pulse">_</span>
+                    </div>
+                    <div class="border-t border-gray-700 pt-4 mt-4">
+                        <span class="text-gray-500"># New Tab</span><br>
+                        <span class="text-white">root@kali:~#</span> xfreerdp /v:127.0.0.1:3333 /u:Administrator<br>
+                        <span class="text-yellow-400">[INFO] Connecting to 127.0.0.1:3333...</span><br>
+                        <span class="text-green-400">[SUCCESS] Connection Established.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: DEFENSE -->
+        <section id="defense" class="tab-content hidden animate-fade-in">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Phase D: Blue Team Defense</h2>
+            <p class="text-gray-600 mb-8">
+                Switching roles to defense, we must detect the artifacts of the attack. 
+                Port scanning creates "noise" in firewall logs, while SSH tunneling hides the payload but creates traffic anomalies (RDP from DMZ).
+            </p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Chart Container -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-4">Traffic Analysis: Identifying the Attack</h3>
+                    <div class="chart-container">
+                        <canvas id="defenseChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4 text-center italic">
+                        The chart simulates network packets/sec over time. Note the massive spike during scanning and the sustained connection during the tunnel.
+                    </p>
+                </div>
+
+                <!-- Snort Rule Builder -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
+                    <h3 class="font-bold text-gray-800 mb-4">Snort IDS Rule Logic</h3>
+                    <p class="text-sm text-gray-600 mb-4">
+                        We need a rule to alert when RDP traffic (3389) originates from the DMZ (192.168.2.0/24). 
+                        This is highly suspicious as DMZ servers should not be administering the LAN.
+                    </p>
+                    
+                    <div class="bg-gray-100 p-4 rounded-lg font-mono text-sm break-all mb-4 border border-gray-300">
+                        <span class="text-red-600 font-bold">alert</span> 
+                        <span class="text-blue-600">tcp</span> 
+                        <span class="text-purple-600">192.168.2.0/24</span> 
+                        <span class="text-gray-600">any</span> 
+                        <span class="text-gray-800">-></span> 
+                        <span class="text-green-600">$HOME_NET</span> 
+                        <span class="text-orange-600">3389</span> 
+                        <span class="text-gray-500">(msg:"POSSIBLE SSH TUNNEL..."; sid:1000002; rev:1;)</span>
+                    </div>
+
+                    <div class="space-y-3 flex-grow">
+                        <div class="flex items-center gap-3 text-sm">
+                            <span class="w-20 font-bold text-red-600 text-right">Action:</span>
+                            <span>Generates an alert in the console/log.</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-sm">
+                            <span class="w-20 font-bold text-purple-600 text-right">Source:</span>
+                            <span>Traffic coming FROM the DMZ subnet.</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-sm">
+                            <span class="w-20 font-bold text-orange-600 text-right">Dest Port:</span>
+                            <span>Targeting Port 3389 (RDP) on Internal Net.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Snort Console Simulator -->
+            <div class="bg-black text-gray-300 p-4 rounded-lg font-mono text-xs shadow-lg border border-gray-700">
+                <div class="border-b border-gray-700 pb-2 mb-2">C:\Snort\bin> snort -i 1 -A console -c C:\Snort\etc\snort.conf</div>
+                <div class="text-gray-500">Initializing Output Plugins...</div>
+                <div class="text-gray-500">Commencing packet processing (pid=1234)</div>
+                <div id="snort-alerts" class="mt-2">
+                    <!-- Dynamic JS adds content here -->
+                </div>
+            </div>
+            <button onclick="simulateAttack()" class="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-bold transition shadow-md">
+                🚨 Re-Run Attack Simulation
+            </button>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm">
+            <p>Educational Lab Guide | Cyber Defense Course</p>
+        </div>
+    </footer>
+
+    <script>
+        // -- State Management --
+        let currentTab = 'overview';
+        let attackSimulated = false;
+        let defenseChartInstance = null;
+
+        // -- Navigation Logic --
+        function switchTab(tabId) {
+            // Hide all sections
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block');
+            });
+            // Show selected
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(tabId).classList.add('block');
+            
+            // Update buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Init Chart if entering defense tab
+            if(tabId === 'defense' && !defenseChartInstance) {
+                initDefenseChart();
+            }
+        }
+
+        // -- Terminal Logic (Recon Phase) --
+        function runCommand(type) {
+            const terminal = document.getElementById('terminal-content');
+            const analysisText = document.getElementById('analysis-text');
+            const analysisBox = document.getElementById('analysis-box');
+            
+            terminal.innerHTML = ''; // Clear
+            analysisBox.classList.remove('hidden');
+
+            let command = '';
+            let output = '';
+            let analysis = '';
+
+            if (type === 'scan') {
+                command = 'root@kali:~# nmap -sS -Pn 192.168.2.5';
+                output = `
+Starting Nmap 7.94 ( https://nmap.org ) at 2023-10-23 14:00 EST
+Nmap scan report for 192.168.2.5
+Host is up (0.00045s latency).
+Not shown: 998 filtered ports
+PORT   STATE SERVICE
+22/tcp open  ssh
+80/tcp open  http
+MAC Address: 08:00:27:XX:XX:XX (Oracle VirtualBox virtual NIC)
+
+Nmap done: 1 IP address (1 host up) scanned in 1.54 seconds`;
+                analysis = "The <strong>-sS (SYN Scan)</strong> reveals that only ports 22 and 80 are accessible through the firewall. 'Filtered' ports confirm the Default Deny rule is active.";
+            } else if (type === 'version') {
+                command = 'root@kali:~# nmap -sV -p 22,80 192.168.2.5';
+                output = `
+Starting Nmap...
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 4.7p1 Debian 8ubuntu1 (protocol 2.0)
+80/tcp open  http    Apache httpd 2.2.8 ((Ubuntu) DAV/2)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel`;
+                analysis = "The <strong>-sV</strong> flag probes the open ports. We now know the target is running an old, vulnerable version of OpenSSH (4.7p1) on Ubuntu.";
+            } else if (type === 'banner') {
+                command = 'root@kali:~# nc -v 192.168.2.5 22';
+                output = `
+192.168.2.5: inverse host lookup failed: Unknown host
+(UNKNOWN) [192.168.2.5] 22 (ssh) open
+SSH-2.0-OpenSSH_4.7p1 Debian-8ubuntu1`;
+                analysis = "Banner grabbing via <strong>Netcat</strong> confirms the SSH version string directly from the service. This 'fingerprint' helps attackers select compatible exploits.";
+            }
+
+            // Typing simulation
+            terminal.innerHTML += `<span class="text-white">${command.split('\n')[0]}</span>\n`;
+            
+            setTimeout(() => {
+                terminal.innerHTML += output;
+                analysisText.innerHTML = analysis;
+            }, 500);
+        }
+
+        // -- Defense Chart Logic (Chart.js) --
+        function initDefenseChart() {
+            const ctx = document.getElementById('defenseChart').getContext('2d');
+            
+            // Dummy Data simulating a timeline of 60 seconds
+            const labels = Array.from({length: 20}, (_, i) => i * 3 + 's');
+            
+            defenseChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Normal Web Traffic',
+                            data: [12, 15, 10, 14, 12, 16, 11, 13, 15, 12, 14, 11, 13, 12, 15, 14, 11, 13, 12, 14],
+                            borderColor: '#10b981', // Green
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Port Scan Noise (Dropped)',
+                            data: [0, 0, 0, 45, 80, 95, 60, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            borderColor: '#ef4444', // Red
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Tunnel Activity (RDP)',
+                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 25, 28, 30, 29, 31, 30, 28, 29, 30],
+                            borderColor: '#f59e0b', // Yellow
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Packets / Sec' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Time' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // -- Snort Simulation --
+        function simulateAttack() {
+            const consoleDiv = document.getElementById('snort-alerts');
+            consoleDiv.innerHTML = ''; // Clear
+            
+            const alertMsg = `[**] [1:1000002:1] POSSIBLE SSH TUNNEL: RDP Access from DMZ [**]
+[Classification: Potentially Bad Traffic] [Priority: 2] 
+10/23-14:35:12.458921 192.168.2.5:49281 -> 192.168.1.10:3389
+TCP TTL:63 TOS:0x0 ID:34234 IpLen:20 DgmLen:52 DF
+***AP*** Seq: 0x98A1B2C3  Ack: 0x12345678  Win: 0x1000  TcpLen: 32`;
+
+            // Delay for effect
+            setTimeout(() => {
+                consoleDiv.innerHTML = `<div class="text-red-500 font-bold whitespace-pre-wrap">${alertMsg}</div>`;
+            }, 800);
+        }
+    </script>
+</body>
+</html>
+
+
