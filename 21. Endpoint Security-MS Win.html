@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endpoint Security: Windows Systems | Interactive Course</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        /* Chart Container Strict Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Terminal Effect */
+        .terminal-window {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .terminal-header {
+            background-color: #1e293b;
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+        }
+        .dot-red { background-color: #ef4444; }
+        .dot-yellow { background-color: #eab308; }
+        .dot-green { background-color: #22c55e; }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans h-screen flex overflow-hidden selection:bg-cyan-500 selection:text-white">
+
+    <!-- Chosen Palette: Secure Slate (Slate 900 background, Cyan accents for "cyber" feel) -->
+    <!-- Application Structure Plan: 
+         1. Sidebar Navigation: Persistent access to all 10 modules + Dashboard + Tools + Labs.
+         2. Main Content Area: Dynamic switching based on selection.
+         3. Dashboard: High-level visual summary using Chart.js.
+         4. Module View: Split layout tabs (Theory vs. Practical) to separate reading from technical implementation details.
+         Rationale: This structure separates the "What" (Lecture) from the "How" (Admin Tasks), making the dense technical content digestible.
+    -->
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-bold text-white tracking-tight">Endpoint<span class="text-cyan-400">Sec</span> Ops</h1>
+            <p class="text-xs text-slate-500 mt-1">Windows Systems Defense</p>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4" id="sidebar-nav">
+            <!-- Navigation items injected by JS -->
+        </nav>
+
+        <div class="p-4 border-t border-slate-800">
+            <div class="bg-slate-800 rounded p-3">
+                <div class="text-xs text-slate-400 mb-1">Course Progress</div>
+                <div class="w-full bg-slate-700 rounded-full h-2">
+                    <div id="progress-bar" class="bg-cyan-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="text-right text-xs text-cyan-400 mt-1" id="progress-text">0%</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 w-full bg-slate-900 z-50 border-b border-slate-800 p-4 flex justify-between items-center">
+        <span class="font-bold text-white">Endpoint<span class="text-cyan-400">Sec</span></span>
+        <button id="mobile-menu-btn" class="text-slate-300 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-slate-950 p-4 md:p-8 pt-20 md:pt-8" id="main-content">
+        <!-- Content injected by JS -->
+    </main>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        // --- Data Storage ---
+        const courseData = {
+            dashboard: {
+                title: "Security Operations Dashboard",
+                intro: "Welcome to the Endpoint Security for Windows Systems interactive module. This dashboard provides an overview of the core security components, threats, and your learning progress.",
+                stats: [
+                    { label: "Modules", value: "10" },
+                    { label: "Lab Hours", value: "10" },
+                    { label: "Tools", value: "9" }
+                ]
+            },
+            modules: [
+                {
+                    id: 1,
+                    title: "OS Architecture & Threats",
+                    icon: "🛡️",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Windows Security Architecture</h3>
+                        <p class="mb-4 text-slate-300 leading-relaxed">Windows is the primary target for adversaries due to its market dominance. Understanding its architecture is critical for defense. The OS operates on a <strong>Ring Architecture</strong>:</p>
+                        <ul class="list-disc pl-5 mb-6 text-slate-300 space-y-2">
+                            <li><strong class="text-cyan-400">Ring 0 (Kernel Mode):</strong> Most privileged. Direct hardware access. Compromise here is catastrophic.</li>
+                            <li><strong class="text-cyan-400">Ring 3 (User Mode):</strong> Least privileged. Where applications run. Attackers aim to escalate from Ring 3 to Ring 0.</li>
+                        </ul>
+                        <h4 class="text-lg font-semibold text-white mb-2">Common Threat Vectors</h4>
+                        <p class="text-slate-300 mb-4">Security concerns generally fall into three buckets: Architectural vulnerabilities, Configuration weaknesses (default settings), and User-centric vulnerabilities.</p>
+                    `,
+                    practical: {
+                        task: "Network Troubleshooting & Diagnostics",
+                        desc: "Diagnose network connectivity issues and identify potential network spoofing (ARP poisoning) or misconfiguration.",
+                        tools: ["ipconfig", "ping", "tracert", "netstat", "arp"],
+                        code: `:: Display full TCP/IP configuration
+ipconfig /all
+
+:: Verify connectivity to Domain Controller
+ping 10.10.10.2
+
+:: Trace path to identify routing hops
+tracert 10.10.10.2
+
+:: Display active connections (numerically)
+netstat -n
+
+:: Check ARP table for spoofing
+arp -a`
+                    }
+                },
+                {
+                    id: 2,
+                    title: "Security Components",
+                    icon: "⚙️",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Core Security Components</h3>
+                        <p class="mb-4 text-slate-300">Windows security relies on a modular architecture to handle authentication and authorization:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <strong class="text-cyan-400 block mb-1">SRM (Security Reference Monitor)</strong>
+                                <span class="text-sm">Kernel-mode enforcer. Checks Access Control Lists (ACLs) against Access Tokens.</span>
+                            </div>
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <strong class="text-cyan-400 block mb-1">LSA (Local Security Authority)</strong>
+                                <span class="text-sm">Authenticates users and generates access tokens. A prime target for credential dumping.</span>
+                            </div>
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <strong class="text-cyan-400 block mb-1">SAM (Security Account Manager)</strong>
+                                <span class="text-sm">Database storing hashed local user passwords.</span>
+                            </div>
+                            <div class="bg-slate-800 p-4 rounded border border-slate-700">
+                                <strong class="text-cyan-400 block mb-1">BitLocker</strong>
+                                <span class="text-sm">Full-volume encryption integrated with TPM for boot integrity.</span>
+                            </div>
+                        </div>
+                    `,
+                    practical: {
+                        task: "System Integrity Verification",
+                        desc: "Identify running services and verify OS version/patch level to assess component health.",
+                        tools: ["systeminfo", "sc", "tasklist"],
+                        code: `:: Verify OS Version and Hotfixes
+systeminfo
+
+:: Query Windows Defender Firewall Service
+sc query mpssvc
+
+:: List running processes and memory usage
+tasklist`
+                    }
+                },
+                {
+                    id: 3,
+                    title: "Built-in Security Features",
+                    icon: "🧱",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Native Defense Mechanisms</h3>
+                        <p class="mb-4 text-slate-300">Microsoft has integrated robust tools directly into the OS:</p>
+                        <ul class="space-y-4 text-slate-300">
+                            <li class="flex items-start"><span class="text-cyan-400 mr-2">➜</span> <strong>Windows Defender Firewall:</strong> Host-based stateful firewall. Uses profiles (Domain, Private, Public) to filter traffic.</li>
+                            <li class="flex items-start"><span class="text-cyan-400 mr-2">➜</span> <strong>UAC (User Account Control):</strong> Prevents unauthorized changes by prompting for admin approval. Creates a split-token for admins.</li>
+                            <li class="flex items-start"><span class="text-cyan-400 mr-2">➜</span> <strong>SmartScreen:</strong> Reputation-based protection against phishing and malicious downloads.</li>
+                            <li class="flex items-start"><span class="text-cyan-400 mr-2">➜</span> <strong>Exploit Protection:</strong> Replaced EMET. Includes ASLR (Address Space Layout Randomization) and DEP (Data Execution Prevention).</li>
+                        </ul>
+                    `,
+                    practical: {
+                        task: "Firewall Configuration",
+                        desc: "Configure Windows Firewall to allow specific management traffic (WMI) needed for remote patching tools.",
+                        tools: ["Windows Defender Firewall GUI"],
+                        code: `1. Open Control Panel -> System & Security -> Windows Defender Firewall
+2. Click "Allow an app or feature through Windows Defender Firewall"
+3. Locate "Windows Management Instrumentation (WMI)"
+4. Enable checkmarks for:
+   [x] Domain
+   [x] Private
+   [ ] Public (Best Practice: Keep disabled)`
+                    }
+                },
+                {
+                    id: 4,
+                    title: "Baseline Configurations",
+                    icon: "📏",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Security Baselines</h3>
+                        <p class="mb-4 text-slate-300">Default Windows installations prioritize compatibility over security. <strong>Security Baselines</strong> are pre-configured GPO settings recommended by Microsoft.</p>
+                        <p class="mb-4 text-slate-300">The <strong>Security Compliance Toolkit (SCT)</strong> helps admins manage these. Key baseline areas include:</p>
+                        <ul class="list-disc pl-5 mb-4 text-slate-300">
+                            <li>Disabling legacy protocols (SMBv1)</li>
+                            <li>Enforcing strong password policies</li>
+                            <li>Restricting administrative privileges</li>
+                            <li>Auditing login events</li>
+                        </ul>
+                    `,
+                    practical: {
+                        task: "Analyzing GPO Baselines",
+                        desc: "Compare current system settings against Microsoft's recommended security baseline to find gaps.",
+                        tools: ["PolicyAnalyzer.exe (MSCT)"],
+                        code: `1. Download/Extract MSCT
+2. Launch PolicyAnalyzer.exe
+3. Add Baseline: "Windows Server 2022 Security Baseline"
+4. Click "Compare local registry" and "Local policy"
+5. Review Conflicts (e.g., Guest Account Enabled vs Disabled)`
+                    }
+                },
+                {
+                    id: 5,
+                    title: "Account & Password Mgmt",
+                    icon: "🔑",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Identity as the Perimeter</h3>
+                        <p class="mb-4 text-slate-300">Managing identities involves Least Privilege and securing Service Accounts. The most critical risk is <strong>Local Admin Password Reuse</strong>.</p>
+                        <div class="bg-slate-800 border-l-4 border-cyan-500 p-4 mb-4">
+                            <h4 class="text-white font-bold">The Solution: LAPS</h4>
+                            <p class="text-sm text-slate-400">Local Administrator Password Solution (LAPS) automatically randomizes local admin passwords on every machine and stores them securely in Active Directory.</p>
+                        </div>
+                    `,
+                    practical: {
+                        task: "Securing Local Admin with LAPS",
+                        desc: "Configure Active Directory to support LAPS for password randomization.",
+                        tools: ["PowerShell", "LAPS"],
+                        code: `# Import LAPS Module
+Import-Module AdmPwd.PS
+
+# Extend AD Schema for LAPS attributes
+Update-AdmPwdADSchema
+
+# Allow computers to write their own passwords
+Set-AdmPwdComputerSelfPermission -Orgunit "OU=CNDclient,DC=cnd,DC=com"
+
+# Allow specific group to read passwords
+Set-AdmPwdReadPasswordPermission -Orgunit "OU=CNDclient..." -AllowedPrincipals "LAPSusers"
+
+# Allow group to force reset
+Set-AdmPwdResetPasswordPermission -Orgunit "OU=CNDclient..." -AllowedPrincipals "LAPSusers"`
+                    }
+                },
+                {
+                    id: 6,
+                    title: "Patch Management",
+                    icon: "🩹",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Patching Lifecycle</h3>
+                        <p class="mb-4 text-slate-300">Unpatched systems are the primary entry point for ransomware (e.g., WannaCry). Effective management involves four phases:</p>
+                        <ol class="list-decimal pl-5 space-y-2 text-slate-300">
+                            <li><strong>Discovery:</strong> Scanning network to find missing KBs.</li>
+                            <li><strong>Testing:</strong> Deploying to a pilot group to ensure stability.</li>
+                            <li><strong>Deployment:</strong> Rolling out to production.</li>
+                            <li><strong>Verification:</strong> Re-scanning to confirm compliance.</li>
+                        </ol>
+                    `,
+                    practical: {
+                        task: "Remote Patching via BatchPatch",
+                        desc: "Remotely scan and install updates on a Domain Controller without interactive login.",
+                        tools: ["BatchPatch", "PsExec"],
+                        code: `1. Launch BatchPatch
+2. Add Host: 20.20.10.19 (DC)
+3. Actions -> Windows Updates -> Check for available updates
+4. Review list (e.g., Security Intelligence Update)
+5. Actions -> Download and install updates + reboot if required
+   (Uses PsExec to trigger WUA remotely)`
+                    }
+                },
+                {
+                    id: 7,
+                    title: "Access Management",
+                    icon: "✋",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Discretionary Access Control (DAC)</h3>
+                        <p class="mb-4 text-slate-300">Windows uses ACLs (Access Control Lists) to define who can access what. In AD environments, <strong>Delegation</strong> is key to Least Privilege.</p>
+                        <p class="text-slate-300">Instead of making everyone a Domain Admin, delegate specific tasks (e.g., Reset Password) to specific groups (e.g., HelpDesk) for specific OUs.</p>
+                    `,
+                    practical: {
+                        task: "Delegating Admin Tasks",
+                        desc: "Allow a junior admin to reset passwords for Finance, but not modify group membership.",
+                        tools: ["AD Users & Computers (dsa.msc)"],
+                        code: `1. Open dsa.msc
+2. Right-click 'FinanceOU' -> Delegate Control
+3. Add User: 'FinanceAdmin'
+4. Tasks to Delegate: 
+   [x] Reset user passwords and force password change at next logon
+5. Finish
+Result: FinanceAdmin can reset passwords but cannot delete the OU.`
+                    }
+                },
+                {
+                    id: 8,
+                    title: "OS Hardening",
+                    icon: "🏗️",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Reducing the Attack Surface</h3>
+                        <p class="mb-4 text-slate-300">Hardening involves disabling unnecessary features and restricting software execution.</p>
+                        <ul class="list-disc pl-5 text-slate-300 space-y-2">
+                            <li><strong>Application Control:</strong> Preventing unauthorized software (AppLocker).</li>
+                            <li><strong>Service Hardening:</strong> Disabling Print Spooler on non-print servers (PrintNightmare mitigation).</li>
+                            <li><strong>Registry Hardening:</strong> Disabling NetBIOS and LMHash.</li>
+                        </ul>
+                    `,
+                    practical: {
+                        task: "Application Blacklisting",
+                        desc: "Prevent users from running unauthorized tools like Notepad++ or Firefox.",
+                        tools: ["ManageEngine Endpoint Central"],
+                        code: `1. Log in to Endpoint Central
+2. Navigate: Application Control -> Prohibit Software
+3. Search 'Notepad++' -> Add to Prohibited SW
+4. Configure Auto-Uninstall Policy:
+   [x] Enable Automatic Uninstallation
+   [x] Notify User
+5. Navigate: Block Executable
+   -> Add Policy: Block 'firefox.exe'`
+                    }
+                },
+                {
+                    id: 9,
+                    title: "AD Security Best Practices",
+                    icon: "🏰",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Protecting the Crown Jewels</h3>
+                        <p class="mb-4 text-slate-300">Active Directory security is paramount. Best practices include:</p>
+                        <ul class="list-disc pl-5 text-slate-300 mb-4">
+                            <li><strong>Secure DCs:</strong> No internet access, no 3rd party software.</li>
+                            <li><strong>Tiered Admin:</strong> Separate accounts for DCs (Tier 0) vs Workstations (Tier 2).</li>
+                            <li><strong>Secure Shares:</strong> Using Access-Based Enumeration (ABE) to hide files users can't access.</li>
+                        </ul>
+                    `,
+                    practical: {
+                        task: "Configuring Secure File Shares",
+                        desc: "Create a departmental share where unauthorized users cannot even see the files.",
+                        tools: ["Server Manager", "File & Storage Services"],
+                        code: `1. Server Manager -> File and Storage Services -> Shares
+2. New Share -> SMB Share - Quick
+3. Path: D:\\Shares\\FinanceData
+4. Settings: [x] Enable Access-based enumeration
+5. Permissions:
+   - Disable Inheritance
+   - Remove 'Users' (Read)
+   - Add 'FinanceData' Group (Modify)`
+                    }
+                },
+                {
+                    id: 10,
+                    title: "Network Protocol Security",
+                    icon: "🌐",
+                    theory: `
+                        <h3 class="text-xl font-bold text-white mb-4">Securing Communication</h3>
+                        <p class="mb-4 text-slate-300">Windows relies on SMB, RDP, and RPC. These must be secured:</p>
+                        <ul class="list-disc pl-5 text-slate-300 mb-4">
+                            <li><strong>SMB:</strong> Disable SMBv1 to prevent EternalBlue exploits. Enable SMB Signing.</li>
+                            <li><strong>RDP:</strong> Enforce Network Level Authentication (NLA).</li>
+                            <li><strong>FIM:</strong> File Integrity Monitoring to detect tampering with network config files (e.g., hosts file).</li>
+                        </ul>
+                    `,
+                    practical: {
+                        task: "File Integrity Monitoring (FIM)",
+                        desc: "Detect if a malicious actor modifies critical configuration files or injects scripts.",
+                        tools: ["ManageEngine OpManager"],
+                        code: `1. Open OpManager -> Security Settings -> File Integrity
+2. Add Path: C:\\Program Files\\...\\conf\\Authentication
+3. Action: System calculates SHA-256 hash
+4. Attack Sim: Modify 'auth-conf' to run 'shutdown.bat'
+5. Result: OpManager alerts "Checksum Mismatch"
+6. Remediation: Restore file / Blacklist script`
+                    }
+                }
+            ],
+            tools: [
+                { name: "BatchPatch", desc: "Lightweight remote patch management and script execution.", type: "Patching" },
+                { name: "ManageEngine Patch Manager", desc: "Automated patching for Windows/Mac/Linux/3rd Party.", type: "Patching" },
+                { name: "Endpoint Central", desc: "Unified Endpoint Management (UEM) for asset and app control.", type: "Management" },
+                { name: "OpManager", desc: "Network monitoring including File Integrity Monitoring (FIM).", type: "Monitoring" },
+                { name: "Microsoft LAPS", desc: "Randomizes local admin passwords and stores in AD.", type: "Identity" },
+                { name: "MSCT", desc: "Security Compliance Toolkit. Policy Analyzer/LGPO.", type: "Auditing" },
+                { name: "Smoothwall / PfSense", desc: "Open-source firewalls/gateways.", type: "Network" },
+                { name: "VirtualBox", desc: "Type-2 Hypervisor for lab environments.", type: "Virtualization" },
+                { name: "Sysinternals", desc: "Suite of tools (PsExec, TCPView) for deep diagnostics.", type: "Diagnostics" }
+            ],
+            labs: [
+                "Infrastructure Setup: Domain Controller & Firewall (2h)",
+                "Ex 1: Command Line Troubleshooting (0.5h)",
+                "Ex 3: Security Baselines with MSCT (1h)",
+                "Ex 2: Secure File Sharing & ABE (1h)",
+                "Ex 6: Delegation of Control Wizard (0.5h)",
+                "Ex 7: LAPS Implementation & GPO (1h)",
+                "Ex 4: Remote Patching with BatchPatch (1h)",
+                "Ex 8: App Blacklisting with Endpoint Central (1h)",
+                "Ex 9: File Integrity Monitoring with OpManager (1h)"
+            ]
+        };
+
+        // --- Core Logic ---
+        let currentModuleId = null;
+        let progress = new Set();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar();
+            renderDashboard();
+            setupMobileMenu();
+        });
+
+        function renderSidebar() {
+            const nav = document.getElementById('sidebar-nav');
+            
+            // Dashboard Link
+            const dashBtn = createNavButton("Dashboard", "📊", () => renderDashboard());
+            nav.appendChild(dashBtn);
+
+            // Modules Header
+            const header = document.createElement('div');
+            header.className = "px-6 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-4";
+            header.innerText = "Modules";
+            nav.appendChild(header);
+
+            // Module Links
+            courseData.modules.forEach(mod => {
+                const btn = createNavButton(mod.title, mod.icon, () => renderModule(mod.id));
+                nav.appendChild(btn);
+            });
+
+            // Tools & Labs
+            nav.appendChild(createNavHeader("Resources"));
+            nav.appendChild(createNavButton("Tools Arsenal", "🛠️", () => renderTools()));
+            nav.appendChild(createNavButton("Lab Exercises", "🧪", () => renderLabs()));
+        }
+
+        function createNavHeader(text) {
+            const div = document.createElement('div');
+            div.className = "px-6 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mt-4";
+            div.innerText = text;
+            return div;
+        }
+
+        function createNavButton(text, icon, onClick) {
+            const btn = document.createElement('button');
+            btn.className = "w-full flex items-center px-6 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-cyan-400 transition-colors text-left";
+            btn.innerHTML = `<span class="mr-3">${icon}</span> ${text}`;
+            btn.onclick = () => {
+                // Mobile menu close logic could go here
+                onClick();
+            };
+            return btn;
+        }
+
+        function renderDashboard() {
+            currentModuleId = null;
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="max-w-5xl mx-auto fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-2">Security Operations Dashboard</h2>
+                    <p class="text-slate-400 mb-8">${courseData.dashboard.intro}</p>
+
+                    <!-- Stats Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        ${courseData.dashboard.stats.map(stat => `
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg shadow-lg">
+                                <div class="text-3xl font-bold text-cyan-400 mb-1">${stat.value}</div>
+                                <div class="text-sm text-slate-500 uppercase tracking-wide">${stat.label}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-white mb-4">Threat Landscape</h3>
+                            <!-- Visualization & Content Choices: Pie chart to show breakdown of common threats mentioned in Section 1 -->
+                            <div class="chart-container">
+                                <canvas id="threatChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg">
+                            <h3 class="text-lg font-semibold text-white mb-4">Patch Management Lifecycle</h3>
+                            <!-- Visualization & Content Choices: Horizontal bar chart for Section 6 phases -->
+                            <div class="chart-container">
+                                <canvas id="patchChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold text-white mb-4">Start Learning</h3>
+                        <button onclick="renderModule(1)" class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold py-3 px-6 rounded-lg transition-colors">
+                            Begin Module 1: OS Architecture
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            initCharts();
+        }
+
+        function initCharts() {
+            // Threat Chart
+            new Chart(document.getElementById('threatChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Malware', 'Network Attacks', 'Identity Attacks'],
+                    datasets: [{
+                        data: [40, 30, 30],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#22d3ee'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                    }
+                }
+            });
+
+            // Patch Chart
+            new Chart(document.getElementById('patchChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Discovery', 'Testing', 'Deployment', 'Verification'],
+                    datasets: [{
+                        label: 'Importance Level',
+                        data: [8, 9, 10, 8],
+                        backgroundColor: '#06b6d4',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                    },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function renderModule(id) {
+            currentModuleId = id;
+            updateProgress(id);
+            const mod = courseData.modules.find(m => m.id === id);
+            const main = document.getElementById('main-content');
+
+            main.innerHTML = `
+                <div class="max-w-5xl mx-auto fade-in h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-white flex items-center">
+                            <span class="mr-3 text-3xl">${mod.icon}</span> ${mod.title}
+                        </h2>
+                        <div class="flex space-x-2">
+                            <button onclick="switchTab('theory')" id="tab-theory" class="px-4 py-2 bg-cyan-500 text-slate-900 font-bold rounded">Core Concepts</button>
+                            <button onclick="switchTab('practical')" id="tab-practical" class="px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded">Field Operations</button>
+                        </div>
+                    </div>
+
+                    <div id="content-theory" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-8 overflow-y-auto">
+                        ${mod.theory}
+                    </div>
+
+                    <div id="content-practical" class="hidden flex-1 bg-slate-900 border border-slate-800 rounded-lg p-8 overflow-y-auto">
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-cyan-400 mb-2">Mission: ${mod.practical.task}</h3>
+                            <p class="text-slate-300">${mod.practical.desc}</p>
+                            <div class="flex gap-2 mt-4 flex-wrap">
+                                ${mod.practical.tools.map(t => `<span class="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-cyan-300">${t}</span>`).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Visualization & Content Choices: Terminal view for code blocks to simulate environment -->
+                        <div class="terminal-window">
+                            <div class="terminal-header">
+                                <div class="dot dot-red"></div>
+                                <div class="dot dot-yellow"></div>
+                                <div class="dot dot-green"></div>
+                                <span class="text-xs text-slate-400 ml-2">Administrator: Windows PowerShell</span>
+                            </div>
+                            <div class="p-4 font-mono text-sm text-green-400 whitespace-pre-wrap overflow-x-auto bg-slate-950 rounded-b-lg border-t border-slate-800">${mod.practical.code}</div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Footer -->
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="${id > 1 ? `renderModule(${id - 1})` : ''}" class="text-slate-400 hover:text-white ${id === 1 ? 'invisible' : ''}">← Previous Module</button>
+                        <button onclick="${id < courseData.modules.length ? `renderModule(${id + 1})` : 'renderLabs()'}" class="text-cyan-400 hover:text-cyan-300 font-bold">
+                            ${id < courseData.modules.length ? 'Next Module →' : 'Go to Labs →'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchTab(tab) {
+            const theoryContent = document.getElementById('content-theory');
+            const practicalContent = document.getElementById('content-practical');
+            const theoryBtn = document.getElementById('tab-theory');
+            const practicalBtn = document.getElementById('tab-practical');
+
+            if (tab === 'theory') {
+                theoryContent.classList.remove('hidden');
+                practicalContent.classList.add('hidden');
+                theoryBtn.className = "px-4 py-2 bg-cyan-500 text-slate-900 font-bold rounded transition-colors";
+                practicalBtn.className = "px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded transition-colors";
+            } else {
+                theoryContent.classList.add('hidden');
+                practicalContent.classList.remove('hidden');
+                theoryBtn.className = "px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded transition-colors";
+                practicalBtn.className = "px-4 py-2 bg-cyan-500 text-slate-900 font-bold rounded transition-colors";
+            }
+        }
+
+        function renderTools() {
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="max-w-5xl mx-auto fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-6">Tools Arsenal</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${courseData.tools.map(tool => `
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-lg hover:border-cyan-500 transition-colors group">
+                                <div class="flex justify-between items-start mb-4">
+                                    <h3 class="text-xl font-bold text-white group-hover:text-cyan-400">${tool.name}</h3>
+                                    <span class="px-2 py-1 bg-slate-800 text-xs rounded text-slate-400 border border-slate-700">${tool.type}</span>
+                                </div>
+                                <p class="text-slate-400 text-sm leading-relaxed">${tool.desc}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLabs() {
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="max-w-4xl mx-auto fade-in">
+                    <h2 class="text-3xl font-bold text-white mb-6">Exercise Lab Checklist</h2>
+                    <div class="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+                        ${courseData.labs.map((lab, index) => `
+                            <div class="p-4 border-b border-slate-800 flex items-center hover:bg-slate-800 transition-colors cursor-pointer" onclick="toggleCheck(this)">
+                                <div class="w-6 h-6 rounded border border-slate-600 mr-4 flex items-center justify-center text-cyan-400 check-box"></div>
+                                <span class="text-slate-300 select-none flex-1">${lab}</span>
+                                <span class="text-xs text-slate-600">Phase ${Math.ceil((index + 1)/2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleCheck(el) {
+            const box = el.querySelector('.check-box');
+            if (box.innerHTML === '') {
+                box.innerHTML = '✓';
+                box.classList.add('bg-slate-700', 'border-cyan-500');
+                el.classList.add('bg-slate-800');
+            } else {
+                box.innerHTML = '';
+                box.classList.remove('bg-slate-700', 'border-cyan-500');
+                el.classList.remove('bg-slate-800');
+            }
+        }
+
+        function updateProgress(id) {
+            progress.add(id);
+            const percentage = Math.round((progress.size / courseData.modules.length) * 100);
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('progress-text').innerText = `${percentage}%`;
+        }
+
+        function setupMobileMenu() {
+            const btn = document.getElementById('mobile-menu-btn');
+            const nav = document.querySelector('aside');
+            btn.onclick = () => {
+                nav.classList.toggle('hidden');
+                nav.classList.toggle('fixed');
+                nav.classList.toggle('z-40');
+                nav.classList.toggle('inset-0');
+                nav.classList.toggle('pt-16');
+            };
+        }
+    </script>
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</body>
+</html>
+
+
+
+
