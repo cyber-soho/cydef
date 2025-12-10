@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Defense Lab: Endpoint Security & Windows Systems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Terminal Style */
+        .terminal {
+            background-color: #1e293b;
+            color: #10b981;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Chart Container Strict Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Node Pulse Animation */
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0px rgba(59, 130, 246, 0.5); }
+            100% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0); }
+        }
+        .node-active {
+            animation: pulse-border 2s infinite;
+            border-color: #3b82f6;
+        }
+    </style>
+    <!-- Chosen Palette: Slate (Background), Blue (Primary), Emerald (Success/Terminal) -->
+    <!-- Application Structure Plan: 
+         1. Header: Title and Global Status.
+         2. Dashboard Grid:
+            - Left Col: Navigation & Skills Chart (Context).
+            - Center Col: Interactive Network Topology (The "Map").
+            - Right Col: Info Panel (Dynamic content based on selection).
+         3. Exercise Modules: Below the fold, a tabbed interface for the 9 distinct exercises.
+         4. Rationale: The lab is about infrastructure and process. A topology map grounds the user in the "where", while the exercise list guides them through the "how".
+    -->
+    <!-- Visualization & Content Choices: 
+         - Network Topology: CSS Grid layout representing WAN/Firewall/LAN. Interactive buttons.
+         - Skills Radar: Chart.js Radar chart to show the multi-disciplinary nature of the lab (IAM, NetAdmin, Patching).
+         - Credentials Table: Simple, clear HTML table for quick reference.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wider">CYBER<span class="text-blue-400">DEFENSE</span> LAB</h1>
+                <p class="text-xs text-slate-400 mt-1">Endpoint Security & Windows Systems Defense</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right hidden md:block">
+                    <p class="text-xs text-slate-400">Lab Status</p>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="font-mono text-sm">ONLINE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 space-y-8">
+
+        <!-- Intro Section -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Mission Briefing</h2>
+            <p class="text-slate-600 leading-relaxed">
+                Welcome, Administrator. This comprehensive lab environment is designed to simulate a real-world corporate network defense scenario. 
+                You will configure a secure infrastructure using an Open-Source Firewall, deploy a Windows Domain environment, and execute 
+                critical defense strategies including <strong>Patch Management</strong>, <strong>Least Privilege (LAPS)</strong>, and <strong>File Integrity Monitoring</strong>.
+            </p>
+        </section>
+
+        <!-- Top Dashboard: Topology & Skills -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Skills Visualization -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Competency Matrix</h3>
+                <p class="text-sm text-slate-500 mb-4">Skills targeted in this lab session.</p>
+                <div class="flex-grow flex items-center justify-center">
+                    <div class="chart-container">
+                        <canvas id="skillsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Topology Map (Interactive) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2 flex flex-col">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Network Infrastructure Topology</h3>
+                <p class="text-sm text-slate-500 mb-6">Interactive Map: Click on a node to view configuration details.</p>
+                
+                <div class="flex-grow bg-slate-100 rounded-lg p-8 relative overflow-hidden">
+                    <!-- Grid Layout for Topology -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center h-full">
+                        
+                        <!-- WAN Zone -->
+                        <div class="text-center relative group">
+                            <div class="absolute inset-0 bg-blue-100 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300"></div>
+                            <div class="relative z-10">
+                                <button onclick="showNodeDetails('wan')" class="w-full bg-white border-2 border-slate-300 hover:border-blue-500 rounded-lg p-4 shadow-sm transition-all duration-300 flex flex-col items-center gap-2">
+                                    <span class="text-4xl">☁️</span>
+                                    <span class="font-bold text-slate-700">WAN / Internet</span>
+                                    <span class="text-xs bg-slate-200 px-2 py-1 rounded font-mono">Bridged Adapter</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Firewall Zone (Central) -->
+                        <div class="text-center relative">
+                            <!-- Connection Lines -->
+                            <div class="hidden md:block absolute top-1/2 -left-8 w-8 h-1 bg-slate-300"></div>
+                            <div class="hidden md:block absolute top-1/2 -right-8 w-8 h-1 bg-slate-300"></div>
+                            
+                            <button onclick="showNodeDetails('firewall')" class="w-full bg-white border-2 border-orange-300 hover:border-orange-500 rounded-lg p-4 shadow-md transition-all duration-300 flex flex-col items-center gap-2 scale-110">
+                                <span class="text-4xl">🛡️</span>
+                                <span class="font-bold text-slate-700">Open-Source Firewall</span>
+                                <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-mono">Gateway</span>
+                            </button>
+                        </div>
+
+                        <!-- LAN Zone -->
+                        <div class="flex flex-col gap-4 relative">
+                            
+                            <!-- DC Node -->
+                            <button onclick="showNodeDetails('dc')" class="bg-white border-2 border-slate-300 hover:border-blue-500 rounded-lg p-4 shadow-sm transition-all duration-300 flex items-center gap-3 text-left">
+                                <span class="text-2xl">🏢</span>
+                                <div>
+                                    <div class="font-bold text-slate-700">Domain Controller</div>
+                                    <div class="text-xs font-mono text-slate-500">192.168.1.10</div>
+                                </div>
+                            </button>
+
+                            <!-- Client Node -->
+                            <button onclick="showNodeDetails('client')" class="bg-white border-2 border-slate-300 hover:border-blue-500 rounded-lg p-4 shadow-sm transition-all duration-300 flex items-center gap-3 text-left">
+                                <span class="text-2xl">💻</span>
+                                <div>
+                                    <div class="font-bold text-slate-700">Windows Client</div>
+                                    <div class="text-xs font-mono text-slate-500">DHCP / Static</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Details Panel (Appears when clicking nodes) -->
+        <div id="detailsPanel" class="hidden bg-slate-800 text-slate-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-500 transition-all duration-500">
+            <div class="flex justify-between items-start">
+                <h3 id="panelTitle" class="text-xl font-bold mb-2">Node Details</h3>
+                <button onclick="hideDetails()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div id="panelContent" class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+
+        <!-- Operations Center: Exercises -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-slate-50">
+                <h2 class="text-xl font-bold text-slate-800">Operations Center</h2>
+                <p class="text-slate-500 text-sm mt-1">Execute the following defense protocols in sequence.</p>
+            </div>
+
+            <div class="flex flex-col md:flex-row min-h-[600px]">
+                <!-- Exercise Navigation -->
+                <nav class="w-full md:w-1/4 bg-slate-50 border-r border-slate-200">
+                    <ul class="flex flex-col" id="exerciseNav">
+                        <!-- Nav items generated by JS -->
+                    </ul>
+                </nav>
+
+                <!-- Exercise Content -->
+                <div class="w-full md:w-3/4 p-6 md:p-8 bg-white relative">
+                    <div id="exerciseContent" class="max-w-3xl mx-auto">
+                        <!-- Exercise details injected here -->
+                        <div class="text-center py-20 text-slate-400">
+                            <span class="text-6xl block mb-4">📋</span>
+                            <p class="text-lg">Select an operation protocol from the left menu to begin.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tool Arsenal -->
+        <section class="bg-slate-900 text-slate-300 rounded-xl shadow-lg p-8">
+            <h2 class="text-xl font-bold text-white mb-6 border-b border-slate-700 pb-2">Defense Toolkit Arsenal</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tool Cards -->
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">MS Security Compliance Toolkit</h4>
+                    <p class="text-xs text-slate-400 mb-3">Baseline analysis & GPO comparison.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">PolicyAnalyzer.exe</code>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">BatchPatch</h4>
+                    <p class="text-xs text-slate-400 mb-3">Remote patch management console.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">BatchPatch.exe</code>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">Microsoft LAPS</h4>
+                    <p class="text-xs text-slate-400 mb-3">Local Admin Password Solution.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">LAPS.x64.msi</code>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">ManageEngine OpManager</h4>
+                    <p class="text-xs text-slate-400 mb-3">Network monitoring & FIM.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">OpManager_64bit.exe</code>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">Endpoint Central</h4>
+                    <p class="text-xs text-slate-400 mb-3">Unified endpoint management.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">Block Executables</code>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 hover:border-blue-500 transition-colors">
+                    <h4 class="font-bold text-white mb-1">PsTools</h4>
+                    <p class="text-xs text-slate-400 mb-3">Sysinternals command line suite.</p>
+                    <code class="block bg-slate-950 p-2 rounded text-xs font-mono mb-2">PsExec.exe</code>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-200 text-slate-600 py-6 mt-8">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>&copy; 2025 Cyber Defense Lab. Infrastructure based on Open- Source Firewall and VirtualBox Hypervisor .</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- Data Models ---
+
+        const nodeData = {
+            wan: {
+                title: "WAN (Wide Area Network)",
+                config: `
+                    <div class="space-y-2">
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Interface</span>
+                            <span class="font-mono">Bridged Adapter</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">IP Assignment</span>
+                            <span class="font-mono">DHCP (ISP/Home)</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Security</span>
+                            <span class="font-mono">Uncheck "Block Private Networks"</span>
+                        </div>
+                    </div>
+                `,
+                notes: "Simulates the external internet connection. Connected to Adapter 1 on Firewall."
+            },
+            firewall: {
+                title: "Open-Source Firewall (Gateway)",
+                config: `
+                    <div class="space-y-2">
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">WAN IP</span>
+                            <span class="font-mono">DHCP</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">LAN IP</span>
+                            <span class="font-mono text-emerald-400">192.168.1.1 / 24</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">DHCP Server</span>
+                            <span class="font-mono">Enabled (LAN)</span>
+                        </div>
+                    </div>
+                `,
+                notes: "Primary router. Requires 3 network adapters (WAN, LAN, DMZ). WebGUI accessible at https://192.168.1.1."
+            },
+            dc: {
+                title: "Windows Server 2019 (DC)",
+                config: `
+                    <div class="space-y-2">
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Static IP</span>
+                            <span class="font-mono text-emerald-400">192.168.1.10</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Gateway</span>
+                            <span class="font-mono">192.168.1.1</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">DNS</span>
+                            <span class="font-mono">127.0.0.1 (Loopback)</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Domain</span>
+                            <span class="font-mono text-blue-400">cnd.local</span>
+                        </div>
+                    </div>
+                `,
+                notes: "Hosts Active Directory Domain Services. Critical asset."
+            },
+            client: {
+                title: "Windows 10/11 Client",
+                config: `
+                    <div class="space-y-2">
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Network</span>
+                            <span class="font-mono">Internal (lan)</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">DNS Server</span>
+                            <span class="font-mono text-emerald-400">192.168.1.10</span>
+                        </div>
+                        <div class="flex justify-between border-b border-slate-700 pb-1">
+                            <span class="text-slate-400">Local Admin</span>
+                            <span class="font-mono">Admin / admin@123</span>
+                        </div>
+                    </div>
+                `,
+                notes: "The target endpoint for patching, monitoring, and security policy application."
+            }
+        };
+
+        const exercises = [
+            {
+                id: "ex1",
+                title: "1. Network Troubleshooting",
+                icon: "🔌",
+                objective: "Diagnose connectivity issues and use CLI tools.",
+                steps: [
+                    "Login to Client machine as local 'Admin'.",
+                    "Disable Ethernet adapter via Control Panel.",
+                    "Attempt to ping DC (192.168.1.10) - Observe failure.",
+                    "Re-enable Ethernet adapter.",
+                    "Execute <code>ipconfig /all</code> to verify settings.",
+                    "Execute <code>tracert 8.8.8.8</code> to verify internet path."
+                ]
+            },
+            {
+                id: "ex2",
+                title: "2. Secure File Shares",
+                icon: "📂",
+                objective: "Implement ACLs and Access-Based Enumeration.",
+                steps: [
+                    "On Server: Create Security Group 'FinanceData' & User 'Bob'.",
+                    "Create Share: <code>C:\\Shares\\FinanceData</code>.",
+                    "<strong>Critical:</strong> Enable 'Access-based enumeration'.",
+                    "Permissions: Disable inheritance. Remove 'Users'. Add 'FinanceData' group.",
+                    "On Client: Verify access as Bob (Success) and Alice (Fail)."
+                ]
+            },
+            {
+                id: "ex3",
+                title: "3. Security Baseline (MSCT)",
+                icon: "📊",
+                objective: "Compare current GPO against Microsoft Best Practices.",
+                steps: [
+                    "Download MS Security Compliance Toolkit on Server.",
+                    "Extract <code>PolicyAnalyzer.zip</code>.",
+                    "Run Policy Analyzer -> Add GPOs from Baseline folder.",
+                    "Import 'Windows Server 2019' Baseline.",
+                    "Click 'Compare to Local Registry' to generate report."
+                ]
+            },
+            {
+                id: "ex4",
+                title: "4. Remote Patching (BatchPatch)",
+                icon: "🩹",
+                objective: "Deploy updates remotely to endpoints.",
+                steps: [
+                    "On Client: Install PsTools (PsExec.exe) to System32.",
+                    "Launch BatchPatch. Add DC IP (192.168.1.10) to grid.",
+                    "Set credentials: <code>cnd\\Administrator</code>.",
+                    "Action: Windows Updates -> Check for available updates.",
+                    "Review missing security patches."
+                ]
+            },
+            {
+                id: "ex5",
+                title: "5. Patch Manager Plus",
+                icon: "🛡️",
+                objective: "Automated vulnerability scanning.",
+                steps: [
+                    "Install ManageEngine Patch Manager Plus on Client.",
+                    "Login to Web Console (admin/admin).",
+                    "Systems -> Add Computers -> Install Local Agent.",
+                    "Run 'Scan Systems'.",
+                    "Analyze 'Missing Patches' report."
+                ]
+            },
+            {
+                id: "ex6",
+                title: "6. Delegation of Control",
+                icon: "👥",
+                objective: "Implement Principle of Least Privilege.",
+                steps: [
+                    "On Server: Create OU 'HelpDesk' & User 'JuniorAdmin'.",
+                    "Right-click target OU -> Delegate Control.",
+                    "Select JuniorAdmin -> Task: 'Reset user passwords'.",
+                    "Verify: Login as JuniorAdmin. Resetting password works; Deleting user fails."
+                ]
+            },
+            {
+                id: "ex7",
+                title: "7. LAPS Deployment",
+                icon: "🔐",
+                objective: "Randomize Local Admin passwords.",
+                steps: [
+                    "Install LAPS Management Tools on Server.",
+                    "Install LAPS Client Extension (CSE) on Client.",
+                    "PowerShell: <code>Update-AdmPwdADSchema</code>.",
+                    "GPO: Enable 'Password Settings' & 'Local Admin Management'.",
+                    "Verify: Open LAPS UI on Server, view Client's random password."
+                ]
+            },
+            {
+                id: "ex8",
+                title: "8. Endpoint Central",
+                icon: "🚫",
+                objective: "Application Whitelisting/Blacklisting.",
+                steps: [
+                    "Install ManageEngine Endpoint Central on Client.",
+                    "Web Console -> Inventory -> Application Control.",
+                    "Policy: Block Executable -> Add <code>notepad.exe</code>.",
+                    "Apply to 'Local Office' group.",
+                    "Verify: Attempt to open Notepad on Client. Access Denied."
+                ]
+            },
+            {
+                id: "ex9",
+                title: "9. File Integrity Monitoring",
+                icon: "👁️",
+                objective: "Detect tampering of critical files.",
+                steps: [
+                    "Install OpManager on Client.",
+                    "Settings -> Monitoring -> File Integrity.",
+                    "Add file to monitor: <code>C:\\Critical\\config.txt</code>.",
+                    "Simulate Attack: Modify text inside config.txt.",
+                    "Scan Now -> Check Alarms for Checksum Mismatch."
+                ]
+            }
+        ];
+
+        // --- UI Functions ---
+
+        // Chart.js Setup
+        window.addEventListener('load', function() {
+            const ctx = document.getElementById('skillsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Network Config', 'Identity (IAM)', 'Patch Mgmt', 'Compliance', 'Monitoring', 'GPO Admin'],
+                    datasets: [{
+                        label: 'Lab Skill Coverage',
+                        data: [80, 90, 85, 70, 75, 95],
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#e2e8f0' },
+                            pointLabels: { font: { size: 12 } },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            renderExerciseNav();
+            loadExercise('ex1'); // Load first exercise by default
+        });
+
+        // Node Interaction
+        function showNodeDetails(nodeId) {
+            const data = nodeData[nodeId];
+            const panel = document.getElementById('detailsPanel');
+            const title = document.getElementById('panelTitle');
+            const content = document.getElementById('panelContent');
+
+            title.innerHTML = `${data.title}`;
+            content.innerHTML = `
+                <div class="col-span-1 border-r border-slate-600 pr-4">
+                    <h4 class="text-blue-400 font-bold mb-3 text-sm uppercase tracking-wide">Configuration</h4>
+                    ${data.config}
+                </div>
+                <div class="col-span-1 pl-2">
+                    <h4 class="text-blue-400 font-bold mb-3 text-sm uppercase tracking-wide">Context</h4>
+                    <p class="text-sm text-slate-300 leading-relaxed">${data.notes}</p>
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+        }
+
+        function hideDetails() {
+            document.getElementById('detailsPanel').classList.add('hidden');
+        }
+
+        // Exercise Navigation
+        function renderExerciseNav() {
+            const nav = document.getElementById('exerciseNav');
+            exercises.forEach((ex, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <button onclick="loadExercise('${ex.id}')" class="w-full text-left px-6 py-4 border-b border-slate-100 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center gap-3 group focus:outline-none focus:bg-blue-50">
+                        <span class="text-xl group-hover:scale-110 transition-transform">${ex.icon}</span>
+                        <div>
+                            <span class="font-bold block text-sm">${ex.title}</span>
+                            <span class="text-xs text-slate-400 font-normal">Protocol ${index + 1}</span>
+                        </div>
+                    </button>
+                `;
+                nav.appendChild(li);
+            });
+        }
+
+        function loadExercise(id) {
+            const ex = exercises.find(e => e.id === id);
+            const container = document.getElementById('exerciseContent');
+            
+            container.innerHTML = `
+                <div class="animate-fade-in">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
+                            ${ex.icon}
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-slate-800">${ex.title}</h3>
+                            <p class="text-slate-500">${ex.objective}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-6">
+                        <h4 class="font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2">Execution Steps</h4>
+                        <ul class="space-y-4">
+                            ${ex.steps.map((step, i) => `
+                                <li class="flex items-start gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center mt-0.5">${i + 1}</span>
+                                    <span class="text-slate-700 text-sm leading-relaxed">${step}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow-sm text-sm font-medium transition-colors" onclick="this.innerText = 'Protocol Completed ✓'; this.classList.remove('bg-blue-600', 'hover:bg-blue-700'); this.classList.add('bg-emerald-500', 'cursor-default');">
+                            Mark as Complete
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
+
+
+
+
