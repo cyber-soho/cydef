@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIDS & Security Onion: The Network Watchtower</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            800: '#292524',
+                            900: '#1c1917',
+                        },
+                        accent: {
+                            blue: '#3b82f6',
+                            red: '#ef4444',
+                            green: '#10b981',
+                            amber: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #fafaf9; /* Warm neutral background */
+            color: #292524;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .code-block {
+            background-color: #1c1917;
+            color: #e7e5e4;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        .nav-btn.active {
+            border-bottom: 2px solid #292524;
+            font-weight: 600;
+        }
+        .scenario-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        /* Custom scrollbar for code blocks */
+        .code-block::-webkit-scrollbar {
+            height: 8px;
+        }
+        .code-block::-webkit-scrollbar-track {
+            background: #292524;
+        }
+        .code-block::-webkit-scrollbar-thumb {
+            background: #57534e;
+            border-radius: 4px;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals (Stone) with functional Accents (Blue, Red, Green) for clarity and calm. -->
+    <!-- Application Structure Plan: 
+         1. Header/Nav: Simple top navigation to switch views.
+         2. Concepts View: Interactive cards defining IDS/IPS and Detection types using toggle states.
+         3. Architecture View: A visual grid representing the Security Onion components (Suricata, Zeek, Steno).
+         4. Simulation Lab (Core): A guided walkthrough of the 6 scenarios. Uses a split layout (Mission Brief vs Data Visual).
+            This structure was chosen to allow users to grasp theory first, then see the tools, and finally apply them in 'Simulations'.
+         5. Code Vault: A reference library for the snippets provided in the lecture.
+    -->
+    <!-- Visualization & Content Choices:
+         - Charts (Chart.js): Used in the Simulation Lab to visualize the "Network Traffic" described in scenarios (e.g., login spikes, bandwidth usage).
+         - Justification: Visualizing the abstract network data makes the "Detection" concept concrete.
+         - Interactive Flow: Users pick a scenario -> See the problem -> Click 'Analyze' -> See the Chart & Solution.
+         - Confirming NO SVG/Mermaid: All icons are text/emoji based or CSS shapes. Charts are Canvas.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Navigation -->
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold tracking-tight text-stone-900 mr-2">🛡️</span>
+                    <h1 class="text-xl font-bold tracking-tight text-stone-900">NIDS. <span class="text-stone-500 font-normal">NIPS</span></h1>
+                </div>
+                <nav class="flex space-x-8 h-full">
+                    <button onclick="switchView('concepts')" id="nav-concepts" class="nav-btn active inline-flex items-center px-1 pt-1 text-sm font-medium text-stone-900 hover:text-stone-600 transition-colors">Core Concepts</button>
+                    <button onclick="switchView('architecture')" id="nav-architecture" class="nav-btn inline-flex items-center px-1 pt-1 text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors">Architecture</button>
+                    <button onclick="switchView('simulation')" id="nav-simulation" class="nav-btn inline-flex items-center px-1 pt-1 text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors">Simulation Lab</button>
+                    <button onclick="switchView('codevault')" id="nav-codevault" class="nav-btn inline-flex items-center px-1 pt-1 text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors">Code Vault</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- VIEW: Core Concepts -->
+        <section id="view-concepts" class="space-y-8 animate-fade-in">
+            <div class="max-w-3xl">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">Intrusion Detection Fundamentals</h2>
+                <p class="text-lg text-stone-600 leading-relaxed">
+                    Before deploying tools, we must understand the strategy. Network defense relies on visibility (IDS) and enforcement (IPS), utilizing two distinct "brains" for detection: Signatures and Anomalies. Explore the cards below to understand the differences.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- IDS vs IPS -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">Role Definition</h3>
+                        <div class="flex bg-stone-100 rounded p-1">
+                            <button onclick="toggleConcept('ids')" id="btn-ids" class="px-3 py-1 rounded bg-white shadow-sm text-sm font-medium text-stone-900 transition-all">IDS</button>
+                            <button onclick="toggleConcept('ips')" id="btn-ips" class="px-3 py-1 rounded text-sm font-medium text-stone-500 hover:text-stone-900 transition-all">IPS</button>
+                        </div>
+                    </div>
+                    <div id="content-ids" class="concept-content">
+                        <div class="text-4xl mb-4">📹</div>
+                        <h4 class="font-bold text-accent-blue mb-2">The Security Camera</h4>
+                        <p class="text-stone-600 mb-4">An <strong>Intrusion Detection System</strong> is a visibility tool. It connects to a SPAN port or TAP and passively watches copies of traffic.</p>
+                        <ul class="space-y-2 text-sm text-stone-600">
+                            <li class="flex items-center"><span class="mr-2">✅</span> Passive Monitoring</li>
+                            <li class="flex items-center"><span class="mr-2">✅</span> No impact on network latency</li>
+                            <li class="flex items-center"><span class="mr-2">⚠️</span> Cannot stop attacks, only alert</li>
+                        </ul>
+                    </div>
+                    <div id="content-ips" class="concept-content hidden">
+                        <div class="text-4xl mb-4">👮</div>
+                        <h4 class="font-bold text-accent-red mb-2">The Bouncer</h4>
+                        <p class="text-stone-600 mb-4">An <strong>Intrusion Prevention System</strong> is an enforcement tool. It sits <em>inline</em> and can actively drop packets.</p>
+                        <ul class="space-y-2 text-sm text-stone-600">
+                            <li class="flex items-center"><span class="mr-2">✅</span> Actively blocks threats</li>
+                            <li class="flex items-center"><span class="mr-2">⚠️</span> Can break legitimate traffic (False Positives)</li>
+                            <li class="flex items-center"><span class="mr-2">⚠️</span> Introduces latency</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Signature vs Anomaly -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-stone-800">Detection Logic</h3>
+                        <div class="flex bg-stone-100 rounded p-1">
+                            <button onclick="toggleMethod('signature')" id="btn-signature" class="px-3 py-1 rounded bg-white shadow-sm text-sm font-medium text-stone-900 transition-all">Signature</button>
+                            <button onclick="toggleMethod('anomaly')" id="btn-anomaly" class="px-3 py-1 rounded text-sm font-medium text-stone-500 hover:text-stone-900 transition-all">Anomaly</button>
+                        </div>
+                    </div>
+                    <div id="content-signature" class="method-content">
+                        <div class="text-4xl mb-4">🧬</div>
+                        <h4 class="font-bold text-stone-800 mb-2">Pattern Matching</h4>
+                        <p class="text-stone-600 mb-4">Compares traffic against a database of known threats (like Antivirus).</p>
+                        <div class="bg-stone-100 p-3 rounded font-mono text-xs text-stone-700 mb-3">
+                            IF packet contains "0x909090" THEN Alert
+                        </div>
+                        <p class="text-sm text-accent-green font-semibold">Pros: Fast, Low False Positives</p>
+                        <p class="text-sm text-accent-red font-semibold">Cons: Blind to Zero-Days</p>
+                    </div>
+                    <div id="content-anomaly" class="method-content hidden">
+                        <div class="text-4xl mb-4">📊</div>
+                        <h4 class="font-bold text-stone-800 mb-2">Statistical Baselining</h4>
+                        <p class="text-stone-600 mb-4">Detects deviations from "normal" behavior (volume, timing, protocol).</p>
+                        <div class="bg-stone-100 p-3 rounded font-mono text-xs text-stone-700 mb-3">
+                            IF traffic > 50GB AND time == 3AM THEN Alert
+                        </div>
+                        <p class="text-sm text-accent-green font-semibold">Pros: Catches Unknown/Zero-Day Attacks</p>
+                        <p class="text-sm text-accent-red font-semibold">Cons: High False Positives</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: Architecture -->
+        <section id="view-architecture" class="hidden space-y-8 animate-fade-in">
+             <div class="max-w-3xl">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">The Security Onion Architecture</h2>
+                <p class="text-lg text-stone-600 leading-relaxed">
+                    Security Onion is a Linux distribution that acts as the "glue" for three critical open-source tools. Each tool provides a different "peel" or layer of visibility. Click the components below to explore their roles.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tool 1: Suricata -->
+                <div onclick="showToolDetail('suricata')" class="cursor-pointer group bg-white border-l-4 border-accent-red p-6 rounded shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-stone-800 group-hover:text-accent-red transition-colors">Suricata</h3>
+                        <span class="text-2xl">🚨</span>
+                    </div>
+                    <p class="text-stone-600 text-sm mb-4">The NIDS Engine.</p>
+                    <div class="text-xs font-bold uppercase tracking-wider text-stone-400">Generates: Alert Data</div>
+                </div>
+
+                <!-- Tool 2: Zeek -->
+                <div onclick="showToolDetail('zeek')" class="cursor-pointer group bg-white border-l-4 border-accent-blue p-6 rounded shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-stone-800 group-hover:text-accent-blue transition-colors">Zeek</h3>
+                        <span class="text-2xl">📝</span>
+                    </div>
+                    <p class="text-stone-600 text-sm mb-4">The Network Flight Recorder.</p>
+                    <div class="text-xs font-bold uppercase tracking-wider text-stone-400">Generates: Session Data</div>
+                </div>
+
+                <!-- Tool 3: Stenographer -->
+                <div onclick="showToolDetail('steno')" class="cursor-pointer group bg-white border-l-4 border-accent-green p-6 rounded shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-stone-800 group-hover:text-accent-green transition-colors">Stenographer</h3>
+                        <span class="text-2xl">📼</span>
+                    </div>
+                    <p class="text-stone-600 text-sm mb-4">The Packet DVR.</p>
+                    <div class="text-xs font-bold uppercase tracking-wider text-stone-400">Generates: Full Packet Capture</div>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div id="tool-detail-panel" class="bg-stone-800 text-stone-100 p-8 rounded-lg shadow-lg mt-8 hidden">
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="md:w-1/2">
+                        <h3 id="tool-title" class="text-2xl font-bold text-white mb-2">Select a Tool</h3>
+                        <p id="tool-desc" class="text-stone-300 leading-relaxed mb-4">Click a card above to see details.</p>
+                        <div id="tool-analogy" class="bg-stone-700 p-4 rounded border-l-4 border-white italic text-stone-200">
+                            "Analogy goes here."
+                        </div>
+                    </div>
+                    <div class="md:w-1/2 bg-black rounded p-4 font-mono text-sm text-green-400 overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-stone-700 pb-2 mb-2">
+                            <span>Console Output</span>
+                            <div class="flex space-x-1">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                        </div>
+                        <pre id="tool-code-preview" class="whitespace-pre-wrap">Waiting for input...</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: Simulation Lab -->
+        <section id="view-simulation" class="hidden space-y-6 animate-fade-in">
+             <div class="max-w-4xl">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Simulation Lab</h2>
+                <p class="text-lg text-stone-600 mb-6">
+                    Step into the shoes of a Sysadmin. Select a scenario from the dropdown to begin a virtual investigation. Analyze the simulated data and discover the correct Security Onion tool for the job.
+                </p>
+                
+                <div class="flex items-center space-x-4 mb-8">
+                    <label class="font-bold text-stone-700">Select Mission:</label>
+                    <select id="scenario-selector" onchange="loadScenario()" class="form-select block w-full max-w-md mt-1 rounded-md border-stone-300 shadow-sm focus:border-accent-blue focus:ring focus:ring-accent-blue focus:ring-opacity-50 p-2 border">
+                        <option value="0">Scenario 1: The Silent Brute Force</option>
+                        <option value="1">Scenario 2: Ransomware vs Backup</option>
+                        <option value="2">Scenario 3: Needle in the Haystack</option>
+                        <option value="3">Scenario 4: Custom Policy Enforcement</option>
+                        <option value="4">Scenario 5: Phishing Forensics</option>
+                        <option value="5">Scenario 6: False Positive Verification</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left: Mission Brief -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm border border-stone-200 h-fit">
+                    <div class="flex items-center mb-4">
+                        <span class="text-xs font-bold bg-stone-100 text-stone-600 px-2 py-1 rounded uppercase tracking-wide mr-2">Mission Briefing</span>
+                        <span id="scenario-icon" class="text-xl">🕵️</span>
+                    </div>
+                    <h3 id="scenario-title" class="text-xl font-bold text-stone-900 mb-4">...</h3>
+                    <p id="scenario-desc" class="text-stone-600 text-sm leading-relaxed mb-6">...</p>
+                    
+                    <button onclick="revealSolution()" class="w-full bg-stone-900 hover:bg-stone-700 text-white font-bold py-3 px-4 rounded transition-colors flex items-center justify-center">
+                        <span>Analyze Data</span>
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Right: Data Visualization & Solution -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Visualization Card -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                        <h4 class="text-sm font-bold text-stone-500 uppercase tracking-wider mb-4">Network Telemetry</h4>
+                        <div class="chart-container">
+                            <canvas id="scenarioChart"></canvas>
+                        </div>
+                        <div id="chart-caption" class="text-center text-xs text-stone-400 mt-2 italic">Select a scenario to load telemetry.</div>
+                    </div>
+
+                    <!-- Solution Card (Hidden initially) -->
+                    <div id="solution-card" class="bg-stone-50 border-l-4 border-stone-300 p-6 rounded hidden animate-fade-in-up">
+                        <div class="flex items-start">
+                            <div class="mr-4 mt-1 bg-white p-2 rounded shadow-sm text-2xl" id="solution-tool-icon">🛠️</div>
+                            <div>
+                                <h4 class="text-lg font-bold text-stone-900 mb-1">Analysis Result</h4>
+                                <p id="solution-text" class="text-stone-700 text-sm mb-4 leading-relaxed">...</p>
+                                <div class="bg-stone-900 rounded p-4">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-xs text-stone-400 font-mono">CODE SNIPPET</span>
+                                    </div>
+                                    <code id="solution-code" class="text-xs text-green-400 font-mono block whitespace-pre-wrap"></code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: Code Vault -->
+        <section id="view-codevault" class="hidden space-y-8 animate-fade-in">
+             <div class="max-w-3xl">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">Code Vault</h2>
+                <p class="text-lg text-stone-600 mb-6">
+                    A repository of the Python, Bash, and PowerShell scripts referenced in the lecture modules. These scripts demonstrate how to programmatically interact with logs and define detection logic.
+                </p>
+            </div>
+
+            <div class="space-y-8">
+                <!-- Python: Brute Force -->
+                <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="bg-stone-100 px-6 py-3 border-b border-stone-200 flex justify-between items-center">
+                        <h3 class="font-bold text-stone-700">Python: Brute Force Detection Logic</h3>
+                        <span class="text-xs font-mono bg-stone-200 px-2 py-1 rounded text-stone-600">simulation</span>
+                    </div>
+                    <div class="p-0">
+                        <pre class="code-block rounded-none m-0"><code># Task: Detect high-frequency login failures (Brute Force simulation)
+import time
+from collections import defaultdict
+
+THRESHOLD = 5
+WINDOW = 10
+
+network_events = [
+    (time.time(), "192.168.1.50", "192.168.1.100", "LOGIN_FAIL"),
+    # ... more events
+]
+
+ip_tracker = defaultdict(int)
+
+for event in network_events:
+    timestamp, src_ip, dest_ip, event_type = event
+    if event_type == "LOGIN_FAIL":
+        ip_tracker[src_ip] += 1
+        if ip_tracker[src_ip] > THRESHOLD:
+            print(f"ALERT: Potential Brute Force detected from {src_ip}")</code></pre>
+                    </div>
+                </div>
+
+                <!-- Suricata Rule -->
+                <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="bg-stone-100 px-6 py-3 border-b border-stone-200 flex justify-between items-center">
+                        <h3 class="font-bold text-stone-700">Suricata: TeamViewer Detection Rule</h3>
+                        <span class="text-xs font-mono bg-stone-200 px-2 py-1 rounded text-stone-600">signature</span>
+                    </div>
+                    <div class="p-0">
+                        <pre class="code-block rounded-none m-0"><code># Task: Create a Suricata rule to detect TeamViewer traffic.
+alert dns $HOME_NET any -> $EXTERNAL_NET any (msg:"POLICY VIOLATION - TeamViewer DNS Request"; content:"teamviewer.com"; nocase; classtype:policy-violation; sid:1000001; rev:1;)</code></pre>
+                    </div>
+                </div>
+
+                <!-- Bash: Zeek Log Parsing -->
+                <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                    <div class="bg-stone-100 px-6 py-3 border-b border-stone-200 flex justify-between items-center">
+                        <h3 class="font-bold text-stone-700">Bash: Parsing Zeek Logs</h3>
+                        <span class="text-xs font-mono bg-stone-200 px-2 py-1 rounded text-stone-600">analysis</span>
+                    </div>
+                    <div class="p-0">
+                        <pre class="code-block rounded-none m-0"><code># Task: Manually parse Zeek logs to find the top bandwidth consumers
+ZEEK_LOG="/nsm/zeek/logs/current/conn.log"
+
+cat $ZEEK_LOG | \
+zeek-cut id.orig_h id.resp_h orig_bytes | \
+sort | \
+uniq -c | \
+sort -nr | \
+head -n 10</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-stone-900 text-stone-400 py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm">
+            <p>&copy; 2025 Security Onion Education Module.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // State Management
+        const state = {
+            currentView: 'concepts',
+            currentScenarioIndex: 0,
+            chartInstance: null
+        };
+
+        // --- Data: Scenarios ---
+        const scenarios = [
+            {
+                title: "Scenario 1: The Silent Brute Force",
+                desc: "An internal web server is compromised and attacks an SQL database. Firewall logs show nothing because port 1433 is allowed.",
+                tool: "Suricata (NIDS)",
+                toolIcon: "🚨",
+                solutionText: "<strong>Solution:</strong> The NIDS analyzes content and frequency. It sees 500 login attempts in 2 seconds. Unlike the firewall which allows the port, Suricata flags the <em>behavior</em>.",
+                codeSnippet: `if ip_tracker[src_ip] > THRESHOLD:\n    print(f"ALERT: Potential Brute Force...")`,
+                chartType: 'bar',
+                chartData: {
+                    labels: ['10:00:00', '10:00:01', '10:00:02', '10:00:03', '10:00:04'],
+                    datasets: [{
+                        label: 'Login Attempts (Port 1433)',
+                        data: [2, 5, 250, 250, 10],
+                        backgroundColor: ['#e7e5e4', '#e7e5e4', '#ef4444', '#ef4444', '#e7e5e4']
+                    }]
+                }
+            },
+            {
+                title: "Scenario 2: Ransomware vs. Backup",
+                desc: "Distinguishing between a known exploit (WannaCry) and a massive legitimate file transfer (Backup) at 3 AM.",
+                tool: "Zeek (Anomaly) vs Suricata (Sig)",
+                toolIcon: "📊",
+                solutionText: "<strong>Solution:</strong> Suricata catches WannaCry via Signature (known hex bytes). For the Backup, Zeek detects the Anomaly (statistical deviation) in the Producer/Consumer Ratio, prompting investigation without a signature match.",
+                codeSnippet: `if ($KnownGood -notcontains $ConnSignature) {\n    Write-Host "ANOMALY DETECTED..."\n}`,
+                chartType: 'line',
+                chartData: {
+                    labels: ['12AM', '1AM', '2AM', '3AM', '4AM', '5AM'],
+                    datasets: [{
+                        label: 'Traffic Volume (GB)',
+                        data: [0.1, 0.1, 0.2, 50, 2, 0.1],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                }
+            },
+            {
+                title: "Scenario 3: Needle in the Haystack",
+                desc: "Network is slow. Upload utilization is 100%. Suricata is silent because traffic is encrypted.",
+                tool: "Zeek (Session Data)",
+                toolIcon: "📝",
+                solutionText: "<strong>Solution:</strong> Since traffic is encrypted, Signature detection fails. You use Zeek Session logs to find 'Top Talkers'. You see the Print Server sending 4GB to an external IP. Zeek reveals the <em>volume</em> and <em>direction</em>.",
+                codeSnippet: `cat conn.log | zeek-cut ... | sort -nr | head -n 10`,
+                chartType: 'doughnut',
+                chartData: {
+                    labels: ['Web Server', 'Workstations', 'Print Server (Crypto Miner)', 'Email Server'],
+                    datasets: [{
+                        label: 'Bandwidth Usage',
+                        data: [15, 30, 50, 5],
+                        backgroundColor: ['#e7e5e4', '#d6d3d1', '#ef4444', '#a8a29e']
+                    }]
+                }
+            },
+            {
+                title: "Scenario 4: Policy Enforcement",
+                desc: "Company forbids TeamViewer. It uses port 80/443, so firewalls miss it. You need to stop it.",
+                tool: "Suricata (Custom Rule)",
+                toolIcon: "🛡️",
+                solutionText: "<strong>Solution:</strong> You write a custom Suricata rule. Even though the port is standard, the rule looks inside the DNS request or SSL handshake for the specific string 'teamviewer.com'.",
+                codeSnippet: `alert dns $HOME_NET any -> $EXTERNAL_NET any (\n  msg:"POLICY VIOLATION"; content:"teamviewer.com";\n)`,
+                chartType: 'bar',
+                chartData: {
+                    labels: ['HTTP', 'HTTPS', 'DNS (TeamViewer)', 'DNS (Google)'],
+                    datasets: [{
+                        label: 'Protocol Count',
+                        data: [120, 300, 1, 450],
+                        backgroundColor: ['#e7e5e4', '#e7e5e4', '#ef4444', '#e7e5e4']
+                    }]
+                }
+            },
+            {
+                title: "Scenario 5: Phishing Forensics",
+                desc: "HR clicked a phishing link 4 hours ago. You need to find WHO did it using historical data.",
+                tool: "Zeek (DNS/HTTP Logs)",
+                toolIcon: "🔍",
+                solutionText: "<strong>Solution:</strong> You query Zeek's `dns.log` for the malicious domain. You find 3 IPs. You check `http.log` or `conn.log` to see which one actually established a connection and sent data (POST request).",
+                codeSnippet: `if query == MALICIOUS_DOMAIN:\n    print(f"ALERT: Host {source_ip} queried...")`,
+                chartType: 'scatter',
+                chartData: {
+                    labels: ['User A', 'User B', 'User C (Victim)'],
+                    datasets: [{
+                        label: 'Connection Size vs Time',
+                        data: [
+                            {x: 9, y: 0}, // Just DNS
+                            {x: 9.1, y: 0}, // Just DNS
+                            {x: 9.2, y: 500} // DNS + 500kb Upload
+                        ],
+                        backgroundColor: '#ef4444'
+                    }]
+                }
+            },
+            {
+                title: "Scenario 6: False Positive Verification",
+                desc: "High severity SQL Injection alert. Is it a real attack or a developer updating the FAQ?",
+                tool: "Stenographer (Full Packet Capture)",
+                toolIcon: "📼",
+                solutionText: "<strong>Solution:</strong> Zeek lacks payload details. You use Stenographer to retrieve the full PCAP. You inspect the HTTP body and see the SQL code was just text in a FAQ description. False Positive confirmed.",
+                codeSnippet: `stenoread "host $TARGET_IP" -w out.pcap\ntcpdump -r out.pcap -A | less`,
+                chartType: 'line', // Representing the packet stream
+                chartData: {
+                    labels: ['Packet 1', 'Packet 2', 'Packet 3', 'Packet 4 (Payload)'],
+                    datasets: [{
+                        label: 'Packet Size (Bytes)',
+                        data: [64, 64, 1500, 1500], // Full MTU packets
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        stepped: true
+                    }]
+                }
+            }
+        ];
+
+        // --- Data: Architecture Details ---
+        const toolDetails = {
+            suricata: {
+                title: "Suricata",
+                desc: "The multi-threaded NIDS engine. It inspects traffic against a set of rules (signatures). If a packet matches a rule (e.g., specific hex bytes or strings), it generates an alert.",
+                analogy: "\"The Police Officer looking for known criminals on a wanted list.\"",
+                code: `alert http $HOME_NET any -> $EXTERNAL_NET any (\n msg:"ET MALWARE User-Agent Known Malicious";\n flow:established,to_server;\n content:"EvilHackerTool"; http_user_agent;\n classtype:trojan-activity;\n sid:2024441;\n)`
+            },
+            zeek: {
+                title: "Zeek (formerly Bro)",
+                desc: "The Network Flight Recorder. It logs metadata for every connection (IPs, Ports, Duration, Bytes, Protocol details). It does not rely on signatures but provides visibility into 'what happened'.",
+                analogy: "\"The Census Taker writing down everyone who walks down the street.\"",
+                code: `# conn.log example\n1678880001  C5w4z...  192.168.1.5  443  1.2.3.4  56789  tcp  ssl  2.5s  500  4500  SF`
+            },
+            steno: {
+                title: "Stenographer",
+                desc: "Full Packet Capture (FPC). It writes all raw packets to disk, acting as a circular buffer. Used for deep forensic analysis when metadata isn't enough.",
+                analogy: "\"The Security Camera DVR recording the actual video footage.\"",
+                code: `$ stenoread "host 10.0.0.5 and port 80" -w incident.pcap\nWriting packets to incident.pcap...`
+            }
+        };
+
+        // --- Navigation Logic ---
+        function switchView(viewId) {
+            // Update Tab UI
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('active', 'text-stone-900');
+                el.classList.add('text-stone-500');
+            });
+            document.getElementById(`nav-${viewId}`).classList.add('active', 'text-stone-900');
+            document.getElementById(`nav-${viewId}`).classList.remove('text-stone-500');
+
+            // Hide all sections
+            ['concepts', 'architecture', 'simulation', 'codevault'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+            });
+
+            // Show selected section
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            // Special initialization
+            if(viewId === 'simulation') {
+                loadScenario();
+            }
+        }
+
+        // --- Concepts Logic ---
+        function toggleConcept(type) {
+            // Update Buttons
+            const btnIds = document.getElementById('btn-ids');
+            const btnIps = document.getElementById('btn-ips');
+            
+            if (type === 'ids') {
+                btnIds.classList.add('bg-white', 'shadow-sm', 'text-stone-900');
+                btnIds.classList.remove('text-stone-500');
+                btnIps.classList.remove('bg-white', 'shadow-sm', 'text-stone-900');
+                btnIps.classList.add('text-stone-500');
+                document.getElementById('content-ids').classList.remove('hidden');
+                document.getElementById('content-ips').classList.add('hidden');
+            } else {
+                btnIps.classList.add('bg-white', 'shadow-sm', 'text-stone-900');
+                btnIps.classList.remove('text-stone-500');
+                btnIds.classList.remove('bg-white', 'shadow-sm', 'text-stone-900');
+                btnIds.classList.add('text-stone-500');
+                document.getElementById('content-ips').classList.remove('hidden');
+                document.getElementById('content-ids').classList.add('hidden');
+            }
+        }
+
+        function toggleMethod(type) {
+            // Update Buttons
+            const btnSig = document.getElementById('btn-signature');
+            const btnAno = document.getElementById('btn-anomaly');
+
+            if (type === 'signature') {
+                btnSig.classList.add('bg-white', 'shadow-sm', 'text-stone-900');
+                btnSig.classList.remove('text-stone-500');
+                btnAno.classList.remove('bg-white', 'shadow-sm', 'text-stone-900');
+                btnAno.classList.add('text-stone-500');
+                document.getElementById('content-signature').classList.remove('hidden');
+                document.getElementById('content-anomaly').classList.add('hidden');
+            } else {
+                btnAno.classList.add('bg-white', 'shadow-sm', 'text-stone-900');
+                btnAno.classList.remove('text-stone-500');
+                btnSig.classList.remove('bg-white', 'shadow-sm', 'text-stone-900');
+                btnSig.classList.add('text-stone-500');
+                document.getElementById('content-anomaly').classList.remove('hidden');
+                document.getElementById('content-signature').classList.add('hidden');
+            }
+        }
+
+        // --- Architecture Logic ---
+        function showToolDetail(toolKey) {
+            const data = toolDetails[toolKey];
+            const panel = document.getElementById('tool-detail-panel');
+            
+            // Populate content
+            document.getElementById('tool-title').textContent = data.title;
+            document.getElementById('tool-desc').textContent = data.desc;
+            document.getElementById('tool-analogy').textContent = data.analogy;
+            document.getElementById('tool-code-preview').textContent = data.code;
+            
+            // Show panel with simple animation
+            panel.classList.remove('hidden');
+            panel.classList.add('animate-fade-in');
+            
+            // Scroll to detail
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // --- Simulation Logic ---
+        function loadScenario() {
+            const select = document.getElementById('scenario-selector');
+            const index = select.value;
+            const data = scenarios[index];
+            
+            state.currentScenarioIndex = index;
+
+            // Update Text
+            document.getElementById('scenario-title').textContent = data.title;
+            document.getElementById('scenario-desc').textContent = data.desc;
+            
+            // Reset Solution State
+            document.getElementById('solution-card').classList.add('hidden');
+            document.getElementById('chart-caption').textContent = "Visualizing network telemetry...";
+            
+            // Render Chart
+            renderChart(data.chartType, data.chartData);
+        }
+
+        function revealSolution() {
+            const data = scenarios[state.currentScenarioIndex];
+            const card = document.getElementById('solution-card');
+            
+            document.getElementById('solution-tool-icon').textContent = data.toolIcon;
+            document.getElementById('solution-text').innerHTML = data.solutionText;
+            document.getElementById('solution-code').textContent = data.codeSnippet;
+            
+            card.classList.remove('hidden');
+            card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        function renderChart(type, data) {
+            const ctx = document.getElementById('scenarioChart').getContext('2d');
+            
+            if (state.chartInstance) {
+                state.chartInstance.destroy();
+            }
+
+            state.chartInstance = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    },
+                    scales: type === 'doughnut' ? {} : {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f5f5f4'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Setup simple fade-in animation styles
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+                .animate-fade-in-up { animation: fadeInUp 0.5s ease-out; }
+            `;
+            document.head.appendChild(style);
+        });
+
+    </script>
+</body>
+</html>
+
+
+
+
