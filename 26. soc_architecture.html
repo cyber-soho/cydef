@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC Architecture Interactive Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#f1f5f9', // Slate 100
+                            DEFAULT: '#334155', // Slate 700
+                            dark: '#0f172a', // Slate 900
+                            accent: '#3b82f6', // Blue 500
+                            success: '#10b981', // Emerald 500
+                            warning: '#f59e0b', // Amber 500
+                            danger: '#ef4444', // Red 500
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Chart Container Styling - MANDATORY constraint implementation */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Prevent excessive width */
+            height: 300px;    /* Base height */
+            max-height: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px; /* Slightly taller on desktop */
+            }
+        }
+
+        /* Custom Scrollbar for code blocks */
+        .code-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .code-scroll::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .code-scroll::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+
+        /* Smooth transitions */
+        .tab-content {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .nav-btn {
+            transition: all 0.2s;
+        }
+        
+        .nav-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Placeholder Comments -->
+    <!-- Chosen Palette: Slate (Warm Neutral Backgrounds) with Blue/Emerald/Red accents for technical status -->
+    <!-- Application Structure Plan: Dashboard-style layout with a persistent sidebar (desktop) or top bar (mobile) navigation. 
+         Content is divided into "The Big Picture" (Overview) and specific "Deep Dives" for each technology (SIEM, EDR, XDR, MDR, NDR, SOAR).
+         Each Deep Dive follows a consistent pattern: Concept -> Interactive Visualization -> Practical Code Scenario.
+         This structure moves from abstract theory (Overview) to specific functionality (Charts) to concrete implementation (Code), mirroring the report's educational flow. -->
+    <!-- Visualization & Content Choices: 
+         1. Overview: Radar Chart to compare the 6 pillars on abstract metrics (Visibility, Automation, etc.). Goal: Compare.
+         2. SIEM: Bar Chart for log volume. Interaction: Filter logs. Goal: Inform/Organize.
+         3. EDR: Doughnut Chart for threat types. Interaction: "Isolate Host" button mimicking the console action. Goal: Change/Response.
+         4. XDR: Connected Node Graph (simulated with HTML/CSS). Interaction: "Correlate" button to draw lines between disparate logs. Goal: Relationships.
+         5. MDR: Line Chart showing "Internal vs MDR" workload. Goal: Compare value.
+         6. NDR: Line Chart for traffic analysis. Interaction: Threshold slider to detect anomalies. Goal: Inform/Change.
+         7. SOAR: Flowchart (HTML/CSS). Interaction: "Run Playbook" animates steps. Goal: Organize/Process.
+         All viz uses Chart.js (Canvas) or styled HTML. NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-brand-accent rounded-lg flex items-center justify-center text-white text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">SOC Architecture Explorer</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block"></p>
+                </div>
+            </div>
+            <div class="text-sm text-slate-500">
+                Interactive Guide
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Navigation -->
+        <nav class="lg:col-span-3 space-y-2 lg:sticky lg:top-24 h-fit">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">The Stack</p>
+            <button onclick="switchTab('overview')" id="nav-overview" class="nav-btn active w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-layer-group w-5"></i> Big Picture
+            </button>
+            
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-6 mb-3 px-2">Technologies</p>
+            <button onclick="switchTab('siem')" id="nav-siem" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-file-lines w-5 text-blue-600"></i> SIEM
+            </button>
+            <button onclick="switchTab('edr')" id="nav-edr" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-laptop-medical w-5 text-emerald-600"></i> EDR
+            </button>
+            <button onclick="switchTab('xdr')" id="nav-xdr" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-circle-nodes w-5 text-purple-600"></i> XDR
+            </button>
+            <button onclick="switchTab('mdr')" id="nav-mdr" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-user-shield w-5 text-orange-600"></i> MDR
+            </button>
+            <button onclick="switchTab('ndr')" id="nav-ndr" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-network-wired w-5 text-cyan-600"></i> NDR
+            </button>
+            <button onclick="switchTab('soar')" id="nav-soar" class="nav-btn w-full text-left px-4 py-3 rounded-lg border border-transparent hover:bg-slate-200 font-medium flex items-center gap-3">
+                <i class="fa-solid fa-robot w-5 text-indigo-600"></i> SOAR
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <section class="lg:col-span-9 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[600px]">
+            
+            <!-- VIEW: OVERVIEW -->
+            <div id="view-overview" class="tab-content block">
+                <div class="mb-8 border-b border-slate-100 pb-6">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">The Visibility & Response Puzzle</h2>
+                    <p class="text-slate-600 leading-relaxed">
+                        Modern environments generate huge volumes of logs, endpoint events, and network traffic. No single tool covers everything efficiently. 
+                        Security Operations Centers (SOCs) rely on a combination of technologies to solve different parts of this puzzle. 
+                        Use the interactive chart below to compare how each technology contributes to the overall security posture.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <!-- Radar Chart -->
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase mb-4 text-center">Technology Comparison Matrix</h3>
+                        <div class="chart-container">
+                            <canvas id="overviewRadar"></canvas>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-4 justify-center">
+                            <button onclick="toggleDataset(0)" class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">Toggle SIEM</button>
+                            <button onclick="toggleDataset(1)" class="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200">Toggle EDR</button>
+                            <button onclick="toggleDataset(5)" class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">Toggle SOAR</button>
+                        </div>
+                    </div>
+
+                    <!-- Key Takeaways Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-file-lines text-blue-600"></i>
+                                <h4 class="font-bold text-slate-700">SIEM</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Centralized log collection & correlation.</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-laptop-medical text-emerald-600"></i>
+                                <h4 class="font-bold text-slate-700">EDR</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Deep endpoint telemetry & process isolation.</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-circle-nodes text-purple-600"></i>
+                                <h4 class="font-bold text-slate-700">XDR</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Integrated detection across endpoints, cloud, & identity.</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-network-wired text-cyan-600"></i>
+                                <h4 class="font-bold text-slate-700">NDR</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Network traffic analysis & anomaly detection.</p>
+                        </div>
+                         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-user-shield text-orange-600"></i>
+                                <h4 class="font-bold text-slate-700">MDR</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Managed service providing 24/7 human expertise.</p>
+                        </div>
+                         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-robot text-indigo-600"></i>
+                                <h4 class="font-bold text-slate-700">SOAR</h4>
+                            </div>
+                            <p class="text-sm text-slate-600">Automated playbooks & orchestration.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SIEM -->
+            <div id="view-siem" class="tab-content hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-100 rounded-lg text-blue-600"><i class="fa-solid fa-file-lines text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">SIEM (Security Information and Event Management)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Log Collection & Analysis</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        SIEM centralizes logs from servers, firewalls, and apps into a single platform ("single pane of glass"). 
+                        It uses correlation rules to flag suspicious patterns, such as multiple failed login attempts followed by a success.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-2">Log Ingestion Volume</h3>
+                        <div class="chart-container">
+                            <canvas id="siemChart"></canvas>
+                        </div>
+                        <div class="mt-4 flex justify-between items-center">
+                            <span class="text-xs text-slate-500">Correlation Engine Status: <span id="siem-status" class="font-bold text-emerald-600">Monitoring</span></span>
+                            <button onclick="simulateBruteForce()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 shadow-sm transition-colors">
+                                <i class="fa-solid fa-bolt mr-2"></i>Simulate Brute Force Attack
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">Sysadmin Task: Log Shipping</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">bash - /etc/rsyslog.d/60-siem.conf</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code><span class="text-slate-500"># Install rsyslog if needed</span>
+sudo apt-get install -y rsyslog
+
+<span class="text-slate-500"># Edit config to forward auth logs</span>
+sudo nano /etc/rsyslog.d/60-siem.conf
+
+<span class="text-slate-500"># Add this line to forward to SIEM</span>
+<span class="text-emerald-400">auth,authpriv.* @@siem.example.com:514</span>
+
+<span class="text-slate-500"># Restart service</span>
+sudo systemctl restart rsyslog</code></pre>
+                            <div id="siem-console-output" class="mt-4 pt-2 border-t border-slate-700 text-emerald-400 text-xs font-mono hidden">
+                                > rsyslog restarted.<br>
+                                > Connection established to siem.example.com:514<br>
+                                > Forwarding 50 events/sec...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: EDR -->
+            <div id="view-edr" class="tab-content hidden">
+                 <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-emerald-100 rounded-lg text-emerald-600"><i class="fa-solid fa-laptop-medical text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">EDR (Endpoint Detection and Response)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Monitoring Workstations & Servers</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        EDR monitors process creations, file changes, and registry operations on the endpoint itself. 
+                        Unlike antivirus, it records history, allowing you to investigate "what happened" and remotely isolate infected machines.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-2">Endpoint Threat Distribution</h3>
+                        <div class="chart-container">
+                            <canvas id="edrChart"></canvas>
+                        </div>
+                        <div class="mt-4 flex flex-col gap-2">
+                             <div class="flex justify-between items-center p-2 bg-white rounded border border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-desktop text-slate-500"></i>
+                                    <span class="text-sm font-medium">Workstation-04</span>
+                                </div>
+                                <span id="edr-host-status" class="text-xs font-bold px-2 py-1 bg-green-100 text-green-700 rounded">HEALTHY</span>
+                             </div>
+                             <button id="btn-isolate" onclick="isolateHost()" class="w-full px-4 py-2 bg-rose-600 text-white text-sm rounded-lg hover:bg-rose-700 shadow-sm transition-colors">
+                                <i class="fa-solid fa-network-wired mr-2"></i>ISOLATE HOST
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">PowerShell: Process Hunting</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">PowerShell - Threat Hunt</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code><span class="text-slate-500"># Find processes with TCP connections</span>
+Get-NetTCPConnection | ForEach-Object {
+   $p = Get-Process -Id $_.OwningProcess
+   [PSCustomObject]@{
+      Process = $p.ProcessName
+      PID     = $p.Id
+      Remote  = $_.RemoteAddress
+   }
+}</code></pre>
+                            <div id="edr-console-output" class="mt-4 pt-2 border-t border-slate-700 text-xs font-mono hidden">
+                                <div class="flex justify-between text-slate-400 border-b border-slate-700 mb-1"><span>Process</span><span>PID</span><span>Remote</span></div>
+                                <div class="flex justify-between text-slate-300"><span>chrome</span><span>4421</span><span>172.217.1.1</span></div>
+                                <div class="flex justify-between text-rose-400 font-bold"><span>powershell</span><span>8812</span><span>45.33.22.11</span></div>
+                                <div class="flex justify-between text-slate-300"><span>svchost</span><span>1022</span><span>192.168.1.5</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: XDR -->
+            <div id="view-xdr" class="tab-content hidden">
+                 <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-purple-100 rounded-lg text-purple-600"><i class="fa-solid fa-circle-nodes text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">XDR (Extended Detection and Response)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Integration of Multiple Layers</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        XDR expands beyond the endpoint to correlate data from email, cloud workloads, network, and identity. 
+                        It connects the dots: Phishing Email &rarr; Endpoint Compromise &rarr; Cloud Login.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz: Attack Chain -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4">Attack Story Construction</h3>
+                        <div class="relative h-64 border-l-2 border-slate-300 ml-4 space-y-8 pl-6 flex flex-col justify-center">
+                            
+                            <!-- Node 1 -->
+                            <div class="relative group cursor-pointer transition-all opacity-50" id="xdr-node-1">
+                                <div class="absolute -left-[33px] top-0 w-4 h-4 rounded-full bg-slate-400 ring-4 ring-white group-hover:bg-purple-500 transition-colors"></div>
+                                <div class="bg-white p-3 rounded shadow-sm border border-slate-200 group-hover:border-purple-500">
+                                    <div class="text-xs font-bold text-slate-500">EMAIL GATEWAY</div>
+                                    <div class="text-sm font-medium">Malicious Attachment Delivered</div>
+                                </div>
+                            </div>
+
+                            <!-- Node 2 -->
+                            <div class="relative group cursor-pointer transition-all opacity-50" id="xdr-node-2">
+                                <div class="absolute -left-[33px] top-0 w-4 h-4 rounded-full bg-slate-400 ring-4 ring-white group-hover:bg-purple-500 transition-colors"></div>
+                                <div class="bg-white p-3 rounded shadow-sm border border-slate-200 group-hover:border-purple-500">
+                                    <div class="text-xs font-bold text-slate-500">ENDPOINT (EDR)</div>
+                                    <div class="text-sm font-medium">Process spawned from Outlook</div>
+                                </div>
+                            </div>
+
+                            <!-- Node 3 -->
+                            <div class="relative group cursor-pointer transition-all opacity-50" id="xdr-node-3">
+                                <div class="absolute -left-[33px] top-0 w-4 h-4 rounded-full bg-slate-400 ring-4 ring-white group-hover:bg-purple-500 transition-colors"></div>
+                                <div class="bg-white p-3 rounded shadow-sm border border-slate-200 group-hover:border-purple-500">
+                                    <div class="text-xs font-bold text-slate-500">CLOUD IDENTITY</div>
+                                    <div class="text-sm font-medium">Suspicious Login from New IP</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                             <button onclick="runCorrelation()" class="px-6 py-2 bg-purple-600 text-white font-medium rounded-full hover:bg-purple-700 shadow-sm transition-transform active:scale-95">
+                                <i class="fa-solid fa-link mr-2"></i>Correlate Events
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">Python: Cross-Layer Correlation</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">Python3 - Analytics.py</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code>web_ips = set(extract_ips("web.log"))
+auth_ips = set(extract_ips("auth.log"))
+
+<span class="text-slate-500"># Find intersection (correlation)</span>
+suspicious = web_ips & auth_ips
+
+for ip in suspicious:
+    print(f"Suspicious IP in both: {ip}")
+    <span class="text-purple-400">trigger_response(ip)</span></code></pre>
+                             <div class="mt-4 p-2 bg-slate-800 rounded border-l-4 border-purple-500 text-xs text-slate-300">
+                                <i class="fa-solid fa-lightbulb text-yellow-500 mr-2"></i>
+                                XDR automates this logic: "If IP scans Web AND fails SSH, create ONE high-fidelity incident."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: MDR -->
+            <div id="view-mdr" class="tab-content hidden">
+                 <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-orange-100 rounded-lg text-orange-600"><i class="fa-solid fa-user-shield text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">MDR (Managed Detection and Response)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Service & Human Expertise</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        MDR is not just software; it's a service. You outsource the "eyes on glass" to a team of experts 
+                        who monitor your environment 24/7, hunt for threats, and respond to incidents, reducing alert fatigue for your internal team.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-2">Internal vs. Managed Workload</h3>
+                        <div class="chart-container">
+                            <canvas id="mdrChart"></canvas>
+                        </div>
+                         <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                            <p><strong>Scenario:</strong> 3:00 AM Alert. Your team is asleep.</p>
+                            <p class="mt-1" id="mdr-status">Status: <span class="text-slate-500">Unmonitored...</span></p>
+                            <button onclick="activateMDR()" class="mt-2 text-xs font-bold text-blue-600 hover:underline">Activate MDR Service</button>
+                        </div>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">Integration: Sending Data to MDR</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">bash - DailyUpload.sh</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code>YESTERDAY=$(date -d "yesterday" +"%Y%m%d")
+
+<span class="text-slate-500"># Compress logs</span>
+tar czf /tmp/fw-$YESTERDAY.log.tar.gz /var/log/fw.log
+
+<span class="text-slate-500"># Ship to MDR Intake</span>
+scp /tmp/fw-$YESTERDAY.log.tar.gz \
+    <span class="text-orange-400">mdr-intake@example-mdr.com:/incoming/</span>
+
+<span class="text-slate-500"># Cleanup</span>
+rm /tmp/fw-$YESTERDAY.log.tar.gz</code></pre>
+                            <div class="mt-auto pt-4 text-xs text-slate-400 italic">
+                                Note: Modern MDRs often use APIs or Agents, but this demonstrates the concept of data transfer.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: NDR -->
+            <div id="view-ndr" class="tab-content hidden">
+                 <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-cyan-100 rounded-lg text-cyan-600"><i class="fa-solid fa-network-wired text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">NDR (Network Detection and Response)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Network Traffic & Unmanaged Devices</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        NDR analyzes traffic packets and flows to spot anomalies, like a database sending massive data to an unknown IP. 
+                        It is crucial for spotting threats on devices that can't run EDR agents (IoT, Printers, Legacy Systems).
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-2">Network Anomaly Detection</h3>
+                        <div class="chart-container">
+                            <canvas id="ndrChart"></canvas>
+                        </div>
+                        <div class="mt-4 px-4 py-2 bg-white rounded border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Outbound Threshold (MB/hr)</label>
+                            <input type="range" id="ndr-threshold" min="20" max="100" value="80" class="w-full accent-cyan-600 cursor-pointer" oninput="updateNDRThreshold(this.value)">
+                            <div class="flex justify-between text-xs text-slate-400 mt-1">
+                                <span>Sensitive</span>
+                                <span id="thresh-val">80 MB</span>
+                                <span>Loose</span>
+                            </div>
+                            <div id="ndr-alert" class="hidden mt-2 p-2 bg-red-100 text-red-700 text-xs font-bold rounded text-center animate-pulse">
+                                ALERT: Traffic Spike Exceeds Threshold!
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">Python: Flow Analysis</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">Python3 - TrafficCheck.py</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code>threshold = 10 * 1024 * 1024 <span class="text-slate-500"># 10 MB</span>
+
+totals = {}
+for f in flows:
+   totals[f["src"]] += f["bytes"]
+
+for src, total in totals.items():
+   if total > threshold:
+      print(f"<span class="text-cyan-400">High outbound: {src} -> {total} bytes</span>")</code></pre>
+                             <div class="mt-4 p-2 bg-slate-800 rounded text-xs text-slate-300">
+                                This logic catches data exfiltration that EDR misses because the "malware" might just be a legitimate tool (like curl) used maliciously.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SOAR -->
+            <div id="view-soar" class="tab-content hidden">
+                 <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-indigo-100 rounded-lg text-indigo-600"><i class="fa-solid fa-robot text-2xl"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">SOAR (Security Orchestration, Automation and Response)</h2>
+                        <p class="text-slate-500 text-sm">Focus: Workflow Automation</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-slate-700 mb-4">
+                        SOAR connects your tools together. Instead of manually copying an IP from SIEM to Firewall, 
+                        SOAR runs a "Playbook" to do it automatically. It ensures consistency and speed.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Viz: Playbook -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                        <h3 class="font-bold text-slate-700 mb-6 w-full text-left">Phishing Response Playbook</h3>
+                        
+                        <div class="space-y-4 w-full max-w-sm relative">
+                            <!-- Step 1 -->
+                            <div id="soar-step-1" class="p-3 bg-white border border-slate-300 rounded shadow-sm text-center transition-all duration-500">
+                                <i class="fa-solid fa-envelope text-slate-400 mb-1"></i>
+                                <div class="text-sm font-bold">Ingest Email</div>
+                            </div>
+                            
+                            <div class="h-4 border-l-2 border-slate-300 mx-auto"></div>
+
+                            <!-- Step 2 -->
+                            <div id="soar-step-2" class="p-3 bg-white border border-slate-300 rounded shadow-sm text-center transition-all duration-500">
+                                <i class="fa-solid fa-magnifying-glass text-slate-400 mb-1"></i>
+                                <div class="text-sm font-bold">Analyze Attachments</div>
+                            </div>
+
+                            <div class="h-4 border-l-2 border-slate-300 mx-auto"></div>
+
+                            <!-- Step 3 -->
+                            <div id="soar-step-3" class="p-3 bg-white border border-slate-300 rounded shadow-sm text-center transition-all duration-500">
+                                <i class="fa-solid fa-ban text-slate-400 mb-1"></i>
+                                <div class="text-sm font-bold">Block Sender & Delete</div>
+                            </div>
+                        </div>
+
+                        <button id="btn-playbook" onclick="runPlaybook()" class="mt-8 px-6 py-2 bg-indigo-600 text-white font-medium rounded-full hover:bg-indigo-700 shadow-sm transition-transform active:scale-95">
+                            <i class="fa-solid fa-play mr-2"></i>Execute Playbook
+                        </button>
+                    </div>
+
+                    <!-- Code Scenario -->
+                    <div class="flex flex-col h-full">
+                        <h3 class="font-bold text-slate-700 mb-2">Python: Auto-Block Script</h3>
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow overflow-hidden flex flex-col">
+                            <div class="flex items-center gap-2 mb-2 border-b border-slate-700 pb-2">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs text-slate-400 ml-2">Python3 - BlockIP.py</span>
+                            </div>
+                            <pre class="text-xs font-mono text-slate-300 overflow-x-auto code-scroll"><code>malicious_ips = ["203.0.113.5", "203.0.113.10"]
+
+with open("blocklist.rules", "w") as f:
+    f.write("# Auto-generated block rules\n")
+    for ip in malicious_ips:
+        <span class="text-indigo-400">f.write(f"deny ip any {ip}\n")</span>
+
+print("Wrote firewall block rules.")</code></pre>
+                             <div class="mt-auto pt-4 text-xs text-slate-400">
+                                Result: Turns a 30-minute manual task into a 3-second script execution.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        // --- Navigation Logic ---
+        function switchTab(tabId) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block');
+            });
+            // Show selected
+            const selected = document.getElementById('view-' + tabId);
+            selected.classList.remove('hidden');
+            selected.classList.add('block');
+            
+            // Update buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-blue-600', 'text-white');
+                btn.classList.add('hover:bg-slate-200');
+            });
+            const activeBtn = document.getElementById('nav-' + tabId);
+            activeBtn.classList.add('active');
+        }
+
+        // --- Chart Initialization ---
+        Chart.defaults.font.family = "'ui-sans-serif', 'system-ui', 'sans-serif'";
+        Chart.defaults.color = '#64748b';
+
+        let overviewChart, siemChart, edrChart, mdrChart, ndrChart;
+
+        window.onload = function() {
+            initOverviewChart();
+            initSiemChart();
+            initEdrChart();
+            initMdrChart();
+            initNdrChart();
+        };
+
+        // 1. Overview Radar
+        function initOverviewChart() {
+            const ctx = document.getElementById('overviewRadar').getContext('2d');
+            overviewChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Visibility Depth', 'Response Speed', 'Setup Complexity', 'Automation', 'Endpoint Focus', 'Network Focus'],
+                    datasets: [
+                        {
+                            label: 'SIEM',
+                            data: [5, 2, 5, 2, 2, 2],
+                            borderColor: '#2563eb', // Blue
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            hidden: false
+                        },
+                        {
+                            label: 'EDR',
+                            data: [4, 4, 3, 3, 5, 1],
+                            borderColor: '#10b981', // Emerald
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            hidden: false
+                        },
+                        {
+                            label: 'SOAR',
+                            data: [2, 5, 4, 5, 1, 1],
+                            borderColor: '#4f46e5', // Indigo
+                            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                            hidden: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#e2e8f0' },
+                            pointLabels: { font: { size: 11, weight: 'bold' } },
+                            min: 0,
+                            max: 6,
+                            ticks: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function toggleDataset(index) {
+            const meta = overviewChart.getDatasetMeta(index);
+            meta.hidden = meta.hidden === null ? !overviewChart.data.datasets[index].hidden : null;
+            overviewChart.update();
+        }
+
+        // 2. SIEM Chart
+        function initSiemChart() {
+            const ctx = document.getElementById('siemChart').getContext('2d');
+            siemChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Firewall', 'Server Auth', 'Application', 'Cloud'],
+                    datasets: [{
+                        label: 'Events Per Minute',
+                        data: [1200, 450, 300, 150],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function simulateBruteForce() {
+            // Update chart to show spike in Server Auth
+            siemChart.data.datasets[0].data[1] = 2500; // Spike
+            siemChart.data.datasets[0].backgroundColor = ['#3b82f6', '#ef4444', '#3b82f6', '#3b82f6']; // Red highlight
+            siemChart.update();
+            
+            document.getElementById('siem-status').innerText = "CRITICAL ALERT: BRUTE FORCE DETECTED";
+            document.getElementById('siem-status').className = "font-bold text-red-600 animate-pulse";
+            
+            const consoleOut = document.getElementById('siem-console-output');
+            consoleOut.classList.remove('hidden');
+            consoleOut.innerHTML += "<br>> ALERT: 50+ failed logins from 192.168.1.105";
+        }
+
+        // 3. EDR Chart
+        function initEdrChart() {
+            const ctx = document.getElementById('edrChart').getContext('2d');
+            edrChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ransomware', 'Adware', 'Fileless', 'Phishing'],
+                    datasets: [{
+                        data: [5, 15, 8, 12],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#8b5cf6', '#3b82f6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+        }
+
+        function isolateHost() {
+            const btn = document.getElementById('btn-isolate');
+            const status = document.getElementById('edr-host-status');
+            const consoleOut = document.getElementById('edr-console-output');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>ISOLATED';
+            btn.classList.replace('bg-rose-600', 'bg-slate-400');
+            
+            status.innerText = "ISOLATED";
+            status.className = "text-xs font-bold px-2 py-1 bg-rose-100 text-rose-700 rounded animate-pulse";
+            
+            consoleOut.classList.remove('hidden');
+        }
+
+        // 4. XDR Logic
+        function runCorrelation() {
+            const nodes = ['xdr-node-1', 'xdr-node-2', 'xdr-node-3'];
+            let delay = 0;
+            
+            nodes.forEach((id, index) => {
+                setTimeout(() => {
+                    const el = document.getElementById(id);
+                    el.classList.remove('opacity-50');
+                    el.querySelector('.rounded-full').classList.replace('bg-slate-400', 'bg-purple-600');
+                    el.querySelector('.rounded-full').classList.add('ring-purple-200');
+                    
+                    // Add connecting line visual logic implied by spacing
+                    if(index > 0) {
+                        // In a real app we might draw an SVG line, here we rely on the left border color transition
+                        document.querySelector('.border-l-2').classList.replace('border-slate-300', 'border-purple-400');
+                    }
+                }, delay);
+                delay += 600;
+            });
+        }
+
+        // 5. MDR Chart
+        function initMdrChart() {
+            const ctx = document.getElementById('mdrChart').getContext('2d');
+            mdrChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['18:00', '21:00', '00:00', '03:00', '06:00'],
+                    datasets: [
+                        {
+                            label: 'Internal Team Capacity',
+                            data: [100, 60, 0, 0, 20], // Sleep time
+                            borderColor: '#94a3b8',
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: 'MDR Coverage',
+                            data: [100, 100, 100, 100, 100],
+                            borderColor: '#f97316',
+                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { min: 0, max: 120 } }
+                }
+            });
+        }
+
+        function activateMDR() {
+            const status = document.getElementById('mdr-status');
+            status.innerHTML = 'Status: <span class="text-orange-600 font-bold">MDR Analyst Investigating...</span>';
+            setTimeout(() => {
+                status.innerHTML = 'Status: <span class="text-green-600 font-bold">Threat Neutralized by MDR</span>';
+            }, 2000);
+        }
+
+        // 6. NDR Chart
+        function initNdrChart() {
+            const ctx = document.getElementById('ndrChart').getContext('2d');
+            ndrChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'],
+                    datasets: [{
+                        label: 'Outbound Traffic (MB)',
+                        data: [12, 15, 11, 95, 14, 12], // Spike at 10:15
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function updateNDRThreshold(val) {
+            document.getElementById('thresh-val').innerText = val + " MB";
+            // Logic: The spike is 95. If threshold < 95, alert.
+            const alertBox = document.getElementById('ndr-alert');
+            if (val < 95) {
+                alertBox.classList.remove('hidden');
+                // Visually show threshold line? (Simplified: just alert)
+            } else {
+                alertBox.classList.add('hidden');
+            }
+        }
+
+        // 7. SOAR Logic
+        function runPlaybook() {
+            const steps = ['soar-step-1', 'soar-step-2', 'soar-step-3'];
+            const btn = document.getElementById('btn-playbook');
+            btn.disabled = true;
+            btn.innerText = 'Running...';
+            
+            let delay = 0;
+            steps.forEach((id) => {
+                setTimeout(() => {
+                    const el = document.getElementById(id);
+                    el.classList.remove('bg-white', 'border-slate-300');
+                    el.classList.add('bg-indigo-50', 'border-indigo-500', 'text-indigo-700');
+                    el.querySelector('i').classList.remove('text-slate-400');
+                    el.querySelector('i').classList.add('text-indigo-600');
+                }, delay);
+                delay += 800;
+            });
+            
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Playbook Complete';
+                btn.classList.replace('bg-indigo-600', 'bg-green-600');
+            }, delay);
+        }
+
+    </script>
+</body>
+</html>
+
+
+
