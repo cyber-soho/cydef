@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Defense Fundamentals: Wazuh Lab Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fdfbf7; color: #4a4a4a; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; height: 300px; max-height: 400px; }
+        .step-card { transition: all 0.3s ease; border-left: 4px solid transparent; }
+        .step-card:hover { transform: translateX(4px); }
+        .step-card.active { border-left-color: #d97706; background-color: #fff7ed; }
+        .btn-primary { background-color: #4b5563; color: white; transition: background-color 0.2s; }
+        .btn-primary:hover { background-color: #374151; }
+        .nav-item.active { border-bottom: 2px solid #d97706; color: #d97706; font-weight: 600; }
+        
+        /* Custom Scrollbar for inner content */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals with Earthy Tech Accents (Stone, Amber, Slate) -->
+    <!-- Application Structure Plan: The app is designed as a "Mission Control" dashboard. It replaces the linear document format with a phase-based navigation system (Overview -> Local Deployment -> Cloud Migration -> Report Submission). This structure was chosen to separate distinct technical contexts (Hypervisor vs. Cloud) to prevent student confusion. It includes interactive checklists to track progress through the labs and data visualizations to explain the 'Why' behind the requirements (e.g., resource usage, deployment comparison). -->
+    <!-- Visualization & Content Choices: 
+         1. Resource Impact Chart (Doughnut): Displays Lab 1 hardware requirements against a hypothetical host machine to visually justify the "lightweight" nature of the OVA.
+         2. Deployment Radar Chart (Radar): Compares Local vs. Cloud deployments on metrics like Setup Speed, Maintenance, and Control to help students understand the trade-offs for the Conclusion section.
+         3. Interactive Process Flows: Steps are presented as clickable cards that reveal details, preventing information overload and allowing students to focus on one task at a time.
+         4. Progress Bars: Visual feedback on task completion.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-stone-800 tracking-tight">Cyber SoHo's CDF.<span class="text-amber-600">Labs</span></span>
+                    <span class="ml-4 text-sm bg-stone-100 text-stone-600 py-1 px-3 rounded-full">Cyber-Defense Fundamentals</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <button onclick="router('overview')" id="nav-overview" class="nav-item px-3 py-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors">Mission Brief</button>
+                    <button onclick="router('lab1')" id="nav-lab1" class="nav-item px-3 py-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors">Lab 1: Local</button>
+                    <button onclick="router('lab2')" id="nav-lab2" class="nav-item px-3 py-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors">Lab 2: Cloud</button>
+                    <button onclick="router('submission')" id="nav-submission" class="nav-item px-3 py-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors">Submission</button>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-stone-400 uppercase tracking-wider">Due Date</p>
+                    <p class="text-sm font-bold text-red-600">Jan 6, 2026</p>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Nav Placeholder (simplified) -->
+        <div class="md:hidden flex justify-around border-t border-stone-100 py-2 bg-stone-50">
+            <button onclick="router('overview')" class="text-xs font-bold text-stone-600">Brief</button>
+            <button onclick="router('lab1')" class="text-xs font-bold text-stone-600">Local</button>
+            <button onclick="router('lab2')" class="text-xs font-bold text-stone-600">Cloud</button>
+            <button onclick="router('submission')" class="text-xs font-bold text-stone-600">Submit</button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="flex-grow bg-[#fdfbf7] p-4 md:p-8">
+        <!-- Content injected by JS -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-stone-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-6 px-4 flex justify-between items-center text-sm text-stone-500">
+            <p>Wazuh Implementation Lab &copy; Cyber SoHo, 2025</p>
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                <span>System Status: Online</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Templates (Hidden) -->
+    <script>
+        // --- Data & State ---
+        const state = {
+            currentView: 'overview',
+            lab1Progress: 0,
+            lab2Progress: 0,
+            lab1Tasks: [
+                { id: 'l1-1', title: 'Environment Setup', desc: 'Import Wazuh OVA into VirtualBox. Set Network to "NAT Network".', status: false },
+                { id: 'l1-2', title: 'Initialization', desc: 'Start VM. Verify IP address via console using `ip a`.', status: false },
+                { id: 'l1-3', title: 'Security Baseline', desc: 'Access Dashboard via HTTPS. Change `admin` password.', status: false },
+                { id: 'l1-4', title: 'Module Activation', desc: 'Enable Vulnerability Detection & FIM in Modules section.', status: false },
+                { id: 'l1-5', title: 'Agent Deployment', desc: 'Deploy agent on host/victim VM using the Dashboard wizard.', status: false },
+                { id: 'l1-6', title: 'Trigger Alerts', desc: 'Perform suspicious action (e.g., failed SSH) & verify in Security Events.', status: false }
+            ],
+            lab2Tasks: [
+                { id: 'l2-1', title: 'Cloud Provisioning', desc: 'Register for 14-day free trial. Create "Small" environment.', status: false },
+                { id: 'l2-2', title: 'Connectivity', desc: 'Ensure local VM is "Bridged" for direct cloud communication.', status: false },
+                { id: 'l2-3', title: 'Agent Migration', desc: 'Uninstall old agent. Deploy new agent using Cloud Manager Address.', status: false },
+                { id: 'l2-4', title: 'Verification', desc: 'Check "Active" status in Cloud Console.', status: false },
+                { id: 'l2-5', title: 'Actionable Task', desc: 'Run SCA scan. Analyze "Fail" results.', status: false }
+            ],
+            submissionItems: [
+                { id: 's-1', text: 'Executive Summary (Local vs Cloud diffs)', checked: false },
+                { id: 's-2', text: 'Lab 1: VirtualBox Network Settings Screenshot', checked: false },
+                { id: 's-3', text: 'Lab 1: Local Dashboard Active Agent Screenshot', checked: false },
+                { id: 's-4', text: 'Lab 1: Security Alert Snippet', checked: false },
+                { id: 's-5', text: 'Lab 2: Cloud Environment URL Screenshot', checked: false },
+                { id: 's-6', text: 'Lab 2: Cloud Agents Tab Screenshot', checked: false },
+                { id: 's-7', text: 'Lab 2: SCA Report Export (PDF/CSV)', checked: false },
+                { id: 's-8', text: 'Conclusion (Efficiency Reflection)', checked: false }
+            ]
+        };
+
+        // --- Render Functions ---
+
+        function updateNav() {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeBtn = document.getElementById(`nav-${state.currentView}`);
+            if(activeBtn) activeBtn.classList.add('active');
+        }
+
+        function router(view) {
+            state.currentView = view;
+            updateNav();
+            const content = document.getElementById('app-content');
+            content.innerHTML = ''; // Clear
+
+            switch(view) {
+                case 'overview': renderOverview(content); break;
+                case 'lab1': renderLab1(content); break;
+                case 'lab2': renderLab2(content); break;
+                case 'submission': renderSubmission(content); break;
+            }
+            window.scrollTo(0,0);
+        }
+
+        function renderOverview(container) {
+            container.innerHTML = `
+                <div class="max-w-5xl mx-auto space-y-8 animate-fade-in">
+                    <div class="text-center py-10">
+                        <h1 class="text-4xl font-bold text-stone-800 mb-4">SIEM & XDR Implementation</h1>
+                        <p class="text-lg text-stone-600 max-w-2xl mx-auto">
+                            Welcome to your Cyber-Defense Fundamentals lab. Your mission is to deploy the Wazuh security stack in two environments: On-Premise and Hybrid Cloud.
+                        </p>
+                        <div class="mt-8">
+                            <button onclick="router('lab1')" class="btn-primary px-6 py-3 rounded-lg shadow-lg font-semibold text-lg">Start Operation</button>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-xl font-bold text-stone-800 mb-2 flex items-center">
+                                <span class="bg-stone-100 p-2 rounded-lg mr-3">🏢</span> Lab 1: On-Premise
+                            </h2>
+                            <p class="text-stone-600 mb-4">Deploy a full stack locally using VirtualBox. Understand the infrastructure weight and configuration of a self-hosted SIEM.</p>
+                            <ul class="text-sm text-stone-500 space-y-2">
+                                <li>• Import OVA Appliance</li>
+                                <li>• Configure NAT Networking</li>
+                                <li>• Baseline Security Config</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-xl font-bold text-stone-800 mb-2 flex items-center">
+                                <span class="bg-blue-50 p-2 rounded-lg mr-3 text-blue-600">☁️</span> Lab 2: Hybrid Cloud
+                            </h2>
+                            <p class="text-stone-600 mb-4">Transition to SaaS. Connect your local assets to the Wazuh Cloud and analyze security posture without managing the backend.</p>
+                            <ul class="text-sm text-stone-500 space-y-2">
+                                <li>• Cloud Tenant Provisioning</li>
+                                <li>• Agent Migration</li>
+                                <li>• Security Configuration Assessment</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">⚠️</div>
+                            <div class="ml-3">
+                                <p class="text-sm text-amber-700 font-bold">Critical Warnings</p>
+                                <ul class="list-disc list-inside text-sm text-amber-700 mt-1">
+                                    <li>The Cloud trial expires in 14 days. Capture evidence immediately.</li>
+                                    <li>Reset all router ports to default after completing the exercise.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLab1(container) {
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
+                    <!-- Left Column: Context & Charts -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-lg font-bold text-stone-800 mb-4">Local Deployment Context</h2>
+                            <p class="text-sm text-stone-600 mb-4">
+                                You will simulate a corporate on-premise security center. This requires dedicating local resources to run the Indexer, Server, and Dashboard components within a single Virtual Appliance.
+                            </p>
+                            <div class="text-xs text-stone-400 uppercase tracking-wide font-bold mb-2">Resource Requirement Model</div>
+                            <div class="chart-container h-64">
+                                <canvas id="resourceChart"></canvas>
+                            </div>
+                            <p class="text-xs text-center text-stone-400 mt-2">Recommended Min Specs vs Typical Host</p>
+                        </div>
+                        
+                        <div class="bg-stone-800 text-stone-300 p-6 rounded-xl">
+                            <h3 class="font-bold text-white mb-2">Technical Specs</h3>
+                            <ul class="text-sm space-y-3">
+                                <li class="flex justify-between"><span>Hypervisor</span> <span class="text-white">VirtualBox (Latest)</span></li>
+                                <li class="flex justify-between"><span>File</span> <span class="text-white">Wazuh OVA</span></li>
+                                <li class="flex justify-between"><span>Network</span> <span class="text-white">NAT Network</span></li>
+                                <li class="flex justify-between"><span>RAM/CPU</span> <span class="text-white">4GB / 2 vCPUs</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Tasks -->
+                    <div class="lg:col-span-2">
+                        <div class="mb-6 flex justify-between items-end">
+                            <div>
+                                <h1 class="text-3xl font-bold text-stone-800">Lab 1: Local Hypervisor</h1>
+                                <p class="text-stone-500">Deploying the On-Premise SIEM Stack</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-amber-600" id="l1-percent">0%</div>
+                                <div class="text-xs text-stone-400">Completion</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-stone-200 rounded-full h-2.5 mb-8">
+                            <div class="bg-amber-500 h-2.5 rounded-full transition-all duration-500" id="l1-bar" style="width: 0%"></div>
+                        </div>
+
+                        <!-- Task List -->
+                        <div class="space-y-4" id="lab1-tasks-container">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            renderTasks('lab1', state.lab1Tasks);
+            
+            // Initialize Chart
+            setTimeout(() => {
+                const ctx = document.getElementById('resourceChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Guest RAM (4GB)', 'Host RAM Reserve', 'Guest Disk (50GB)', 'Host Disk Reserve'],
+                        datasets: [{
+                            data: [4, 12, 50, 450],
+                            backgroundColor: ['#d97706', '#f3f4f6', '#4b5563', '#e5e7eb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                    }
+                });
+            }, 100);
+        }
+
+        function renderLab2(container) {
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto grid lg:grid-cols-3 gap-8">
+                    <!-- Left Column: Context & Charts -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-100">
+                            <h2 class="text-lg font-bold text-stone-800 mb-4">Cloud Deployment Context</h2>
+                            <p class="text-sm text-stone-600 mb-4">
+                                Shift to a SaaS model. Here, the heavy lifting (Indexer/Server) is managed by Wazuh. Your focus shifts to connectivity and policy configuration.
+                            </p>
+                            <div class="text-xs text-stone-400 uppercase tracking-wide font-bold mb-2">Model Comparison</div>
+                            <div class="chart-container h-64">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                            <p class="text-xs text-center text-stone-400 mt-2">Local (Lab 1) vs Cloud (Lab 2)</p>
+                        </div>
+                        
+                        <div class="bg-blue-900 text-blue-100 p-6 rounded-xl">
+                            <h3 class="font-bold text-white mb-2">Cloud Specs</h3>
+                            <ul class="text-sm space-y-3">
+                                <li class="flex justify-between"><span>Account</span> <span class="text-white">14-Day Free Trial</span></li>
+                                <li class="flex justify-between"><span>Credit Card</span> <span class="text-white">Not Required</span></li>
+                                <li class="flex justify-between"><span>Outbound Ports</span> <span class="text-white">1514, 1515, 443</span></li>
+                                <li class="flex justify-between"><span>Network</span> <span class="text-white">Bridged Mode</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Tasks -->
+                    <div class="lg:col-span-2">
+                        <div class="mb-6 flex justify-between items-end">
+                            <div>
+                                <h1 class="text-3xl font-bold text-stone-800">Lab 2: Hybrid Cloud</h1>
+                                <p class="text-stone-500">Connecting Endpoints to SaaS</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-blue-600" id="l2-percent">0%</div>
+                                <div class="text-xs text-stone-400">Completion</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-stone-200 rounded-full h-2.5 mb-8">
+                            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" id="l2-bar" style="width: 0%"></div>
+                        </div>
+
+                        <!-- Task List -->
+                        <div class="space-y-4" id="lab2-tasks-container">
+                            <!-- Tasks injected here -->
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            renderTasks('lab2', state.lab2Tasks);
+
+            // Initialize Chart
+            setTimeout(() => {
+                const ctx = document.getElementById('radarChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Setup Speed', 'Maintenance', 'Cost ($)', 'Control', 'Scalability'],
+                        datasets: [{
+                            label: 'Local (Lab 1)',
+                            data: [2, 5, 1, 5, 2],
+                            fill: true,
+                            backgroundColor: 'rgba(217, 119, 6, 0.2)',
+                            borderColor: 'rgb(217, 119, 6)',
+                            pointBackgroundColor: 'rgb(217, 119, 6)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(217, 119, 6)'
+                        }, {
+                            label: 'Cloud (Lab 2)',
+                            data: [5, 1, 3, 3, 5],
+                            fill: true,
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            pointBackgroundColor: 'rgb(37, 99, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(37, 99, 235)'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        elements: { line: { borderWidth: 3 } },
+                        scales: { r: { angleLines: { display: false }, suggestedMin: 0, suggestedMax: 5, ticks: { display: false } } }
+                    }
+                });
+            }, 100);
+        }
+
+        function renderSubmission(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center mb-10">
+                        <h1 class="text-3xl font-bold text-stone-800 mb-2">Final Report Protocol</h1>
+                        <p class="text-stone-600">Compile the following evidence into a single DOCX/PDF report.</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden">
+                        <div class="bg-stone-800 p-4 text-white flex justify-between items-center">
+                            <span class="font-bold">Submission Checklist</span>
+                            <span class="text-xs bg-stone-700 px-2 py-1 rounded" id="submit-count">0/8 Ready</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid gap-4" id="submission-list">
+                                <!-- Checklist items -->
+                            </div>
+                        </div>
+                        <div class="bg-stone-50 p-4 border-t border-stone-200 text-center">
+                            <p class="text-sm text-stone-500">Ensure screenshots are legible. Submit before Jan 6, 2026.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            renderChecklist();
+        }
+
+        // --- Helper Components & Logic ---
+
+        function renderTasks(labId, tasks) {
+            const container = document.getElementById(`${labId}-tasks-container`);
+            container.innerHTML = tasks.map((task, index) => `
+                <div class="step-card bg-white p-5 rounded-lg border border-stone-200 shadow-sm cursor-pointer ${task.status ? 'border-l-green-500' : ''}" onclick="toggleTask('${labId}', ${index})">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 mt-1">
+                            <div class="w-6 h-6 rounded-full border-2 ${task.status ? 'bg-green-500 border-green-500' : 'border-stone-300'} flex items-center justify-center text-white text-xs font-bold transition-colors">
+                                ${task.status ? '✓' : index + 1}
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-grow">
+                            <h3 class="text-lg font-medium text-stone-800 ${task.status ? 'line-through text-stone-400' : ''}">${task.title}</h3>
+                            <div class="mt-2 text-stone-600 text-sm ${task.status ? 'hidden' : 'block'}">
+                                ${task.desc}
+                            </div>
+                            <button class="mt-3 text-xs font-semibold uppercase tracking-wide ${task.status ? 'text-green-600' : 'text-amber-600 hover:text-amber-700'}">
+                                ${task.status ? 'Completed' : 'Mark Complete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            updateProgress(labId);
+        }
+
+        function toggleTask(labId, index) {
+            if(labId === 'lab1') state.lab1Tasks[index].status = !state.lab1Tasks[index].status;
+            else state.lab2Tasks[index].status = !state.lab2Tasks[index].status;
+            renderTasks(labId, labId === 'lab1' ? state.lab1Tasks : state.lab2Tasks);
+        }
+
+        function updateProgress(labId) {
+            const tasks = labId === 'lab1' ? state.lab1Tasks : state.lab2Tasks;
+            const completed = tasks.filter(t => t.status).length;
+            const percent = Math.round((completed / tasks.length) * 100);
+            
+            document.getElementById(`${labId === 'lab1' ? 'l1' : 'l2'}-percent`).innerText = `${percent}%`;
+            document.getElementById(`${labId === 'lab1' ? 'l1' : 'l2'}-bar`).style.width = `${percent}%`;
+        }
+
+        function renderChecklist() {
+            const list = document.getElementById('submission-list');
+            list.innerHTML = state.submissionItems.map((item, index) => `
+                <label class="flex items-center p-3 rounded-lg hover:bg-stone-50 cursor-pointer border border-transparent hover:border-stone-200 transition-all">
+                    <input type="checkbox" class="form-checkbox h-5 w-5 text-stone-600 rounded focus:ring-stone-500" 
+                        ${item.checked ? 'checked' : ''} 
+                        onchange="toggleCheck(${index})">
+                    <span class="ml-3 text-stone-700 ${item.checked ? 'line-through opacity-50' : ''}">${item.text}</span>
+                </label>
+            `).join('');
+            
+            const count = state.submissionItems.filter(i => i.checked).length;
+            document.getElementById('submit-count').innerText = `${count}/${state.submissionItems.length} Ready`;
+        }
+
+        function toggleCheck(index) {
+            state.submissionItems[index].checked = !state.submissionItems[index].checked;
+            renderChecklist();
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            router('overview');
+        });
+
+    </script>
+</body>
+</html>
+
+
+

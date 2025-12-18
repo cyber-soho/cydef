@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Onion: Interactive Lab Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin: 0 auto; height: 300px; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .step-active { border-left: 4px solid #6366f1; background: #eef2ff; }
+        .nav-link.active { color: #6366f1; border-bottom: 2px solid #6366f1; }
+    </style>
+    <!-- Chosen Palette: Cyber Indigo & Slate (Professional, high-tech feel) -->
+    <!-- Application Structure Plan: Organized as a phased technical walkthrough. Instead of a scrolling document, it uses a modular "Phase" approach (Requirements -> Setup -> SOC Operations -> Submission) to match the complexity of Security Onion's installation. Interactive resource calculators help students determine if their hardware can handle the stack. -->
+    <!-- Visualization & Content Choices: 
+         1. Resource Allocation Radar: Visualizes the heavy RAM/CPU requirements of Security Onion vs typical student hardware.
+         2. Interactive Checklist: Tracks technical milestones.
+         3. Code Snippet Blocks: Highlights specific CLI commands needed during setup.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">SO</div>
+                    <span class="text-xl font-bold tracking-tight text-slate-800">CyberSoho.<span class="text-indigo-600">SecurityOnion.</span> Lab</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <button onclick="navigate('start')" id="nav-start" class="nav-link px-2 py-5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">Requirements</button>
+                    <button onclick="navigate('install')" id="nav-install" class="nav-link px-2 py-5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">Phase 1: Setup</button>
+                    <button onclick="navigate('ops')" id="nav-ops" class="nav-link px-2 py-5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">Phase 2: SOC</button>
+                    <button onclick="navigate('submit')" id="nav-submit" class="nav-link px-2 py-5 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">Submission</button>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1 rounded-full">DUE: DEC 20</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="view-container" class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+        <!-- Dynamic Content -->
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-6">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
+            <p>Cyber-Defense Fundamentals | Formative Exercise</p>
+            <p class="mt-2 md:mt-0">Hardware Recommendation: 16GB+ RAM highly recommended.</p>
+        </div>
+    </footer>
+
+    <script>
+        const state = {
+            currentView: 'start',
+            steps: {
+                install: [
+                    { id: 1, title: 'VM Creation', desc: '4 vCPUs, 12GB RAM, 200GB VDI Disk.', done: false },
+                    { id: 2, title: 'Network Setup', desc: 'Adapter 1: NAT Net. Adapter 2: Host-Only (Promiscuous Mode: Allow All).', done: false },
+                    { id: 3, title: 'ISO Boot', desc: 'Select "Install Security Onion 2". Wait for initial OS load.', done: false },
+                    { id: 4, title: 'Setup Script', desc: 'Run `sudo setup`. Choose IMPORT/EVAL mode.', done: false }
+                ],
+                ops: [
+                    { id: 5, title: 'Login to SOC', desc: 'Access via browser using Management IP.', done: false },
+                    { id: 6, title: 'Verify Grid', desc: 'Ensure all containers (Suricata, Elastic) are green.', done: false },
+                    { id: 7, title: 'Query Alerts', desc: 'Filter alerts in the Alerts interface.', done: false }
+                ]
+            }
+        };
+
+        function navigate(view) {
+            state.currentView = view;
+            updateNav();
+            render();
+        }
+
+        function updateNav() {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const active = document.getElementById(`nav-${state.currentView}`);
+            if (active) active.classList.add('active');
+        }
+
+        function render() {
+            const container = document.getElementById('view-container');
+            container.innerHTML = '';
+
+            if (state.currentView === 'start') renderStart(container);
+            if (state.currentView === 'install') renderInstall(container);
+            if (state.currentView === 'ops') renderOps(container);
+            if (state.currentView === 'submit') renderSubmit(container);
+            window.scrollTo(0, 0);
+        }
+
+        function renderStart(container) {
+            container.innerHTML = `
+                <div class="grid lg:grid-cols-2 gap-12 items-center animate-in fade-in duration-500">
+                    <div>
+                        <h1 class="text-5xl font-extrabold text-slate-900 tracking-tight mb-6">Mastering the <span class="text-indigo-600">Onion</span></h1>
+                        <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                            Security Onion is the industry standard for Network Security Monitoring (NSM). This lab shifts your focus from endpoint-centric security (Wazuh) to a network-wide perspective. You will deploy a full SOC-in-a-box.
+                        </p>
+                        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8">
+                            <h4 class="font-bold text-amber-800">Resource Warning</h4>
+                            <p class="text-sm text-amber-700">Security Onion requires significantly more RAM than Wazuh. Do not attempt on machines with < 8GB RAM.</p>
+                        </div>
+                        <button onclick="navigate('install')" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">Begin Deployment</button>
+                    </div>
+                    <div class="glass-card p-8 rounded-3xl shadow-xl">
+                        <h3 class="text-xl font-bold mb-6 text-slate-800">Hardware Resource Model</h3>
+                        <div class="chart-container">
+                            <canvas id="resourceChart"></canvas>
+                        </div>
+                        <div class="mt-6 grid grid-cols-2 gap-4 text-center">
+                            <div class="p-3 bg-slate-50 rounded-lg"><p class="text-xs text-slate-400">MIN RAM</p><p class="font-bold">12 GB</p></div>
+                            <div class="p-3 bg-slate-50 rounded-lg"><p class="text-xs text-slate-400">MIN STORAGE</p><p class="font-bold">200 GB</p></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            initChart();
+        }
+
+        function renderInstall(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2">Phase 1: Installation & Configuration</h2>
+                    <p class="text-slate-500 mb-8">Follow these milestones to establish your monitoring node.</p>
+                    
+                    <div class="space-y-4">
+                        ${state.steps.install.map(s => `
+                            <div class="glass-card p-6 rounded-2xl flex items-start space-x-4 cursor-pointer hover:border-indigo-300 transition-all ${s.done ? 'bg-indigo-50/30 border-indigo-200' : ''}" onclick="toggleStep('install', ${s.id})">
+                                <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-bold ${s.done ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}">
+                                    ${s.done ? '✓' : s.id}
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800 ${s.done ? 'line-through text-slate-400' : ''}">${s.title}</h4>
+                                    <p class="text-sm text-slate-500">${s.desc}</p>
+                                    ${s.title === 'Setup Script' ? '<div class="mt-3 mono text-xs bg-slate-900 text-indigo-400 p-2 rounded">sudo setup</div>' : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="mt-10 p-6 bg-slate-900 rounded-2xl text-slate-300">
+                        <h4 class="text-white font-bold mb-2">Pro Tip: Promiscuous Mode</h4>
+                        <p class="text-sm">In VirtualBox, under Network -> Advanced, set **Promiscuous Mode** to "Allow All" on your second adapter. Without this, your Sniffing interface won't see any traffic!</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOps(container) {
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-bold mb-2">Phase 2: SOC Management</h2>
+                    <p class="text-slate-500 mb-8">Interaction with the Security Onion Console (SOC).</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="glass-card p-6 rounded-2xl">
+                            <h4 class="font-bold mb-4">Key SOC Tools</h4>
+                            <ul class="space-y-4 text-sm">
+                                <li class="flex items-center space-x-3">
+                                    <span class="p-2 bg-indigo-100 text-indigo-600 rounded">🔔</span>
+                                    <span><strong>Alerts:</strong> Real-time Suricata/Zeek events.</span>
+                                </li>
+                                <li class="flex items-center space-x-3">
+                                    <span class="p-2 bg-emerald-100 text-emerald-600 rounded">🔍</span>
+                                    <span><strong>Hunt:</strong> Query-based threat hunting across all logs.</span>
+                                </li>
+                                <li class="flex items-center space-x-3">
+                                    <span class="p-2 bg-amber-100 text-amber-600 rounded">📊</span>
+                                    <span><strong>Dashboards:</strong> Visual breakdown of network health.</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="space-y-4">
+                            ${state.steps.ops.map(s => `
+                                <div class="glass-card p-4 rounded-xl flex items-center space-x-3 cursor-pointer hover:bg-white transition-all" onclick="toggleStep('ops', ${s.id})">
+                                    <div class="w-6 h-6 rounded border-2 flex items-center justify-center ${s.done ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'}">
+                                        ${s.done ? '✓' : ''}
+                                    </div>
+                                    <span class="text-sm font-medium ${s.done ? 'line-through text-slate-400' : ''}">${s.title}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSubmit(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center">
+                    <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">📝</div>
+                    <h2 class="text-3xl font-bold mb-4">Submission Readiness</h2>
+                    <p class="text-slate-500 mb-10">Ensure you have captured the following for your professor:</p>
+                    
+                    <div class="text-left space-y-4 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="flex items-center space-x-4 border-b border-slate-50 pb-4">
+                            <input type="checkbox" class="w-5 h-5 rounded">
+                            <p class="text-slate-700 font-medium">Screenshot: VirtualBox Dual-Adapter Settings</p>
+                        </div>
+                        <div class="flex items-center space-x-4 border-b border-slate-50 pb-4">
+                            <input type="checkbox" class="w-5 h-5 rounded">
+                            <p class="text-slate-700 font-medium">Screenshot: Final Setup Success Screen (CLI)</p>
+                        </div>
+                        <div class="flex items-center space-x-4 border-b border-slate-50 pb-4">
+                            <input type="checkbox" class="w-5 h-5 rounded">
+                            <p class="text-slate-700 font-medium">Screenshot: SOC "Grid" page (All Green)</p>
+                        </div>
+                        <div class="flex items-center space-x-4 border-b border-slate-50 pb-4">
+                            <input type="checkbox" class="w-5 h-5 rounded">
+                            <p class="text-slate-700 font-medium">Screenshot: Alert or Hunt query result</p>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <input type="checkbox" class="w-5 h-5 rounded">
+                            <p class="text-slate-700 font-medium">100-word reflection (Wazuh vs Security Onion)</p>
+                        </div>
+                    </div>
+                    
+                    <p class="mt-8 text-sm text-slate-400">Due December 20, 2025 at 15:00 EST.</p>
+                </div>
+            `;
+        }
+
+        function toggleStep(group, id) {
+            const step = state.steps[group].find(s => s.id === id);
+            if (step) step.done = !step.done;
+            render();
+        }
+
+        function initChart() {
+            setTimeout(() => {
+                const ctx = document.getElementById('resourceChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['RAM', 'vCPU', 'Disk Space', 'Complexity', 'Network load'],
+                        datasets: [{
+                            label: 'Security Onion',
+                            data: [100, 80, 90, 85, 70],
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderColor: '#6366f1',
+                            pointBackgroundColor: '#6366f1'
+                        }, {
+                            label: 'Wazuh (Lab 1)',
+                            data: [40, 40, 30, 40, 20],
+                            backgroundColor: 'rgba(148, 163, 184, 0.2)',
+                            borderColor: '#94a3b8',
+                            pointBackgroundColor: '#94a3b8'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: { r: { ticks: { display: false }, suggestedMin: 0, suggestedMax: 100 } },
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }, 50);
+        }
+
+        window.onload = () => navigate('start');
+    </script>
+</body>
+</html>
+
+
+
+
+
