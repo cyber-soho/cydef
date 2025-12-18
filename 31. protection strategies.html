@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortress Theory: Advanced Perimeter & Host Protection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Chosen Palette: Warm Corporate Security -->
+    <!-- Backgrounds: Stone-50 (Warm Neutral) -->
+    <!-- Primary Text: Stone-800 -->
+    <!-- Accents: Indigo (Tech), Emerald (Safe), Rose (Threat), Amber (Warning) -->
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9; /* Stone-50 */
+            color: #1c1917; /* Stone-900 */
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e7e5e4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #a8a29e; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #78716c; 
+        }
+
+        /* Chart Container Strict Styling - As requested */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Terminal/Code Styling */
+        .terminal-window {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #444;
+        }
+        .terminal-header {
+            background-color: #2d2d2d;
+            padding: 0.5rem 1rem;
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-red { background-color: #ff5f56; }
+        .dot-yellow { background-color: #ffbd2e; }
+        .dot-green { background-color: #27c93f; }
+
+        /* Animation for Tor Flow */
+        @keyframes pulse-flow {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.3; transform: scale(0.95); }
+        }
+        .node-active {
+            animation: pulse-flow 1.5s infinite ease-in-out;
+            border-color: #4f46e5 !important;
+            background-color: #e0e7ff !important;
+            color: #312e81 !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Application Structure Plan: 
+         Layout: "Command Center" Dashboard.
+         - Sidebar: Navigation through the defensive layers (Intro, Perimeter, Transport, Host, Integrity).
+         - Main Content: 
+            1. Header: Context and Title.
+            2. Split View: 
+               - Left: Explanatory text, Real-life scenarios, and Source Code reference.
+               - Right: Interactive Visualization/Simulation (The "Lab").
+         
+         Flow: User reads the concept -> Sees the visualization -> Interacts with the "Lab" to test the concept (e.g., simulating a WAF block or calculating a hash).
+         
+         Why: This structure breaks the dense lecture into digestible, interactive modules. It allows non-linear exploration but suggests a logical flow from Edge -> Network -> Host.
+    -->
+
+    <!-- Visualization & Content Choices:
+         1. Intro: Doughnut Chart (CIA Triad balance).
+         2. Perimeter: Bar Chart (OSI Layers) + Interactive WAF Regex Tester.
+         3. Transport: Interactive Node Diagram (HTML/CSS) for Tor circuits + Code View for Nginx/ZeroTier.
+         4. Host: Radar Chart (Security vs Usability) for OS comparison.
+         5. Integrity: Interactive File Integrity Monitor (Hash calculator).
+         
+         Justification: No SVG used. Chart.js handles data viz. HTML/CSS/JS handles diagram interactions and simulations.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-stone-900 text-stone-300 flex-shrink-0 flex flex-col transition-all z-20">
+        <div class="p-6 border-b border-stone-800 bg-stone-950">
+            <h1 class="text-xl font-bold text-white tracking-wide">FORTRESS THEORY</h1>
+            <p class="text-xs text-stone-500 mt-1 uppercase tracking-widest">Cyber Defense Ops</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-4 space-y-1" id="nav-container">
+            <!-- Nav items injected by JS -->
+        </div>
+
+        <div class="p-4 bg-stone-950 border-t border-stone-800 text-xs text-stone-500 text-center">
+            Lecture Duration: ~60 Mins<br>Source: Cybersecurity Ops
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col bg-stone-50 overflow-hidden relative">
+        
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-stone-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
+            <div>
+                <h2 id="module-title" class="text-2xl font-bold text-stone-800">Welcome</h2>
+                <p id="module-subtitle" class="text-sm text-stone-500">Initialize session...</p>
+            </div>
+            <div class="hidden md:flex items-center gap-3">
+                <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-semibold">System Secure</span>
+                <span class="px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-semibold" id="page-counter">Module 1/5</span>
+            </div>
+        </header>
+
+        <!-- Scrollable Area -->
+        <div id="content-area" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth">
+            
+            <!-- Module Intro Section -->
+            <section class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
+                    <h3 class="text-lg font-semibold text-stone-800 mb-3 border-b border-stone-100 pb-2">Module Briefing</h3>
+                    <div id="module-intro" class="prose prose-stone text-stone-600 leading-relaxed max-w-none">
+                        <!-- Content Injected Here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive Grid -->
+            <div class="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                <!-- Left Column: Deep Dive & Code -->
+                <div class="space-y-6">
+                    
+                    <!-- Scenario Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+                        <div class="bg-indigo-50 px-6 py-3 border-b border-indigo-100 flex items-center justify-between">
+                            <span class="font-semibold text-indigo-900">🛡️ Real-Life Scenario</span>
+                            <span class="text-xs uppercase font-bold text-indigo-400 tracking-wider">Field Ops</span>
+                        </div>
+                        <div class="p-6">
+                            <h4 id="scenario-title" class="text-lg font-bold text-stone-800 mb-2">Scenario Title</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <span class="text-xs font-bold text-stone-400 uppercase">The Task</span>
+                                    <p id="scenario-task" class="text-stone-700 mt-1">Task description...</p>
+                                </div>
+                                <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+                                    <span class="text-xs font-bold text-emerald-600 uppercase">The Solution</span>
+                                    <p id="scenario-solution" class="text-emerald-900 mt-1 text-sm font-medium">Solution description...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Source Code Display -->
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <div class="dot dot-red"></div>
+                            <div class="dot dot-yellow"></div>
+                            <div class="dot dot-green"></div>
+                            <span class="text-xs font-mono text-stone-400 ml-2" id="code-filename">source.py</span>
+                        </div>
+                        <div class="relative group">
+                            <pre class="p-4 overflow-x-auto text-xs md:text-sm font-mono leading-relaxed h-64 overflow-y-auto"><code id="code-display" class="language-python"># Code loads here...</code></pre>
+                            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="text-xs bg-stone-700 text-white px-2 py-1 rounded">Read Only</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Visualization & Lab -->
+                <div class="space-y-6">
+                    
+                    <!-- Chart/Diagram Container -->
+                    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 flex flex-col items-center">
+                        <h3 class="text-sm font-bold text-stone-400 uppercase tracking-widest mb-4 w-full text-left">Data Analysis</h3>
+                        
+                        <!-- ChartJS Canvas Wrapper -->
+                        <div id="canvas-wrapper" class="chart-container hidden">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+
+                        <!-- HTML Diagram Wrapper (for non-chart visuals) -->
+                        <div id="diagram-wrapper" class="w-full hidden">
+                            <!-- Dynamic Diagram Content -->
+                        </div>
+                        
+                        <p id="viz-caption" class="text-xs text-stone-400 mt-4 text-center italic">Visualization Caption</p>
+                    </div>
+
+                    <!-- Interactive Lab Controller -->
+                    <div class="bg-stone-100 rounded-xl border border-stone-200 overflow-hidden">
+                        <div class="px-6 py-3 border-b border-stone-200 bg-stone-200/50 flex items-center justify-between">
+                            <span class="font-semibold text-stone-700">🔬 Interactive Lab</span>
+                            <div class="flex gap-2">
+                                <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                <span class="text-xs font-mono text-stone-500">ACTIVE</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6" id="lab-container">
+                            <!-- Dynamic Inputs and Buttons for Simulators -->
+                        </div>
+                        
+                        <div class="bg-stone-900 p-4 border-t border-stone-300 font-mono text-xs h-32 overflow-y-auto" id="lab-console">
+                            <span class="text-emerald-500">user@fortress:~$</span> <span class="text-stone-300">Ready for command...</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer Spacing -->
+            <div class="h-12"></div>
+        </div>
+    </main>
+
+    <!-- LOGIC -->
+    <script>
+        // --- Data Store ---
+        const fortressData = {
+            overview: {
+                id: 'overview',
+                title: 'Fortress Theory',
+                subtitle: 'Introduction to Advanced Protection',
+                intro: `<p>In the context of the <strong>CIA (Confidentiality, Integrity, Availability)</strong> triad, the concept of a "perimeter" has evolved. We no longer rely solely on a hard outer shell and a soft center. We are moving toward <strong>Zero Trust</strong>.</p><p class="mt-2">This lecture dissects the tools required to secure the edge, obscure the traffic, and harden the host. A modern architect must assume the network is compromised and build defenses at every layer.</p>`,
+                scenario: {
+                    title: 'The Shift to Zero Trust',
+                    task: 'Traditional security relies on a firewall. Once inside, an attacker moves freely. The task is to limit this movement.',
+                    solution: 'Implement a layered defense strategy. If the Perimeter fails, Transport encryption hides data. If Transport is intercepted, Host isolation prevents execution.'
+                },
+                code: {
+                    filename: 'principles.txt',
+                    content: `CIA TRIAD:
+1. Confidentiality: Only authorized access.
+2. Integrity: Data is trustworthy and unaltered.
+3. Availability: Systems function when needed.
+
+STRATEGY:
+Layer 1: Perimeter (Firewalls, UTM)
+Layer 2: Transport (VPN, Tor, Proxy)
+Layer 3: Host (Isolation, HIDS)`
+                },
+                viz: {
+                    type: 'chart',
+                    config: {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Perimeter (Edge)', 'Transport (Obscurity)', 'Host (Hardening)'],
+                            datasets: [{
+                                data: [33, 33, 33],
+                                backgroundColor: ['#4f46e5', '#f59e0b', '#10b981'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom' },
+                                title: { display: true, text: 'Balanced Defense Strategy' }
+                            }
+                        }
+                    },
+                    caption: 'A robust security posture distributes resources equally across all three layers.'
+                },
+                lab: {
+                    type: 'info',
+                    msg: 'System Initialized. Select a module from the sidebar to begin training.'
+                }
+            },
+            perimeter: {
+                id: 'perimeter',
+                title: 'Perimeter Defense',
+                subtitle: 'Firewalls (L3 vs L7) & UTM',
+                intro: `<p><strong>Module 1 & 2:</strong> Traditional packet filtering operates at Layer 3/4 (IP/Port), blind to the payload. An <strong>Application Level Firewall (ALF/WAF)</strong> operates at Layer 7, inspecting content for attacks like SQL Injection.</p><p class="mt-2"><strong>Unified Threat Management (UTM)</strong> consolidates Firewall, IDS, VPN, and AV into a single appliance, reducing cost but creating a Single Point of Failure (SPOF).</p>`,
+                scenario: {
+                    title: 'The E-Commerce Sanitizer',
+                    task: 'Intercept a malicious search query intended to dump the user database via SQL Injection.',
+                    solution: 'Deploy a WAF with Deep Packet Inspection. It detects the regex pattern "OR 1=1" within the HTTP request body and drops the packet before it hits the DB.'
+                },
+                code: {
+                    filename: 'waf_sim.py',
+                    content: `# Application Level Firewall Simulation
+import re
+
+class SimpleWAF:
+    def __init__(self):
+        # SQL Injection Patterns
+        self.patterns = [
+            r"or\\s+1=1",       # Auth Bypass
+            r"union\\s+select", # Data Dump
+            r"--"               # Comment injection
+        ]
+
+    def inspect(self, payload):
+        for p in self.patterns:
+            if re.search(p, payload, re.IGNORECASE):
+                return "BLOCKED"
+        return "ALLOWED"
+
+# Usage
+waf = SimpleWAF()
+print(waf.inspect("search?q=laptop' OR 1=1 --"))`
+                },
+                viz: {
+                    type: 'chart',
+                    config: {
+                        type: 'bar',
+                        data: {
+                            labels: ['Packet Filter (L3)', 'Stateful FW (L4)', 'App Level FW (L7)'],
+                            datasets: [{
+                                label: 'OSI Layer Visibility Depth',
+                                data: [3, 4, 7],
+                                backgroundColor: ['#9ca3af', '#6b7280', '#4f46e5'],
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            scales: { y: { max: 7, title: { display: true, text: 'OSI Layer' } } },
+                            plugins: { title: { display: true, text: 'Firewall Visibility Comparison' } }
+                        }
+                    },
+                    caption: 'WAFs (L7) see the data payload. Packet Filters (L3) only see the envelope.'
+                },
+                lab: {
+                    type: 'waf',
+                    ui: `
+                        <label class="block text-xs font-bold text-stone-500 mb-1">HTTP Request Payload</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="waf-input" class="flex-1 bg-white border border-stone-300 rounded px-3 py-2 text-sm font-mono" placeholder="search?q=..." value="search?q=admin' OR 1=1 --">
+                            <button onclick="simWAF()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-bold shadow-sm transition-colors">INSPECT</button>
+                        </div>
+                        <div class="mt-3 text-xs text-stone-400">Try: <span class="font-mono bg-stone-200 px-1 rounded text-stone-600">union select</span> or <span class="font-mono bg-stone-200 px-1 rounded text-stone-600">clean query</span></div>
+                    `
+                }
+            },
+            transport: {
+                id: 'transport',
+                title: 'Transport Obfuscation',
+                subtitle: 'Proxies, Tor, VPN & SDN',
+                intro: `<p><strong>Modules 3, 4, 5, 8:</strong> Once packets leave the perimeter, they are vulnerable. We use <strong>Proxies</strong> (Forward/Reverse) to break connections, <strong>Tor</strong> to onion-route traffic through 3 random nodes, and <strong>VPNs/SDN (ZeroTier)</strong> to create encrypted tunnels.</p><p class="mt-2"><strong>Proxy Chaining</strong> (Pivoting) involves multiple hops (A -> B -> C), making traffic analysis exponentially harder.</p>`,
+                scenario: {
+                    title: 'The Activist & The Hybrid Mesh',
+                    task: '1. Publish a blog without revealing location (Tor). 2. Connect a home lab to AWS without opening ports (ZeroTier).',
+                    solution: '1. Tor Browser encrypts data 3 times. Guard knows IP, Exit knows Data. None know both.\n2. ZeroTier creates a P2P Global Ethernet Switch, bypassing NAT constraints.'
+                },
+                code: {
+                    filename: 'nginx_proxy_&_zerotier.sh',
+                    content: `# Nginx Reverse Proxy Block
+server {
+    listen 80;
+    location / {
+        proxy_pass http://192.168.1.50:8080; # Hide Backend
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+# ZeroTier SDN Setup
+curl -s https://install.zerotier.com | sudo bash
+sudo zerotier-cli join af78bf94364e2035 # Join Network
+ip addr show zt0 # Verify Virtual Interface`
+                },
+                viz: {
+                    type: 'diagram',
+                    html: `
+                        <div class="flex flex-col gap-4 w-full font-mono text-xs">
+                            <div id="node-client" class="p-3 border-2 border-stone-300 rounded bg-white text-center transition-all cursor-pointer hover:border-indigo-400" onclick="explainTor('client')">
+                                💻 Client (You) <br><span class="text-stone-400">Origin IP</span>
+                            </div>
+                            <div class="flex justify-center text-stone-400">⬇️ Encrypted Layer 1, 2, 3</div>
+                            <div id="node-guard" class="p-3 border-2 border-stone-300 rounded bg-stone-100 text-center transition-all cursor-pointer hover:border-indigo-400" onclick="explainTor('guard')">
+                                🛡️ Guard Node <br><span class="text-stone-400">Knows: You</span>
+                            </div>
+                            <div class="flex justify-center text-stone-400">⬇️ Encrypted Layer 2, 3</div>
+                            <div id="node-middle" class="p-3 border-2 border-stone-300 rounded bg-stone-100 text-center transition-all cursor-pointer hover:border-indigo-400" onclick="explainTor('middle')">
+                                🔄 Middle Node <br><span class="text-stone-400">Knows: Guard & Exit</span>
+                            </div>
+                            <div class="flex justify-center text-stone-400">⬇️ Encrypted Layer 3</div>
+                            <div id="node-exit" class="p-3 border-2 border-stone-300 rounded bg-stone-100 text-center transition-all cursor-pointer hover:border-indigo-400" onclick="explainTor('exit')">
+                                🚪 Exit Node <br><span class="text-stone-400">Knows: Target</span>
+                            </div>
+                            <div class="flex justify-center text-stone-400">⬇️ Decrypted (HTTP)</div>
+                            <div id="node-target" class="p-3 border-2 border-stone-300 rounded bg-rose-50 text-center transition-all cursor-pointer hover:border-indigo-400" onclick="explainTor('target')">
+                                🌐 Target Server <br><span class="text-stone-400">Sees: Exit IP</span>
+                            </div>
+                        </div>
+                    `,
+                    caption: 'The Tor Circuit. Click nodes to see what they know.'
+                },
+                lab: {
+                    type: 'tor',
+                    ui: `
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="animateTor()" class="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-bold shadow-sm mb-2">SEND PACKET THROUGH TOR</button>
+                            <div class="text-xs font-bold text-stone-500">Current Knowledge:</div>
+                            <div id="tor-knowledge" class="col-span-2 bg-white border border-stone-300 p-2 rounded text-xs min-h-[40px] flex items-center">Click a node in the diagram...</div>
+                        </div>
+                    `
+                }
+            },
+            host: {
+                id: 'host',
+                title: 'Host Hardening',
+                subtitle: 'Tails, Whonix & Qubes OS',
+                intro: `<p><strong>Modules 6 & 7:</strong> If the network is breached, the Host must survive. <strong>Tails</strong> is an amnesic OS (RAM only), ensuring no trace is left on the hardware.</p><p class="mt-2"><strong>Qubes OS</strong> uses "Security by Isolation" via the Xen Hypervisor. It runs apps in separate VMs (Qubes). Opening a virus in the "Work" Qube cannot infect the "Banking" Qube. <strong>Whonix</strong> isolates the network gateway from the workstation.</p>`,
+                scenario: {
+                    title: 'The Malware Analyst',
+                    task: 'Open a suspicious PDF attachment that might contain a zero-day kernel exploit.',
+                    solution: 'Use Qubes OS "DisposableVM". The PDF opens in a temporary VM. Even if infected, the VM is destroyed upon closing the window, wiping the malware instantly.'
+                },
+                code: {
+                    filename: 'qubes_structure.txt',
+                    content: `[ Hardware (Xen Hypervisor) ]
+      |
+      +--- [ dom0 (Admin) ] --- No Network Access
+      |
+      +--- [ sys-net ] --- Network Driver (Untrusted)
+      |
+      +--- [ sys-firewall ] --- Firewall Rules
+      |
+      +--- [ sys-whonix ] --- Tor Gateway
+            |
+            +--- [ anon-whonix ] --- Workstation (Isolated)
+      |
+      +--- [ personal ] --- Files
+      |
+      +--- [ work ] --- Files`
+                },
+                viz: {
+                    type: 'chart',
+                    config: {
+                        type: 'radar',
+                        data: {
+                            labels: ['Anonymity', 'Data Persistence', 'Isolation', 'Ease of Use'],
+                            datasets: [{
+                                label: 'Standard OS (Win/Mac)',
+                                data: [20, 90, 30, 95],
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)'
+                            }, {
+                                label: 'Tails (Amnesic)',
+                                data: [95, 10, 80, 60],
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.2)'
+                            }, {
+                                label: 'Qubes (Isolation)',
+                                data: [80, 80, 99, 40],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)'
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            scales: { r: { min: 0, max: 100 } },
+                            plugins: { title: { display: true, text: 'OS Security Profile Comparison' } }
+                        }
+                    },
+                    caption: 'Trade-offs: Tails sacrifices persistence for anonymity. Qubes maximizes isolation at the cost of usability.'
+                },
+                lab: {
+                    type: 'qubes',
+                    ui: `
+                        <p class="text-xs text-stone-500 mb-2">Simulate File Opening:</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="simOS('standard')" class="bg-stone-200 hover:bg-stone-300 text-stone-800 px-3 py-2 rounded text-xs font-bold">Standard OS</button>
+                            <button onclick="simOS('qubes')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded text-xs font-bold">Qubes DispVM</button>
+                        </div>
+                    `
+                }
+            },
+            integrity: {
+                id: 'integrity',
+                title: 'Integrity Monitoring',
+                subtitle: 'HIDS & FIM',
+                intro: `<p><strong>Module 9:</strong> While firewalls protect the door, <strong>HIDS (Host-Based Intrusion Detection)</strong> protects the room. Tools like Tripwire or OSSEC perform <strong>FIM (File Integrity Monitoring)</strong>.</p><p class="mt-2">FIM calculates the cryptographic hash (SHA-256) of critical files (e.g., <code>/bin/ls</code>). If a rootkit modifies the binary, the hash changes, triggering an alert.</p>`,
+                scenario: {
+                    title: 'The Silent Rootkit',
+                    task: 'A hacker has gained root and replaced the "ls" command to hide their files.',
+                    solution: 'The FIM system checks the hash of /bin/ls against a secure baseline database. The hashes do not match. An alert is sent immediately.'
+                },
+                code: {
+                    filename: 'fim_check.py',
+                    content: `import hashlib
+
+def calculate_hash(filepath):
+    # Calculate SHA-256
+    hasher = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        buf = f.read(65536)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = f.read(65536)
+    return hasher.hexdigest()
+
+# Compare
+if current_hash != baseline_hash:
+    print("CRITICAL ALERT: File modified!")`
+                },
+                viz: {
+                    type: 'diagram',
+                    html: `
+                        <div class="flex flex-col items-center justify-center h-full gap-4">
+                            <div class="text-xs font-bold text-stone-500 uppercase">Integrity Status</div>
+                            <div id="integrity-status" class="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center text-white text-4xl shadow-lg transition-colors">
+                                ✓
+                            </div>
+                            <div id="hash-display" class="font-mono text-[10px] bg-stone-100 p-2 rounded text-stone-500 border border-stone-200">
+                                Hash: MATCH
+                            </div>
+                        </div>
+                    `,
+                    caption: 'Visualizing File Integrity State'
+                },
+                lab: {
+                    type: 'fim',
+                    ui: `
+                        <label class="block text-xs font-bold text-stone-500 mb-1">Critical System File Content</label>
+                        <textarea id="file-content" class="w-full bg-white border border-stone-300 rounded px-3 py-2 text-sm font-mono h-20">SYSTEM_ROOT=/bin/secure_boot</textarea>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="setBaseline()" class="flex-1 bg-stone-600 hover:bg-stone-700 text-white px-3 py-2 rounded text-xs font-bold">SET BASELINE</button>
+                            <button onclick="checkIntegrity()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-xs font-bold">CHECK INTEGRITY</button>
+                        </div>
+                    `
+                }
+            }
+        };
+
+        // --- State ---
+        let currentChart = null;
+        let activeBaselineHash = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavigation();
+            loadModule('overview');
+        });
+
+        // --- Core Functions ---
+        function renderNavigation() {
+            const nav = document.getElementById('nav-container');
+            const modules = [
+                { id: 'overview', icon: '⚡', label: 'Overview' },
+                { id: 'perimeter', icon: '🧱', label: 'Perimeter Defense' },
+                { id: 'transport', icon: '🧅', label: 'Transport Obfuscation' },
+                { id: 'host', icon: '💻', label: 'Host Hardening' },
+                { id: 'integrity', icon: '🔍', label: 'Integrity Monitoring' }
+            ];
+
+            modules.forEach((mod, index) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-6 py-3 text-sm font-medium transition-colors flex items-center gap-3 hover:bg-stone-800 ${index === 0 ? 'bg-stone-800 text-white border-l-4 border-indigo-500' : 'text-stone-400 border-l-4 border-transparent'}`;
+                btn.innerHTML = `<span>${mod.icon}</span> ${mod.label}`;
+                btn.onclick = () => loadModule(mod.id);
+                btn.dataset.id = mod.id;
+                nav.appendChild(btn);
+            });
+        }
+
+        function loadModule(id) {
+            const data = fortressData[id];
+            if (!data) return;
+
+            // Update Nav State
+            document.querySelectorAll('#nav-container button').forEach(btn => {
+                if (btn.dataset.id === id) {
+                    btn.classList.add('bg-stone-800', 'text-white', 'border-indigo-500');
+                    btn.classList.remove('text-stone-400', 'border-transparent');
+                } else {
+                    btn.classList.remove('bg-stone-800', 'text-white', 'border-indigo-500');
+                    btn.classList.add('text-stone-400', 'border-transparent');
+                }
+            });
+
+            // Update Header
+            document.getElementById('module-title').textContent = data.title;
+            document.getElementById('module-subtitle').textContent = data.subtitle;
+            
+            // Determine page index for counter
+            const keys = Object.keys(fortressData);
+            const index = keys.indexOf(id) + 1;
+            document.getElementById('page-counter').textContent = `Module ${index}/${keys.length}`;
+
+            // Update Content
+            document.getElementById('module-intro').innerHTML = data.intro;
+            
+            // Update Scenario
+            document.getElementById('scenario-title').textContent = data.scenario.title;
+            document.getElementById('scenario-task').textContent = data.scenario.task;
+            document.getElementById('scenario-solution').textContent = data.scenario.solution;
+
+            // Update Code
+            document.getElementById('code-filename').textContent = data.code.filename;
+            document.getElementById('code-display').textContent = data.code.content;
+
+            // Update Visualization
+            renderViz(data.viz);
+
+            // Update Lab
+            renderLab(data.lab);
+            
+            // Reset Console
+            document.getElementById('lab-console').innerHTML = `<span class="text-emerald-500">user@fortress:~$</span> <span class="text-stone-300">Module loaded. Ready.</span>`;
+        }
+
+        function renderViz(vizData) {
+            const chartWrapper = document.getElementById('canvas-wrapper');
+            const diagramWrapper = document.getElementById('diagram-wrapper');
+            const caption = document.getElementById('viz-caption');
+
+            caption.textContent = vizData.caption;
+
+            // Destroy previous chart
+            if (currentChart) {
+                currentChart.destroy();
+                currentChart = null;
+            }
+
+            if (vizData.type === 'chart') {
+                chartWrapper.classList.remove('hidden');
+                diagramWrapper.classList.add('hidden');
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                currentChart = new Chart(ctx, vizData.config);
+            } else {
+                chartWrapper.classList.add('hidden');
+                diagramWrapper.classList.remove('hidden');
+                diagramWrapper.innerHTML = vizData.html;
+            }
+        }
+
+        function renderLab(labData) {
+            const container = document.getElementById('lab-container');
+            if (labData.type === 'info') {
+                container.innerHTML = `<div class="text-sm text-stone-500 italic">${labData.msg}</div>`;
+            } else {
+                container.innerHTML = labData.ui;
+            }
+        }
+
+        function log(msg, type='info') {
+            const consoleEl = document.getElementById('lab-console');
+            const line = document.createElement('div');
+            line.className = "mt-1 break-words";
+            
+            let colorClass = 'text-stone-300';
+            if (type === 'error') colorClass = 'text-rose-400 font-bold';
+            if (type === 'success') colorClass = 'text-emerald-400 font-bold';
+            if (type === 'warn') colorClass = 'text-amber-400';
+
+            line.innerHTML = `<span class="opacity-50 text-[10px] mr-2">${new Date().toLocaleTimeString()}</span><span class="${colorClass}">> ${msg}</span>`;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        // --- Interactive Simulators ---
+
+        // 1. WAF Simulator
+        function simWAF() {
+            const input = document.getElementById('waf-input').value;
+            log(`Analyzing Packet: "${input}"`);
+            
+            // Regex patterns from the lecture module
+            const patterns = [
+                /or\s+1=1/i,
+                /union\s+select/i,
+                /--/
+            ];
+
+            let blocked = false;
+            let cause = "";
+            patterns.forEach(p => {
+                if (p.test(input)) {
+                    blocked = true;
+                    cause = p.toString();
+                }
+            });
+
+            setTimeout(() => {
+                if (blocked) {
+                    log(`[ALERT] Malicious payload detected matching ${cause}`, 'error');
+                    log(`ACTION: Connection Dropped (Layer 7 Block)`, 'error');
+                } else {
+                    log(`Analysis Clean. Packet Forwarded.`, 'success');
+                }
+            }, 600);
+        }
+
+        // 2. Tor Simulator
+        function explainTor(node) {
+            const explanations = {
+                'client': 'CLIENT: You. Your IP is visible here. Data is wrapped in 3 layers of encryption.',
+                'guard': 'GUARD NODE: Knows your IP. Cannot read data (Encrypted). Passes to Middle.',
+                'middle': 'MIDDLE NODE: Knows it came from Guard and goes to Exit. Knows nothing else.',
+                'exit': 'EXIT NODE: Decrypts the final layer. Knows the Target. Does NOT know the Client IP.',
+                'target': 'TARGET: Receives request from Exit Node IP. Has no idea Client exists.'
+            };
+            document.getElementById('tor-knowledge').textContent = explanations[node];
+            document.getElementById('tor-knowledge').classList.add('bg-indigo-50', 'text-indigo-800');
+        }
+
+        function animateTor() {
+            log('Initiating Tor Circuit...', 'warn');
+            const sequence = ['node-client', 'node-guard', 'node-middle', 'node-exit', 'node-target'];
+            
+            sequence.forEach((id, index) => {
+                setTimeout(() => {
+                    document.querySelectorAll('.node-active').forEach(el => el.classList.remove('node-active'));
+                    const el = document.getElementById(id);
+                    if(el) {
+                        el.classList.add('node-active');
+                        log(`Hop ${index + 1}: Reached ${id.replace('node-', '').toUpperCase()}`);
+                    }
+                }, index * 1000);
+            });
+
+            setTimeout(() => {
+                document.querySelectorAll('.node-active').forEach(el => el.classList.remove('node-active'));
+                log('Circuit Complete. Identity Obscured.', 'success');
+            }, 5000);
+        }
+
+        // 3. OS/Qubes Simulator
+        function simOS(type) {
+            if (type === 'standard') {
+                log('Opening PDF in Standard OS...', 'info');
+                log('Executing embedded script...', 'error');
+                log('Accessing /system/passwords.txt...', 'error');
+                log('DATA EXFILTRATION SUCCESSFUL. HOST COMPROMISED.', 'error');
+            } else {
+                log('Creating DisposableVM (disp101)...', 'info');
+                log('Opening PDF in disp101...', 'info');
+                log('Malicious script executing in disp101...', 'warn');
+                log('Script fails to find /system/passwords.txt (File not present in VM).', 'success');
+                log('Closing Window. Destroying disp101...', 'info');
+                log('VM Wiped. Threat Neutralized.', 'success');
+            }
+        }
+
+        // 4. FIM Simulator
+        // Simple JS Hash for demo (DJB2 variant)
+        function simpleHash(str) {
+            let hash = 5381;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) + hash) + str.charCodeAt(i); /* hash * 33 + c */
+            }
+            return (hash >>> 0).toString(16); // Convert to unsigned hex
+        }
+
+        function setBaseline() {
+            const content = document.getElementById('file-content').value;
+            activeBaselineHash = simpleHash(content);
+            log(`Baseline Hash Calculated: ${activeBaselineHash}`, 'info');
+            
+            // Visual Update
+            const status = document.getElementById('integrity-status');
+            const display = document.getElementById('hash-display');
+            status.className = "w-24 h-24 rounded-full bg-stone-300 flex items-center justify-center text-white text-4xl shadow-lg transition-colors";
+            status.textContent = "-";
+            display.textContent = `Baseline: ${activeBaselineHash}`;
+        }
+
+        function checkIntegrity() {
+            if (!activeBaselineHash) {
+                log('Error: Set Baseline first!', 'error');
+                return;
+            }
+            const content = document.getElementById('file-content').value;
+            const currentHash = simpleHash(content);
+            
+            const status = document.getElementById('integrity-status');
+            const display = document.getElementById('hash-display');
+
+            log(`Current Hash: ${currentHash}`);
+
+            if (currentHash === activeBaselineHash) {
+                log('Integrity Verified: MATCH.', 'success');
+                status.className = "w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center text-white text-4xl shadow-lg transition-colors";
+                status.textContent = "✓";
+                display.textContent = "Hash: MATCH";
+            } else {
+                log('Integrity Check Failed: MISMATCH.', 'error');
+                status.className = "w-24 h-24 rounded-full bg-rose-500 flex items-center justify-center text-white text-4xl shadow-lg transition-colors animate-bounce";
+                status.textContent = "!";
+                display.textContent = "Hash: COMPROMISED";
+            }
+        }
+
+    </script>
+</body>
+</html>
+
+
+
