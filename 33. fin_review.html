@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Defense Final Exam Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <!-- Chosen Palette: Warm Neutrals (Stone) with Tech Accents (Blue/Amber) -->
+    <!-- Application Structure Plan: 
+         1. Dashboard: Overview of the 10-hour review plan + Visual breakdown of topics (Chart.js).
+         2. Knowledge Base (Modules): Tabbed view for the 3 main theory pillars (Network, Endpoint, SOC).
+         3. Simulation Lab (Case Studies): Interactive selector to practice scenarios before revealing answers.
+         4. Question Bank (Q&A): 50-item searchable grid for rapid-fire drill.
+         Why: This structure allows the student to move from high-level theory -> application -> rote memorization, mimicking a natural study flow.
+    -->
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4; /* Stone-100 */
+            color: #1c1917; /* Stone-900 */
+        }
+
+        /* Chart Container Styling - MANDATORY */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+
+        /* Custom Scrollbar for internal panels */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #e7e5e4;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #a8a29e;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #78716c;
+        }
+
+        /* Utility for hiding/showing views */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-hover {
+            transition: all 0.2s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-stone-800 tracking-tight">🛡️ CyberDef<span class="text-blue-600">Prep</span></span>
+                </div>
+                <div class="hidden sm:flex space-x-8 items-center">
+                    <button onclick="switchView('dashboard')" class="nav-btn text-blue-600 font-semibold border-b-2 border-blue-600 px-1 pt-1 h-full" id="btn-dashboard">Dashboard</button>
+                    <button onclick="switchView('modules')" class="nav-btn text-stone-500 hover:text-stone-700 px-1 pt-1 h-full" id="btn-modules">Knowledge Base</button>
+                    <button onclick="switchView('cases')" class="nav-btn text-stone-500 hover:text-stone-700 px-1 pt-1 h-full" id="btn-cases">Simulations</button>
+                    <button onclick="switchView('qa')" class="nav-btn text-stone-500 hover:text-stone-700 px-1 pt-1 h-full" id="btn-qa">Q&A Drill</button>
+                </div>
+                <!-- Mobile Menu Button Placeholder -->
+                <div class="flex items-center sm:hidden">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-stone-500 hover:text-stone-700 focus:outline-none">
+                        ☰
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden sm:hidden bg-white border-b border-stone-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="switchView('dashboard')" class="block w-full text-left px-3 py-2 text-base font-medium text-stone-700 hover:bg-stone-50">Dashboard</button>
+                <button onclick="switchView('modules')" class="block w-full text-left px-3 py-2 text-base font-medium text-stone-700 hover:bg-stone-50">Knowledge Base</button>
+                <button onclick="switchView('cases')" class="block w-full text-left px-3 py-2 text-base font-medium text-stone-700 hover:bg-stone-50">Simulations</button>
+                <button onclick="switchView('qa')" class="block w-full text-left px-3 py-2 text-base font-medium text-stone-700 hover:bg-stone-50">Q&A Drill</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VIEW: DASHBOARD -->
+        <section id="dashboard" class="view-section active">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-stone-800 mb-4">Final Exam Comprehensive Review</h1>
+                <p class="text-xl text-stone-600 max-w-3xl mx-auto">
+                    Welcome to your 10-hour review session. This platform integrates theory, practical application, and exam drills. 
+                    Focus on integration, troubleshooting, and cybersecurity applications.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Stat Card 1 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
+                    <h3 class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Session Focus</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-3xl font-bold text-stone-800">Integration</span>
+                    </div>
+                    <p class="mt-2 text-stone-600 text-sm">Combining Endpoint, Network, and Cloud defenses.</p>
+                </div>
+                <!-- Stat Card 2 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
+                    <h3 class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Total Scenarios</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-3xl font-bold text-blue-600">10</span>
+                        <span class="ml-2 text-sm text-stone-500">Case Studies</span>
+                    </div>
+                    <p class="mt-2 text-stone-600 text-sm">Based on real-world troubleshooting & mitigation.</p>
+                </div>
+                <!-- Stat Card 3 -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
+                    <h3 class="text-sm font-semibold text-stone-400 uppercase tracking-wider">Question Bank</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <span class="text-3xl font-bold text-amber-500">50</span>
+                        <span class="ml-2 text-sm text-stone-500">Review Items</span>
+                    </div>
+                    <p class="mt-2 text-stone-600 text-sm">Covering definitions, tools, and commands.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Topic Distribution Chart -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                    <h3 class="text-lg font-bold text-stone-800 mb-4 border-b pb-2 border-stone-100">Exam Content Weighting</h3>
+                    <!-- Visualization & Content Choices: Using a Donut chart to show the balance of the 3 modules. Informational goal. -->
+                    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+                    <div class="chart-container">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center text-sm text-stone-500">
+                        Based on the volume of review material provided.
+                    </div>
+                </div>
+
+                <!-- Strategic Summary -->
+                <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 flex flex-col justify-center">
+                    <h3 class="text-lg font-bold text-stone-800 mb-4 border-b pb-2 border-stone-100">Strategy Guide</h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <span class="text-2xl mr-3">🏗️</span>
+                            <div>
+                                <h4 class="font-bold text-stone-800">Architecture First</h4>
+                                <p class="text-sm text-stone-600">Understand <strong>Zero Trust</strong> and segmentation before diving into tools. The network layout dictates the defense.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-2xl mr-3">💻</span>
+                            <div>
+                                <h4 class="font-bold text-stone-800">Endpoint is the Battlefield</h4>
+                                <p class="text-sm text-stone-600">Windows (Ring 0 vs 3) is the primary target. Master <strong>LAPS</strong>, <strong>AppLocker</strong>, and <strong>Defender</strong> configurations.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-2xl mr-3">🧠</span>
+                            <div>
+                                <h4 class="font-bold text-stone-800">The Modern SOC</h4>
+                                <p class="text-sm text-stone-600">Move beyond prevention to detection. Know your acronyms: <strong>SIEM</strong>, <strong>SOAR</strong>, <strong>EDR</strong>, <strong>XDR</strong>.</p>
+                            </div>
+                        </li>
+                    </ul>
+                    <button onclick="switchView('modules')" class="mt-8 w-full bg-stone-800 text-white py-3 rounded-lg hover:bg-stone-700 transition font-medium">
+                        Start Content Review
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: KNOWLEDGE BASE (MODULES) -->
+        <section id="modules" class="view-section">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-stone-800">Core Modules</h2>
+                <p class="text-stone-600 mt-2">
+                    Review the foundational theories comprising the exam. Select a module below to explore its key concepts, definitions, and integration points.
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-stone-300 mb-6 overflow-x-auto">
+                <button onclick="switchTab('mod-a')" id="tab-mod-a" class="tab-btn px-6 py-3 font-medium text-stone-600 border-b-2 border-transparent hover:text-stone-800 whitespace-nowrap active-tab">Module A: Network Defense</button>
+                <button onclick="switchTab('mod-b')" id="tab-mod-b" class="tab-btn px-6 py-3 font-medium text-stone-600 border-b-2 border-transparent hover:text-stone-800 whitespace-nowrap">Module B: Endpoint Security</button>
+                <button onclick="switchTab('mod-c')" id="tab-mod-c" class="tab-btn px-6 py-3 font-medium text-stone-600 border-b-2 border-transparent hover:text-stone-800 whitespace-nowrap">Module C: SOC Stack</button>
+            </div>
+
+            <!-- Module Content Container -->
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 min-h-[500px]">
+                
+                <!-- Module A -->
+                <div id="content-mod-a" class="tab-content p-8">
+                    <h3 class="text-2xl font-bold text-stone-800 mb-6">Defensive Architecture & Network Controls</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-6">
+                            <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
+                                <h4 class="font-bold text-blue-800 mb-2">1. Network Segmentation</h4>
+                                <ul class="list-disc pl-5 space-y-2 text-stone-700 text-sm">
+                                    <li><strong>Physical:</strong> Air-gapped hardware. High security, high cost.</li>
+                                    <li><strong>Logical (VLANs):</strong> Uses 802.1Q tags to separate traffic on switches.</li>
+                                    <li><strong>Virtualization:</strong> Software-Defined Networking (SDN).</li>
+                                    <li><strong>Goal:</strong> Move away from "Flat Networks" to <strong>Zero Trust</strong>.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
+                                <h4 class="font-bold text-blue-800 mb-2">2. Firewall Evolution</h4>
+                                <ul class="list-disc pl-5 space-y-2 text-stone-700 text-sm">
+                                    <li><strong>Packet Filtering (L3/L4):</strong> Inspects IP & Port. Blind to payloads.</li>
+                                    <li><strong>Stateful Inspection:</strong> Tracks connection state (context aware).</li>
+                                    <li><strong>ALF/WAF (Layer 7):</strong> Application/Web App Firewall. Inspects content (HTTP headers, JSON) to stop SQLi, XSS.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div class="bg-stone-50 p-5 rounded-lg border border-stone-200">
+                                <h4 class="font-bold text-blue-800 mb-2">3. The DMZ (Demilitarized Zone)</h4>
+                                <p class="text-sm text-stone-700 mb-2">A buffer zone for public-facing services (Web, Mail, DNS).</p>
+                                <div class="bg-yellow-50 p-3 rounded border border-yellow-200 text-sm text-yellow-800 font-medium">
+                                    ⚠️ Critical Rule: DMZ hosts should NEVER initiate connections to the internal LAN.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module B -->
+                <div id="content-mod-b" class="tab-content hidden p-8">
+                    <h3 class="text-2xl font-bold text-stone-800 mb-6">Endpoint Security (Windows Ecosystem)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Card 1 -->
+                        <div class="bg-white border border-stone-200 rounded-lg p-5 shadow-sm hover:shadow-md transition">
+                            <div class="text-3xl mb-3">🛡️</div>
+                            <h4 class="font-bold text-stone-800 mb-2">Architecture</h4>
+                            <p class="text-sm text-stone-600 mb-3">Defense focuses on the Kernel (Ring 0) vs. User (Ring 3) distinction.</p>
+                            <div class="text-xs bg-stone-100 p-2 rounded">
+                                <strong>LAPS:</strong> Randomizes local admin passwords to prevent lateral movement.
+                            </div>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="bg-white border border-stone-200 rounded-lg p-5 shadow-sm hover:shadow-md transition">
+                            <div class="text-3xl mb-3">☣️</div>
+                            <h4 class="font-bold text-stone-800 mb-2">Escalation Threats</h4>
+                            <ul class="text-sm text-stone-600 space-y-2">
+                                <li><strong>Pass-the-Hash:</strong> Auth via NTLM hash.</li>
+                                <li><strong>Golden Ticket:</strong> Credential Manager abuse via <code>runas /savecred</code>.</li>
+                                <li><strong>LotL:</strong> Living off the Land (using native tools like PowerShell).</li>
+                            </ul>
+                        </div>
+                        <!-- Card 3 -->
+                        <div class="bg-white border border-stone-200 rounded-lg p-5 shadow-sm hover:shadow-md transition">
+                            <div class="text-3xl mb-3">🔒</div>
+                            <h4 class="font-bold text-stone-800 mb-2">Hardening</h4>
+                            <ul class="text-sm text-stone-600 space-y-2">
+                                <li><strong>AppLocker:</strong> Whitelisting apps.</li>
+                                <li><strong>Block:</strong> <code>powershell.exe</code> / <code>cmd.exe</code> for standard users.</li>
+                                <li><strong>Audit:</strong> <code>cmdkey /list</code> to find stored creds.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Module C -->
+                <div id="content-mod-c" class="tab-content hidden p-8">
+                    <h3 class="text-2xl font-bold text-stone-800 mb-6">Advanced Detection & Response (SOC Stack)</h3>
+                    
+                    <div class="mb-8">
+                        <h4 class="font-bold text-stone-700 mb-3">The Alphabet Soup of Tools</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-blue-50 p-4 rounded text-center border border-blue-100">
+                                <div class="font-bold text-blue-900 text-lg">SIEM</div>
+                                <div class="text-xs text-blue-800">"The Brain" - Logs</div>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded text-center border border-green-100">
+                                <div class="font-bold text-green-900 text-lg">EDR</div>
+                                <div class="text-xs text-green-800">"The Eyes" - Host Behavior</div>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded text-center border border-purple-100">
+                                <div class="font-bold text-purple-900 text-lg">SOAR</div>
+                                <div class="text-xs text-purple-800">"The Arms" - Automation</div>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded text-center border border-red-100">
+                                <div class="font-bold text-red-900 text-lg">XDR</div>
+                                <div class="text-xs text-red-800">Unified Platform</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-stone-700 mb-2">Microsoft Stack</h4>
+                            <ul class="space-y-2 text-sm text-stone-600">
+                                <li class="p-3 bg-stone-50 rounded border border-stone-200">
+                                    <strong>Defender:</strong> "The Shield" (Host protection).
+                                </li>
+                                <li class="p-3 bg-stone-50 rounded border border-stone-200">
+                                    <strong>Sentinel:</strong> "The General" (Cloud-native SIEM + SOAR).
+                                </li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-stone-700 mb-2">Open Source Stack (Security Onion)</h4>
+                            <ul class="space-y-2 text-sm text-stone-600">
+                                <li class="p-3 bg-stone-50 rounded border border-stone-200">
+                                    <strong>Suricata:</strong> Signature Detection.
+                                </li>
+                                <li class="p-3 bg-stone-50 rounded border border-stone-200">
+                                    <strong>Zeek:</strong> Anomaly Detection / Metadata.
+                                </li>
+                                <li class="p-3 bg-stone-50 rounded border border-stone-200">
+                                    <strong>Stenographer:</strong> Full Packet Capture (FPC).
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- VIEW: CASE STUDIES (SIMULATIONS) -->
+        <section id="cases" class="view-section">
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-stone-800">Case Study Simulations</h2>
+                <p class="text-stone-600 mt-2">
+                    Apply your knowledge. Select a scenario from the list to view the incident details. 
+                    Analyze the situation, then click "Decrypt Solution" to reveal the answer and mitigation.
+                </p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-6 h-[600px]">
+                <!-- Case List Sidebar -->
+                <div class="w-full lg:w-1/3 bg-white border border-stone-200 rounded-xl overflow-hidden flex flex-col">
+                    <div class="p-4 bg-stone-50 border-b border-stone-200 font-bold text-stone-700">Incident Log</div>
+                    <div class="overflow-y-auto flex-grow custom-scroll" id="case-list">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+
+                <!-- Case Detail Area -->
+                <div class="w-full lg:w-2/3 bg-white border border-stone-200 rounded-xl p-8 flex flex-col relative overflow-hidden">
+                    <div id="case-placeholder" class="absolute inset-0 flex items-center justify-center text-stone-400 bg-stone-50 z-10">
+                        <div class="text-center">
+                            <span class="text-4xl block mb-2">📁</span>
+                            Select a case file to begin analysis
+                        </div>
+                    </div>
+
+                    <div id="case-content" class="h-full flex flex-col hidden">
+                        <div class="mb-4">
+                            <span class="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">Incident Report</span>
+                            <h3 id="case-title" class="text-2xl font-bold text-stone-800 mt-2">Case Title</h3>
+                        </div>
+                        
+                        <div class="bg-stone-50 p-6 rounded-lg border border-stone-200 mb-6 flex-grow">
+                            <h4 class="text-stone-500 text-xs uppercase font-bold mb-2">Scenario Description</h4>
+                            <p id="case-scenario" class="text-stone-800 leading-relaxed">
+                                Scenario text goes here...
+                            </p>
+                        </div>
+
+                        <div class="border-t border-stone-200 pt-6">
+                            <button onclick="revealSolution()" id="btn-reveal" class="w-full py-3 bg-stone-800 text-white rounded-lg hover:bg-stone-700 transition font-medium flex items-center justify-center">
+                                <span>🔓 Decrypt Solution & Mitigation</span>
+                            </button>
+                            
+                            <div id="case-solution" class="hidden mt-6 space-y-4 animation-fade-in">
+                                <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r">
+                                    <h5 class="font-bold text-red-900 text-sm">Diagnosis</h5>
+                                    <p id="case-answer" class="text-red-800 mt-1 font-medium">Answer goes here</p>
+                                </div>
+                                <div class="p-4 bg-green-50 border-l-4 border-green-500 rounded-r">
+                                    <h5 class="font-bold text-green-900 text-sm">Mitigation Strategy</h5>
+                                    <p id="case-mitigation" class="text-green-800 mt-1 text-sm">Mitigation goes here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: Q&A DRILL -->
+        <section id="qa" class="view-section">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-stone-800">Final Review Q&A</h2>
+                    <p class="text-stone-600 mt-2">
+                        50 rapid-fire questions to test your readiness. Click a card to flip it.
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0 w-full md:w-64">
+                    <input type="text" id="qa-search" placeholder="Search questions..." onkeyup="filterQA()" class="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="qa-grid">
+                <!-- Cards generated by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-stone-200 mt-auto py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-stone-500 text-sm">
+            Cyber Defense Final Exam Review • 10 Hour Session Guide
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA STORAGE ---
+        
+        const caseStudies = [
+            { id: 1, title: 'The "Golden" Bypass', scenario: 'An attacker gains access to a locked-down workstation. They cannot run PowerShell directly. However, they discover the machine has "runas /savecred" capabilities enabled and successfully escalate to Domain Admin without ever knowing the admin password.', answer: 'Credential Manager Abuse', mitigation: 'Regularly audit stored credentials using "cmdkey /list" and delete them ("cmdkey /delete"). Disable the Secondary Logon Service via Group Policy.' },
+            { id: 2, title: 'The Silent Exfiltration', scenario: 'A firewall is configured to block all outbound traffic on non-standard ports. However, sensitive data is still being leaked. Forensic analysis shows large amounts of data leaving via DNS (Domain Name System) queries (Port 53).', answer: 'DNS Tunneling', mitigation: 'Implement a DNS Sinkhole or Proxy that inspects the length and entropy of DNS queries, or use a Next-Gen Firewall (NGFW) capable of Protocol Anomaly Detection.' },
+            { id: 3, title: 'The Lateral Move', scenario: 'An attacker compromises a Receptionist PC. Within 10 minutes, they have accessed the Finance Server. It is discovered that every computer in the organization shared the same local administrator password: "Admin123!".', answer: 'Lack of LAPS (Local Administrator Password Solution)', mitigation: 'Deploy Microsoft LAPS to randomize local admin passwords and store them securely in Active Directory.' },
+            { id: 4, title: 'The Hidden Image', scenario: 'An antivirus scan shows a clean system. However, a user reports their machine is slow. An investigation reveals a harmless-looking "vacation.jpg" file that actually contains a hidden PowerShell script in its metadata, executed via "Get-Content -Stream".', answer: 'Alternate Data Streams (ADS) / Steganography', mitigation: 'Use File Integrity Monitoring (FIM) tools (like Wazuh or ManageEngine OpManager) to detect changes in file hashes and monitor execution of data streams.' },
+            { id: 5, title: 'Alert Fatigue', scenario: 'A SOC team receives 10,000 alerts per day from their SIEM. They miss a critical ransomware alert because it was buried under thousands of "Failed Login" notifications.', answer: 'Lack of SOAR', mitigation: 'Implement SOAR playbooks to automatically handle low-level alerts (e.g., block IP after 5 failed logins) so analysts focus only on high-severity incidents.' },
+            { id: 6, title: 'The Perimeter Breach', scenario: 'A web server in the DMZ is compromised via SQL Injection. The attacker immediately uses this server to RDP directly into the internal Database Server containing customer credit cards.', answer: 'Poor Network Segmentation / Firewall Rules', mitigation: 'Enforce "Zero Trust." The DMZ should have strict firewall rules preventing inbound connections to the Internal LAN. The Web Server should only talk to the DB on a specific port, inspected by an IPS.' },
+            { id: 7, title: 'The Blind Spot', scenario: 'A network admin uses a Packet Filtering firewall. An attacker sends a malicious JSON payload wrapped in a legitimate HTTP packet on Port 80. The firewall allows it because Port 80 is open.', answer: 'Lack of Application Level Firewall (ALF) / WAF', mitigation: 'Upgrade to a Layer 7 Firewall or WAF that performs Deep Packet Inspection (DPI) to validate the payload content, not just the headers.' },
+            { id: 8, title: 'The Unpatched Vulnerability', scenario: 'The "WannaCry" ransomware hits an organization, exploiting the SMBv1 vulnerability. It turns out patches were available 2 months ago but were never deployed to the workstations.', answer: 'Failure in Patch Management Lifecycle', mitigation: 'Implement automated patch management tools like BatchPatch or ManageEngine Patch Manager Plus to scan and deploy updates centrally.' },
+            { id: 9, title: 'The Ghost Process', scenario: 'An attacker uses "sqldumper.exe" (a legitimate Microsoft tool) to dump the memory of "lsass.exe" and extract passwords. The antivirus does not trigger because "sqldumper.exe" is a trusted binary.', answer: 'Living off the Land (LotL) / Binary Abuse', mitigation: 'Configure Attack Surface Reduction (ASR) rules in Microsoft Defender to "Block credential stealing from the Windows local security authority subsystem."' },
+            { id: 10, title: 'Visibility Gap', scenario: 'A breach occurs. The team knows when it happened but cannot reproduce what happened because they only have metadata logs (NetFlow), not the actual packet contents.', answer: 'Lack of Full Packet Capture (FPC)', mitigation: 'Utilize a tool like Stenographer (part of Security Onion) to store actual packet payloads for forensic reconstruction.' }
+        ];
+
+        const questions = [
+            { id: 1, q: "Diff between Ring 0 and Ring 3?", a: "Ring 0 = Kernel (Privileged), Ring 3 = User (Apps).", src: "Endpoint Security" },
+            { id: 2, q: "Primary purpose of LAPS?", a: "Randomize local admin passwords to prevent lateral movement.", src: "Lab 05" },
+            { id: 3, q: "What is Stateful Inspection?", a: "Firewall tracks connection state/context, not just packets.", src: "Network Controls" },
+            { id: 4, q: "SIEM function?", a: "Aggregates, normalizes, and correlates logs from various sources.", src: "SOC Architecture" },
+            { id: 5, q: "SecOnion tool for Signatures?", a: "Suricata.", src: "NIDs" },
+            { id: 6, q: "Define Pivoting.", a: "Using a compromised low-sec machine to access high-sec systems.", src: "Firewall Evasion" },
+            { id: 7, q: "Air-gapped network?", a: "Physically isolated from other networks/internet.", src: "Network Controls" },
+            { id: 8, q: "Command to bypass AppLocker with stored creds?", a: "runas /savecred", src: "Privilege Escalation" },
+            { id: 9, q: "Diff between EDR and EPP?", a: "EPP = Preventative (AV); EDR = Behavioral Detection (Post-breach).", src: "Defender" },
+            { id: 10, q: "PowerShell cmdlet for scanning?", a: "Test-NetConnection (tnc).", src: "Firewall Evasion" },
+            { id: 11, q: "What is the 'Golden Ticket' (Creds)?", a: "Stored passwords in Windows Credential Manager.", src: "Privilege Escalation" },
+            { id: 12, q: "OSI Layer for WAF?", a: "Layer 7 (Application).", src: "Protection Strategies" },
+            { id: 13, q: "What is FIM?", a: "File Integrity Monitoring (Check hash changes).", src: "Lab 05" },
+            { id: 14, q: "Microsoft's Cloud SIEM+SOAR?", a: "Microsoft Sentinel.", src: "Defender" },
+            { id: 15, q: "Function of Stenographer?", a: "Full Packet Capture (FPC).", src: "NIDs" },
+            { id: 16, q: "How does Pass-the-Hash work?", a: "Auth via NTLM hash instead of plaintext password.", src: "Privilege Escalation" },
+            { id: 17, q: "Zeek's primary use?", a: "Network Monitoring/Anomaly Detection (Metadata).", src: "NIDs" },
+            { id: 18, q: "What are Alternate Data Streams (ADS)?", a: "Hidden sub-files in NTFS not visible in standard directory.", src: "Firewall Evasion" },
+            { id: 19, q: "Diff between SOAR and SIEM?", a: "SIEM detects (logs); SOAR responds (automation).", src: "SOC Architecture" },
+            { id: 20, q: "What is a Jump Box?", a: "Hardened entry point server for managing secure zones.", src: "Network Controls" },
+            { id: 21, q: "What is Wazuh?", a: "Host-based IDS (HIDS) for FIM and Log Analysis.", src: "Advanced Threat" },
+            { id: 22, q: "Command to extend AD Schema for LAPS?", a: "Update-AdmPwdADSchema", src: "Endpoint Security" },
+            { id: 23, q: "Zero Trust Architecture?", a: "Trust no user/device by default, even inside perimeter.", src: "Protection Strategies" },
+            { id: 24, q: "Attack via sqldumper.exe?", a: "Dumping LSASS memory to steal credentials.", src: "Privilege Escalation" },
+            { id: 25, q: "What is ASR?", a: "Attack Surface Reduction (Rules to block behaviors).", src: "Defender" },
+            { id: 26, q: "What does XDR stand for?", a: "Extended Detection and Response.", src: "SOC Architecture" },
+            { id: 27, q: "Tools for Patch Mgmt?", a: "BatchPatch or ManageEngine Patch Manager Plus.", src: "Lab 05" },
+            { id: 28, q: "Risk of Flat Network?", a: "Breach of one device = Access to entire infrastructure.", src: "Network Controls" },
+            { id: 29, q: "Get-FileHash usage?", a: "Calculate file hash to verify integrity.", src: "Network Controls" },
+            { id: 30, q: "Steganography?", a: "Hiding secret data inside non-secret files (images).", src: "Firewall Evasion" },
+            { id: 31, q: "Protocol for SIEM log ingest?", a: "Syslog.", src: "Advanced Threat" },
+            { id: 32, q: "Protected Users Group?", a: "AD group enforcing Kerberos, blocking NTLM caching.", src: "Privilege Escalation" },
+            { id: 33, q: "Sentinel Data Connector role?", a: "Streams alerts/logs from external sources into Sentinel.", src: "Defender" },
+            { id: 34, q: "Diff between IDS and IPS?", a: "IDS alerts (passive); IPS blocks (active/inline).", src: "NIDs" },
+            { id: 35, q: "How Reverse Shell bypasses firewall?", a: "Initiates connection OUTbound (usually allowed).", src: "Firewall Evasion" },
+            { id: 36, q: "Application Control?", a: "Blocking unauthorized executables (Whitelisting).", src: "Lab 05" },
+            { id: 37, q: "Lateral Movement?", a: "Moving from one compromised host to another internally.", src: "Firewall Evasion" },
+            { id: 38, q: "Microsoft Intelligent Security Graph?", a: "Cloud brain analyzing signals for threat detection.", src: "Defender" },
+            { id: 39, q: "Role of Gateway in segmentation?", a: "Router/Firewall controlling traffic between segments.", src: "Lab 05" },
+            { id: 40, q: "Log Normalization?", a: "Converting different formats to common standard.", src: "Advanced Threat" },
+            { id: 41, q: "DLP role?", a: "Scans outbound traffic for sensitive data patterns.", src: "Firewall Evasion" },
+            { id: 42, q: "stenoread command?", a: "Read packets indexed by Stenographer from disk.", src: "NIDs" },
+            { id: 43, q: "MDR?", a: "Managed Detection & Response (Outsourced SOC).", src: "SOC Architecture" },
+            { id: 44, q: "Why block notepad.exe in labs?", a: "Proof of concept for App Control blocking capabilities.", src: "Lab 05" },
+            { id: 45, q: "DNS Tunneling?", a: "Encoding data in DNS queries to bypass firewalls.", src: "Firewall Evasion" },
+            { id: 46, q: "Endpoint Central usage?", a: "Unified Endpoint Mgmt (Patching, Software Deployment).", src: "Endpoint Security" },
+            { id: 47, q: "SPAN Port?", a: "Switch config mirroring traffic for monitoring (IDS).", src: "NIDs" },
+            { id: 48, q: "Integrity (CIA)?", a: "Ensuring data hasn't been altered (Hashing).", src: "Protection Strategies" },
+            { id: 49, q: "Azure Arc?", a: "Bridge for managing on-prem servers via Cloud.", src: "Defender" },
+            { id: 50, q: "Why disable Secondary Logon?", a: "Prevent abuse of runas /savecred.", src: "Privilege Escalation" }
+        ];
+
+        // --- CHART GENERATION ---
+        
+        function initChart() {
+            const ctx = document.getElementById('topicChart').getContext('2d');
+            
+            // Analyze questions for distribution
+            let counts = { 'Network': 0, 'Endpoint': 0, 'SOC/Tools': 0 };
+            questions.forEach(q => {
+                if(q.src.includes('Network') || q.src.includes('Firewall') || q.src.includes('Protection')) counts['Network']++;
+                else if(q.src.includes('Endpoint') || q.src.includes('Privilege') || q.src.includes('Lab')) counts['Endpoint']++;
+                else counts['SOC/Tools']++;
+            });
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Network Defense', 'Endpoint Security', 'SOC Operations'],
+                    datasets: [{
+                        data: [counts['Network'], counts['Endpoint'], counts['SOC/Tools']],
+                        backgroundColor: [
+                            '#3b82f6', // Blue-500
+                            '#f59e0b', // Amber-500
+                            '#10b981'  // Emerald-500
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // --- NAVIGATION & INTERACTION ---
+
+        function switchView(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            // Show target view
+            document.getElementById(viewId).classList.add('active');
+            
+            // Update Nav State
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'border-blue-600', 'border-b-2', 'font-semibold');
+                btn.classList.add('text-stone-500');
+            });
+            document.getElementById('btn-' + viewId).classList.add('text-blue-600', 'border-blue-600', 'border-b-2', 'font-semibold');
+            document.getElementById('btn-' + viewId).classList.remove('text-stone-500');
+        }
+
+        function switchTab(tabId) {
+            // Hide contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('text-stone-800', 'border-stone-800');
+                btn.classList.add('border-transparent');
+            });
+            document.getElementById('tab-' + tabId).classList.add('text-stone-800', 'border-stone-800');
+            document.getElementById('tab-' + tabId).classList.remove('border-transparent');
+        }
+
+        // --- CASE STUDY LOGIC ---
+
+        function renderCaseList() {
+            const list = document.getElementById('case-list');
+            list.innerHTML = '';
+            caseStudies.forEach(cs => {
+                const item = document.createElement('div');
+                item.className = 'p-4 border-b border-stone-100 hover:bg-stone-50 cursor-pointer transition';
+                item.onclick = () => loadCase(cs);
+                item.innerHTML = `
+                    <div class="text-xs font-bold text-stone-400">CASE #${cs.id}</div>
+                    <div class="font-semibold text-stone-800">${cs.title}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        let currentCaseId = null;
+
+        function loadCase(cs) {
+            currentCaseId = cs.id;
+            document.getElementById('case-placeholder').classList.add('hidden');
+            document.getElementById('case-content').classList.remove('hidden');
+            
+            document.getElementById('case-title').innerText = cs.title;
+            document.getElementById('case-scenario').innerText = cs.scenario;
+            
+            // Reset solution state
+            document.getElementById('btn-reveal').classList.remove('hidden');
+            document.getElementById('case-solution').classList.add('hidden');
+            
+            document.getElementById('case-answer').innerText = cs.answer;
+            document.getElementById('case-mitigation').innerText = cs.mitigation;
+        }
+
+        function revealSolution() {
+            document.getElementById('btn-reveal').classList.add('hidden');
+            document.getElementById('case-solution').classList.remove('hidden');
+        }
+
+        // --- Q&A LOGIC ---
+
+        function renderQA() {
+            const grid = document.getElementById('qa-grid');
+            grid.innerHTML = '';
+            questions.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'qa-card bg-white rounded-xl shadow-sm border border-stone-200 p-6 cursor-pointer card-hover h-48 flex flex-col justify-between relative perspective-1000';
+                card.dataset.content = q.q.toLowerCase() + " " + q.a.toLowerCase(); // For search
+                
+                // Content
+                card.innerHTML = `
+                    <div class="qa-front">
+                        <span class="text-xs font-bold text-stone-400 uppercase">Q${q.id} • ${q.src}</span>
+                        <h4 class="font-bold text-lg text-stone-800 mt-2">${q.q}</h4>
+                        <div class="text-blue-500 text-xs mt-4 font-bold">Click to Reveal Answer</div>
+                    </div>
+                    <div class="qa-back hidden h-full flex flex-col justify-between">
+                         <div>
+                            <span class="text-xs font-bold text-green-600 uppercase">Answer</span>
+                            <p class="text-stone-800 font-medium mt-1 leading-snug">${q.a}</p>
+                         </div>
+                         <div class="text-stone-400 text-xs mt-2">Source: ${q.src}</div>
+                    </div>
+                `;
+
+                card.onclick = function() {
+                    const front = this.querySelector('.qa-front');
+                    const back = this.querySelector('.qa-back');
+                    
+                    if (front.classList.contains('hidden')) {
+                        front.classList.remove('hidden');
+                        back.classList.add('hidden');
+                        this.classList.remove('bg-stone-50');
+                    } else {
+                        front.classList.add('hidden');
+                        back.classList.remove('hidden');
+                        this.classList.add('bg-stone-50');
+                    }
+                };
+
+                grid.appendChild(card);
+            });
+        }
+
+        function filterQA() {
+            const term = document.getElementById('qa-search').value.toLowerCase();
+            document.querySelectorAll('.qa-card').forEach(card => {
+                if (card.dataset.content.includes(term)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- INIT ---
+        window.onload = function() {
+            initChart();
+            renderCaseList();
+            renderQA();
+            // Start at Dashboard
+            switchView('dashboard');
+        };
+
+    </script>
+</body>
+</html>
+
+
+
+

@@ -508,22 +508,28 @@ DATE: 2025-11-14
           <div class="panel">
             <div class="grid cols-2">
               <div>
-                <h4>Theory (8.0hrs)</h4>
-                <p style="margin-top: 0.5rem; font-weight: 700;">Honeypots – OpenCanary and Cowrie</p>
+                <!-- UPDATED HOURS: 8.0hrs -> 7.0 hrs -->
+                <h4>Theory (7.0 hrs)</h4>
+                <!-- CHANGED: Added link to "Honeypots" -->
+                <p style="margin-top: 0.5rem; font-weight: 700;"><a href="32. honeypots.html" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">Honeypots</a> – OpenCanary and Cowrie</p>
                 <ul>
                   <li>Introduction to honeypots and honeynets (low, medium, high interaction)</li>
-                  <li>Role in threat intelligence gathering</li>
+                  <!-- CHANGED: Added link to "threat intelligence" -->
+                  <li>Role in <a href="32. honeypots.html" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">threat intelligence</a> gathering</li>
                   <li>Deep dive into medium-interaction honeypots (SSH/Telnet emulation)</li>
                 </ul>
               </div>
               <div>
-                <h4>Lab (5.0hrs)</h4>
-                <p style="margin-top: 0.5rem; font-weight: 700;">Honeypot Lab</p>
+                <!-- UPDATED HOURS: 5.0hrs -> 8.0 hrs -->
+                <h4>Lab (8.0 hrs)</h4>
+                <!-- CHANGED: Added link to "Honeypot Lab" -->
+                <p style="margin-top: 0.5rem; font-weight: 700;"><a href="32. honey_lab.html" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">Honeypot Lab</a></p>
                 <ul>
                   <li>Deploying OpenCanary, configuring emulated services (HTTP, SSH, SMB)</li>
                   <li>Deploying Cowrie, interacting as an "attacker" to observe logs</li>
                 </ul>
-                <p style="margin-top: 0.5rem; font-weight: 700;">Final Review &amp; Assessment</p>
+                <!-- CHANGED: Added link to "Final Review" -->
+                <p style="margin-top: 0.5rem; font-weight: 700;"><a href="33. fin_review.html" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">Final Review</a> &amp; Assessment</p>
                 <ul>
                   <li>Comprehensive review of all course topics</li>
                   <li>Integrating firewalls, IDS, and honeypots for layered defense</li>
@@ -773,8 +779,8 @@ You can see the entered password by clicking on the "eye" icon.</p>
         // --- Password Protection Logic ---
         
         // *** THIS IS THE CHANGED LINE ***
-        // Stored Base64 encoded password.
-        const CORRECT_PASSWORD_B64 = "Y3liZXItZGVmZW5jZS0yMDI1IQ=="; 
+        // Stored Base64 encoded password for 'cyber-defense-2025%'
+        const CORRECT_PASSWORD_B64 = "Y3liZXItZGVmZW5zZS0yMDI1JQ=="; 
         const SESSION_KEY = "tr_authed_2025"; // Re-using session key from template
 
         const mainContent = $('#main');

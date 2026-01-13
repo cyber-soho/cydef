@@ -1,0 +1,839 @@
+<!-- Chosen Palette: Warm Neutral Tech (Cream #F9FAFB, Slate #1E293B, Tech Blue #3B82F6, Alert Amber #F59E0B) -->
+<!-- Application Structure Plan: The application is designed as an interactive "Virtual Lab Assistant" (VLA). Instead of a static document, it functions as a guided wizard (Stepper) that walks the user through the lifecycle of the lab: Preparation -> Installation -> Configuration -> Simulation -> Analysis. This structure was chosen to reduce cognitive load, allowing the user to focus on one phase at a time while providing interactive feedback (e.g., simulated terminal execution, live config generation) that reinforces the learning objectives of the source report. -->
+<!-- Visualization & Content Choices:
+1.  **Lab Progress Tracker (Stepper):** Goal: Inform. Method: HTML/CSS Flexbox. Interaction: Clickable steps. Justification: Clearly shows user position in the deployment process.
+2.  **Prerequisite Checklist:** Goal: Organize. Method: Interactive HTML Checkbox list. Interaction: Toggling updates completion status. Justification: Ensures users actually read and confirm requirements before starting.
+3.  **Simulated Terminal:** Goal: Inform/Change. Method: HTML/JS DOM Manipulation. Interaction: Clicking "Run" triggers a typing animation of commands and output. Justification: Simulates the actual CLI experience described in the report without needing a real VM, increasing confidence.
+4.  **Live Configuration Builder:** Goal: Change/Understand. Method: HTML Form inputs linked to a JSON Code Block. Interaction: Toggles and inputs update the JSON in real-time. Justification: Demystifies the configuration file format by showing cause-and-effect of settings.
+5.  **Attack/Defense Dashboard:** Goal: Inform/Relationships. Method: Split-view UI (Attacker controls vs. Defender logs). Interaction: "Attack" buttons inject JSON logs into the console. Justification: Directly connects the "Red Team" actions to the "Blue Team" observations described in the report.
+6.  **Honeypot Comparison Chart:** Goal: Compare. Method: Chart.js Bar Chart. Interaction: Tooltips. Justification: Visualizes the "Resources and Alternatives" section to help users select the right tool based on features (inferred from descriptions).
+-->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab: Deploying OpenCanary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Font for Terminal */
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F9FAFB; /* Warm light gray */
+            color: #1E293B; /* Slate 800 */
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Chart Container Styling - Mandatory Strictness */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Terminal Styling */
+        .terminal-window {
+            background-color: #0F172A; /* Slate 900 */
+            color: #10B981; /* Emerald 500 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            background-color: #334155; /* Slate 700 */
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 9999px;
+        }
+
+        .terminal-body {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8; 
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .typing-cursor::after {
+            content: '▋';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navigation / Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-2">
+                    <div class="text-2xl">🐤</div>
+                    <span class="font-bold text-xl tracking-tight text-slate-800">OpenCanary<span class="text-blue-600 font-light">Lab</span></span>
+                </div>
+                <!-- Desktop Stepper -->
+                <nav class="hidden md:flex space-x-1" id="stepper-nav">
+                    <!-- Steps injected via JS -->
+                </nav>
+            </div>
+        </div>
+        <!-- Mobile Progress Bar -->
+        <div class="h-1 bg-gray-200 md:hidden">
+            <div id="mobile-progress" class="h-1 bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full relative">
+        <div id="app-content" class="fade-in">
+            <!-- Dynamic Content Injected Here -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <p class="text-sm text-gray-500">Deploying OpenCanary for Network Deception</p>
+            <div class="text-sm text-gray-400 mt-2 md:mt-0">Interactive Learning Exercise</div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- State Management ---
+        const state = {
+            currentStep: 0,
+            config: {
+                http: { enabled: false, banner: "Apache/2.4.41 (Ubuntu)", skin: "nasLogin" },
+                ssh: { enabled: false, port: 2222, version: "SSH-2.0-OpenSSH_8.2p1 Ubuntu-4ubuntu0.5" },
+                smb: { enabled: false, auditFile: "/var/log/samba-audit.log" }
+            },
+            terminals: {
+                install: { history: [] },
+                simulation: { logs: [] }
+            },
+            simulating: false
+        };
+
+        const steps = [
+            { id: 'intro', label: 'Briefing' },
+            { id: 'prereqs', label: 'Setup' },
+            { id: 'install', label: 'Install' },
+            { id: 'config', label: 'Configure' },
+            { id: 'sim', label: 'Simulation' },
+            { id: 'review', label: 'Debrief' }
+        ];
+
+        // --- View Rendering Functions ---
+
+        function renderStepper() {
+            const nav = document.getElementById('stepper-nav');
+            const mobile = document.getElementById('mobile-progress');
+            
+            nav.innerHTML = steps.map((step, index) => {
+                const isActive = index === state.currentStep;
+                const isPast = index < state.currentStep;
+                let colorClass = isPast ? 'text-blue-600' : (isActive ? 'text-blue-800 font-bold border-b-2 border-blue-600' : 'text-gray-400');
+                
+                return `
+                    <button onclick="navigateTo(${index})" class="px-3 py-2 text-sm font-medium transition-colors ${colorClass} hover:text-blue-500">
+                        ${index + 1}. ${step.label}
+                    </button>
+                `;
+            }).join('');
+
+            const progress = ((state.currentStep + 1) / steps.length) * 100;
+            mobile.style.width = `${progress}%`;
+        }
+
+        function renderContent() {
+            const container = document.getElementById('app-content');
+            container.innerHTML = ''; // Clear current
+
+            switch(state.currentStep) {
+                case 0: container.innerHTML = renderIntro(); break;
+                case 1: container.innerHTML = renderPrereqs(); break;
+                case 2: container.innerHTML = renderInstall(); break;
+                case 3: container.innerHTML = renderConfig(); break;
+                case 4: container.innerHTML = renderSim(); break;
+                case 5: container.innerHTML = renderReview(); setTimeout(renderChart, 100); break;
+            }
+            
+            // Re-attach event listeners for dynamic elements if needed
+            renderStepper();
+            window.scrollTo(0,0);
+        }
+
+        // --- Section Templates ---
+
+        function renderIntro() {
+            return `
+                <div class="text-center py-10 max-w-3xl mx-auto">
+                    <div class="inline-block p-4 rounded-full bg-blue-50 mb-6">
+                        <span class="text-4xl">🦅</span>
+                    </div>
+                    <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Deploying OpenCanary</h1>
+                    <p class="text-xl text-slate-600 mb-8 leading-relaxed">
+                        Welcome to the Network Deception Lab. Your mission is to deploy a <strong>Honeypot</strong>—a decoy system designed to trap hackers and track malicious behavior.
+                    </p>
+                    
+                    <div class="grid md:grid-cols-3 gap-6 text-left mb-12">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition-colors">
+                            <h3 class="font-bold text-slate-800 mb-2">🎯 Objective</h3>
+                            <p class="text-sm text-slate-600">Set up a functional honeypot, customize signatures, and interpret attack logs.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition-colors">
+                            <h3 class="font-bold text-slate-800 mb-2">🛠️ Tools</h3>
+                            <p class="text-sm text-slate-600">Ubuntu Server, Python (pip/venv), Nmap, and OpenCanary Daemon.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition-colors">
+                            <h3 class="font-bold text-slate-800 mb-2">🕵️ Outcome</h3>
+                            <p class="text-sm text-slate-600">Detect reconnaissance scans and unauthorized login attempts in real-time.</p>
+                        </div>
+                    </div>
+
+                    <button onclick="nextStep()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">
+                        Start Mission &rarr;
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderPrereqs() {
+            return `
+                <div class="max-w-4xl mx-auto">
+                    <div class="mb-8">
+                        <h2 class="text-3xl font-bold text-slate-900">Prerequisites & Environment</h2>
+                        <p class="text-slate-600 mt-2">Before we deploy code, we need a stable foundation. Ensure your Virtual Machine (VM) is correctly configured.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Left: Hypervisor Choice -->
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
+                                <span>🖥️</span> 2.1 Hypervisor Selection
+                            </h3>
+                            <p class="text-sm text-slate-600 mb-4">You may use any hypervisor. Select the one you are using:</p>
+                            <div class="space-y-3">
+                                <label class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                                    <input type="radio" name="hypervisor" class="h-4 w-4 text-blue-600">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-medium text-slate-900">VirtualBox</span>
+                                        <span class="block text-xs text-slate-500">Free / Open Source</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                                    <input type="radio" name="hypervisor" class="h-4 w-4 text-blue-600">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-medium text-slate-900">VMware Workstation Player</span>
+                                        <span class="block text-xs text-slate-500">Free for non-commercial</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-center p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                                    <input type="radio" name="hypervisor" class="h-4 w-4 text-blue-600">
+                                    <div class="ml-3">
+                                        <span class="block text-sm font-medium text-slate-900">Hyper-V</span>
+                                        <span class="block text-xs text-slate-500">Built into Windows Pro/Ent</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Right: OS & Network -->
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
+                                    <span>🐧</span> 2.2 Operating System
+                                </h3>
+                                <div class="bg-blue-50 text-blue-800 p-4 rounded-md mb-4 text-sm">
+                                    <strong>Recommendation:</strong> Ubuntu Server 22.04 LTS or 24.04 LTS.
+                                </div>
+                                <div class="space-y-4">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="h-5 w-5 text-blue-600 mt-1 rounded">
+                                        <span class="ml-2 text-sm text-slate-700">I have a fresh Linux VM installed.</span>
+                                    </label>
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="h-5 w-5 text-blue-600 mt-1 rounded">
+                                        <span class="ml-2 text-sm text-slate-700"><strong>Network Config:</strong> Bridged Adapter is enabled (VM appears as separate device on LAN).</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 pt-6 border-t border-gray-100">
+                                <h4 class="text-sm font-bold text-slate-800 mb-2">2.3 Initial System Update</h4>
+                                <div class="bg-slate-900 text-green-400 font-mono text-xs p-3 rounded">
+                                    sudo apt-get update && sudo apt-get upgrade -y
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button onclick="nextStep()" class="bg-slate-800 text-white px-6 py-3 rounded-lg hover:bg-slate-700 font-medium">
+                            Confirm & Continue &rarr;
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInstall() {
+            return `
+                <div class="max-w-5xl mx-auto h-full">
+                    <div class="mb-6 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-900">Installation</h2>
+                            <p class="text-slate-600 mt-2">Deploy OpenCanary components using the Python Package Installer (pip).</p>
+                        </div>
+                        <button onclick="nextStep()" class="text-blue-600 hover:underline text-sm font-medium">Skip to Configuration &rarr;</button>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-8">
+                        <!-- Step List -->
+                        <div class="space-y-4">
+                            <div class="bg-white p-4 rounded border-l-4 border-blue-500 shadow-sm cursor-pointer hover:bg-gray-50" onclick="runCmd(1)">
+                                <h3 class="font-bold text-slate-800">3.1 Install Dependencies</h3>
+                                <p class="text-xs text-slate-500 mt-1">Install system libraries for network protocols and encryption (includes Samba).</p>
+                                <code class="block mt-2 text-xs bg-gray-100 p-2 rounded text-slate-700">sudo apt-get install python3-dev ...</code>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded border-l-4 border-gray-300 shadow-sm cursor-pointer hover:bg-gray-50" onclick="runCmd(2)">
+                                <h3 class="font-bold text-slate-800">3.2 Create Virtual Environment</h3>
+                                <p class="text-xs text-slate-500 mt-1">Isolate the application to avoid system conflicts.</p>
+                                <code class="block mt-2 text-xs bg-gray-100 p-2 rounded text-slate-700">virtualenv env/ && source env/bin/activate</code>
+                            </div>
+
+                            <div class="bg-white p-4 rounded border-l-4 border-gray-300 shadow-sm cursor-pointer hover:bg-gray-50" onclick="runCmd(3)">
+                                <h3 class="font-bold text-slate-800">3.3 Install Daemon</h3>
+                                <p class="text-xs text-slate-500 mt-1">Download and install the core OpenCanary package.</p>
+                                <code class="block mt-2 text-xs bg-gray-100 p-2 rounded text-slate-700">pip install opencanary</code>
+                            </div>
+                            
+                            <div class="text-center text-sm text-gray-500 italic mt-4">
+                                Click the cards above to simulate running the commands.
+                            </div>
+                        </div>
+
+                        <!-- Simulated Terminal -->
+                        <div class="terminal-window h-96">
+                            <div class="terminal-header">
+                                <div class="dot bg-red-500"></div>
+                                <div class="dot bg-yellow-500"></div>
+                                <div class="dot bg-green-500"></div>
+                                <span class="text-xs text-gray-400 ml-2">user@ubuntu-server:~</span>
+                            </div>
+                            <div class="terminal-body" id="term-output">
+                                <div class="text-gray-500 mb-2"># Click a step on the left to execute...</div>
+                                <div class="typing-cursor text-green-400">user@ubuntu-server:~$ </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderConfig() {
+            const configJson = generateConfigJson();
+            return `
+                <div class="max-w-6xl mx-auto">
+                    <div class="mb-6">
+                        <h2 class="text-3xl font-bold text-slate-900">Service Configuration</h2>
+                        <p class="text-slate-600 mt-2">OpenCanary uses a config file <code>~/.opencanary.conf</code>. Enable services to see how the JSON structure changes.</p>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-8 items-start">
+                        <!-- Configuration Form -->
+                        <div class="space-y-6">
+                            
+                            <!-- HTTP Config -->
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-lg text-slate-800">4.2 HTTP Service</h3>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" ${state.config.http.enabled ? 'checked' : ''} onchange="toggleConfig('http')">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="space-y-3 ${!state.config.http.enabled ? 'opacity-50 pointer-events-none' : ''}">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-500 mb-1">Banner / Skin</label>
+                                        <select class="block w-full text-sm border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+                                            onchange="updateConfigVal('http', 'skin', this.value)">
+                                            <option value="nasLogin" ${state.config.http.skin === 'nasLogin' ? 'selected' : ''}>NAS Login (Synology)</option>
+                                            <option value="apacheDefault" ${state.config.http.skin === 'apacheDefault' ? 'selected' : ''}>Apache Default Page</option>
+                                            <option value="basicAuth" ${state.config.http.skin === 'basicAuth' ? 'selected' : ''}>Basic Auth Prompt</option>
+                                        </select>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Port: 80 (Standard Web)</p>
+                                </div>
+                            </div>
+
+                            <!-- SSH Config -->
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-lg text-slate-800">4.3 SSH Service</h3>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" ${state.config.ssh.enabled ? 'checked' : ''} onchange="toggleConfig('ssh')">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="space-y-3 ${!state.config.ssh.enabled ? 'opacity-50 pointer-events-none' : ''}">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-500 mb-1">Listening Port</label>
+                                        <input type="number" value="${state.config.ssh.port}" disabled class="block w-full text-sm bg-gray-100 border-gray-300 rounded-md p-2 border">
+                                    </div>
+                                    <div class="bg-amber-50 border border-amber-200 p-2 rounded text-xs text-amber-800">
+                                        <strong>Crucial:</strong> Running on port 2222 to avoid conflict with real SSH (port 22).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SMB Config -->
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-lg text-slate-800">4.4 SMB (Windows Share)</h3>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" ${state.config.smb.enabled ? 'checked' : ''} onchange="toggleConfig('smb')">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="text-xs text-slate-600 space-y-2">
+                                    <p>Relies on underlying OS Samba logs.</p>
+                                    <p>1. <code>/etc/samba/smb.conf</code> (Enable full_audit)</p>
+                                    <p>2. <code>/etc/rsyslog.conf</code> (Route to log file)</p>
+                                    <p class="font-mono text-slate-500">Audit File: /var/log/samba-audit.log</p>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- JSON Preview -->
+                        <div class="sticky top-24">
+                            <div class="bg-slate-800 rounded-t-lg p-2 flex justify-between items-center">
+                                <span class="text-xs text-gray-400 font-mono">~/.opencanary.conf</span>
+                                <span class="text-xs text-gray-500">JSON</span>
+                            </div>
+                            <div class="bg-slate-900 p-4 rounded-b-lg overflow-auto shadow-lg" style="max-height: 500px;">
+                                <pre class="font-mono text-sm text-green-400" id="json-preview">${configJson}</pre>
+                            </div>
+                            <div class="mt-6 flex justify-end">
+                                <button onclick="nextStep()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                                    Save & Launch &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSim() {
+            return `
+                <div class="h-[calc(100vh-140px)] flex flex-col">
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-bold text-slate-900">Attack Simulation (Red vs Blue)</h2>
+                        <p class="text-slate-600 text-sm">Act as the attacker to generate logs, then observe the OpenCanary output.</p>
+                    </div>
+
+                    <div class="flex-grow grid lg:grid-cols-3 gap-6 min-h-0">
+                        <!-- Attacker Console -->
+                        <div class="bg-slate-200 p-4 rounded-xl border border-slate-300 flex flex-col gap-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <h3 class="font-bold text-red-900 uppercase tracking-wider text-sm">Red Team Console</h3>
+                            </div>
+
+                            <div class="bg-white p-4 rounded shadow-sm">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">6.1 Reconnaissance</h4>
+                                <p class="text-xs text-slate-500 mb-2">Scan for open ports and banners.</p>
+                                <button onclick="triggerLog('nmap')" class="w-full bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 py-2 rounded text-xs font-mono font-bold transition">
+                                    nmap -sV &lt;TARGET&gt;
+                                </button>
+                            </div>
+
+                            <div class="bg-white p-4 rounded shadow-sm">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">6.2 Web Probe</h4>
+                                <p class="text-xs text-slate-500 mb-2">Visit the fake NAS login page.</p>
+                                <button onclick="triggerLog('http')" class="w-full bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 py-2 rounded text-xs font-mono font-bold transition">
+                                    Browser: http://&lt;TARGET&gt;
+                                </button>
+                            </div>
+
+                            <div class="bg-white p-4 rounded shadow-sm">
+                                <h4 class="font-bold text-slate-800 text-sm mb-1">6.3 Brute Force</h4>
+                                <p class="text-xs text-slate-500 mb-2">Attempt unauthorized SSH login.</p>
+                                <button onclick="triggerLog('ssh')" class="w-full bg-red-100 hover:bg-red-200 text-red-800 border border-red-200 py-2 rounded text-xs font-mono font-bold transition">
+                                    ssh root@&lt;TARGET&gt; -p 2222
+                                </button>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <button onclick="nextStep()" class="w-full bg-slate-800 text-white py-3 rounded-lg hover:bg-slate-700 font-medium">End Simulation</button>
+                            </div>
+                        </div>
+
+                        <!-- Defender Console -->
+                        <div class="lg:col-span-2 terminal-window">
+                            <div class="terminal-header justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-blue-300 font-mono">opencanaryd --start</span>
+                                    <span class="px-2 py-0.5 rounded bg-green-900 text-green-300 text-[10px] uppercase font-bold">Running</span>
+                                </div>
+                                <span class="text-xs text-gray-500">/var/tmp/opencanary.log</span>
+                            </div>
+                            <div class="terminal-body bg-black" id="log-output">
+                                <div class="text-gray-600 italic mb-2">// Waiting for events...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderReview() {
+            return `
+                <div class="max-w-4xl mx-auto space-y-10">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-bold text-slate-900">Debrief & Resources</h2>
+                        <p class="text-slate-600 mt-2">Analysis of alternatives and official documentation.</p>
+                    </div>
+
+                    <!-- Comparison Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold text-lg text-slate-800 mb-4">Honeypot Comparison</h3>
+                        <p class="text-sm text-slate-500 mb-6">Comparing OpenCanary with alternatives mentioned in the lab (Cowrie, Dionaea, T-Pot).</p>
+                        
+                        <div class="chart-container">
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                        <p class="text-xs text-center text-gray-400 mt-2">Ratings inferred from lab descriptions (Low Interaction vs Specialized).</p>
+                    </div>
+
+                    <!-- Resources Links -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-6 rounded-lg border border-blue-100">
+                            <h3 class="font-bold text-blue-900 mb-2">Official Project</h3>
+                            <ul class="space-y-3">
+                                <li>
+                                    <a href="https://thinkst.com/" target="_blank" class="flex items-center text-blue-700 hover:underline">
+                                        <span class="mr-2">🔗</span> Thinkst Applied Research
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://github.com/thinkst/opencanary" target="_blank" class="flex items-center text-blue-700 hover:underline">
+                                        <span class="mr-2">📂</span> OpenCanary GitHub Repository
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <h3 class="font-bold text-slate-800 mb-2">Alternatives</h3>
+                            <ul class="space-y-2 text-sm text-slate-600">
+                                <li><strong>Cowrie:</strong> Specialized for SSH/Telnet brute force.</li>
+                                <li><strong>Dionaea:</strong> Low-interaction, captures malware (SMB, MSSQL).</li>
+                                <li><strong>T-Pot:</strong> Multi-honeypot platform (Docker + Dashboard).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center pb-10">
+                        <button onclick="navigateTo(0)" class="text-slate-400 hover:text-slate-600 underline text-sm">Restart Lab</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Logic & Actions ---
+
+        function navigateTo(stepIndex) {
+            state.currentStep = stepIndex;
+            renderContent();
+        }
+
+        function nextStep() {
+            if (state.currentStep < steps.length - 1) {
+                state.currentStep++;
+                renderContent();
+            }
+        }
+
+        function runCmd(cmdId) {
+            const outputDiv = document.getElementById('term-output');
+            if (!outputDiv) return;
+
+            // Prevent spamming
+            if (state.terminals.install.history.includes(cmdId)) return;
+            state.terminals.install.history.push(cmdId);
+
+            // Highlight the card
+            // (In a real React app we'd use state, here we cheat with DOM)
+            
+            let cmdStr = "";
+            let responseStr = "";
+
+            if (cmdId === 1) {
+                cmdStr = "sudo apt-get install python3-dev python3-pip python3-virtualenv python3-venv python3-scapy libssl-dev libpcap-dev samba -y";
+                responseStr = `Reading package lists... Done\nBuilding dependency tree... Done\n0 upgraded, 14 newly installed.\nUnpacking objects... 100%\nSetting up samba... Done.`;
+            } else if (cmdId === 2) {
+                cmdStr = "virtualenv env/ && source env/bin/activate";
+                responseStr = `created virtual environment CPython3.8.10.final.0-64\n(env) user@ubuntu-server:~$`;
+            } else if (cmdId === 3) {
+                cmdStr = "pip install opencanary";
+                responseStr = `Collecting opencanary\nDownloading opencanary-0.7.1.tar.gz (180 kB)\nInstalling collected packages: twisted, opencanary\nSuccessfully installed opencanary-0.7.1`;
+            }
+
+            // Append CMD
+            const cmdLine = document.createElement('div');
+            cmdLine.className = "mb-1";
+            cmdLine.innerHTML = `<span class="text-green-400">user@ubuntu-server:~$</span> <span class="text-white">${cmdStr}</span>`;
+            
+            // Remove old cursor
+            const cursors = outputDiv.getElementsByClassName('typing-cursor');
+            while(cursors.length > 0){
+                cursors[0].classList.remove('typing-cursor');
+            }
+
+            outputDiv.appendChild(cmdLine);
+
+            // Simulate delay
+            setTimeout(() => {
+                const respLine = document.createElement('div');
+                respLine.className = "text-gray-400 mb-2 whitespace-pre-wrap";
+                respLine.innerText = responseStr;
+                outputDiv.appendChild(respLine);
+                
+                // Add new cursor line
+                const newCursor = document.createElement('div');
+                newCursor.className = "typing-cursor text-green-400";
+                newCursor.innerText = cmdId === 2 ? "(env) user@ubuntu-server:~$ " : "user@ubuntu-server:~$ ";
+                outputDiv.appendChild(newCursor);
+                
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+            }, 600);
+        }
+
+        function toggleConfig(key) {
+            state.config[key].enabled = !state.config[key].enabled;
+            refreshJson();
+        }
+
+        function updateConfigVal(service, key, value) {
+            state.config[service][key] = value;
+            refreshJson();
+        }
+
+        function refreshJson() {
+            document.getElementById('json-preview').textContent = generateConfigJson();
+        }
+
+        function generateConfigJson() {
+            // Reconstruct JSON based on state
+            const c = {
+                "device.node_id": "opencanary-1",
+                "logger": { "class": "PyLogger", "kwargs": { "formatters": { "plain": { "format": "%(message)s" } } } }
+            };
+
+            if (state.config.http.enabled) {
+                c["http.enabled"] = true;
+                c["http.port"] = 80;
+                c["http.skin"] = state.config.http.skin;
+                c["http.banner"] = state.config.http.banner;
+            } else {
+                c["http.enabled"] = false;
+            }
+
+            if (state.config.ssh.enabled) {
+                c["ssh.enabled"] = true;
+                c["ssh.port"] = parseInt(state.config.ssh.port);
+                c["ssh.version"] = state.config.ssh.version;
+            } else {
+                c["ssh.enabled"] = false;
+            }
+
+            if (state.config.smb.enabled) {
+                c["smb.enabled"] = true;
+                c["smb.auditfile"] = state.config.smb.auditFile;
+            } else {
+                c["smb.enabled"] = false;
+            }
+
+            return JSON.stringify(c, null, 4);
+        }
+
+        function triggerLog(type) {
+            const outputDiv = document.getElementById('log-output');
+            if (!outputDiv) return;
+
+            const timestamp = new Date().toISOString();
+            let logEntry = {};
+
+            if (type === 'nmap') {
+                logEntry = {
+                    "dst_host": "192.168.1.15",
+                    "dst_port": 80,
+                    "local_time": timestamp,
+                    "logtype": 5001,
+                    "node_id": "opencanary-1",
+                    "src_host": "192.168.1.100",
+                    "src_port": 45322,
+                    "logdata": { "msg": "Syn Scan Detected" }
+                };
+            } else if (type === 'http') {
+                logEntry = {
+                    "dst_host": "192.168.1.15",
+                    "dst_port": 80,
+                    "local_time": timestamp,
+                    "logtype": 3000,
+                    "node_id": "opencanary-1",
+                    "src_host": "192.168.1.100",
+                    "src_port": 51002,
+                    "logdata": { 
+                        "USERAGENT": "Mozilla/5.0...",
+                        "PATH": "/login.cgi"
+                    }
+                };
+            } else if (type === 'ssh') {
+                logEntry = {
+                    "dst_host": "192.168.1.15",
+                    "dst_port": 2222,
+                    "local_time": timestamp,
+                    "logtype": 4002,
+                    "node_id": "opencanary-1",
+                    "src_host": "192.168.1.100",
+                    "src_port": 34911,
+                    "logdata": { 
+                        "USERNAME": "root",
+                        "PASSWORD": "password123",
+                        "VERSION": "SSH-2.0-OpenSSH"
+                    }
+                };
+            }
+
+            const div = document.createElement('div');
+            div.className = "text-green-400 mb-2 border-l-2 border-green-700 pl-2 text-xs break-all fade-in";
+            div.innerText = JSON.stringify(logEntry, null, 2);
+            outputDiv.appendChild(div);
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        // --- Charts ---
+
+        function renderChart() {
+            const ctx = document.getElementById('comparisonChart');
+            if (!ctx) return;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['OpenCanary', 'Cowrie', 'Dionaea', 'T-Pot'],
+                    datasets: [{
+                        label: 'Configuration Complexity (Lower is Better)',
+                        data: [8, 7, 5, 4], // OpenCanary is modular/easy config
+                        backgroundColor: '#93C5FD', // Light Blue
+                    }, {
+                        label: 'Protocol Diversity',
+                        data: [7, 3, 8, 10], // T-Pot has many, Cowrie is SSH specific
+                        backgroundColor: '#3B82F6', // Tech Blue
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            ticks: { display: false },
+                            grid: { display: false }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const label = context[0].label;
+                                    if(label === 'Cowrie') return "Specific to SSH/Telnet brute force.";
+                                    if(label === 'Dionaea') return "Captures malware samples (SMB, FTP).";
+                                    if(label === 'T-Pot') return "All-in-one Platform (Docker).";
+                                    return "Modular, daemon-based.";
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Init ---
+        window.onload = function() {
+            renderStepper();
+            renderContent();
+        };
+
+    </script>
+</body>
+</html>
+
+
+
